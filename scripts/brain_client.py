@@ -21,7 +21,8 @@ except ImportError:
 from config import HUB_URL, HUB_API_KEY
 
 _BASE    = HUB_URL.rstrip("/")
-_TIMEOUT = 5  # seconds — never block pipeline for brain calls
+_TIMEOUT       = 15   # seconds — for search/add calls
+_TIMEOUT_FAST  = 3    # seconds — for health checks only
 
 
 def _headers() -> dict:
@@ -186,5 +187,10 @@ def stats() -> Optional[dict]:
 
 def is_online() -> bool:
     """Quick health check — returns True if hub brain is reachable."""
-    result = _get("/health")
-    return result is not None
+    if not _HTTP_OK:
+        return False
+    try:
+        r = _requests.get(f"{_BASE}/health", headers=_headers(), timeout=_TIMEOUT_FAST)
+        return r.status_code < 300
+    except Exception:
+        return False

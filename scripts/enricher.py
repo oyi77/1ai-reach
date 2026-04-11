@@ -76,6 +76,13 @@ def _via_agentcash(website: str, name: str) -> dict:
         capture_output=True, text=True,
     )
     if result.returncode != 0:
+        # Check if it's a balance issue — no point retrying
+        try:
+            err = json.loads(result.stdout)
+            if err.get("error", {}).get("cause") == "insufficient_balance":
+                raise RuntimeError("AgentCash balance is zero — skipping")
+        except (json.JSONDecodeError, AttributeError):
+            pass
         raise RuntimeError("non-zero exit")
     data = json.loads(result.stdout)
     person = data.get("data", {}).get("person", {})
@@ -180,23 +187,39 @@ def _scrape_website(base_url: str) -> dict:
 # Strategy 4 – Common email pattern guessing
 # ---------------------------------------------------------------------------
 
-def _guess_email(website: str) -> dict:
-    """Try common prefixes at the business domain."""
+def _guess_email(website: str, person_name: str = "") -> dict:
+    """Try name-based then common prefix patterns at the business domain."""
     try:
         domain = urlparse(website if website.startswith("http") else "https://" + website).netloc
         domain = domain.lstrip("www.")
     except Exception:
         raise RuntimeError("invalid website URL")
 
-    # Try to verify by checking MX records or just return first common pattern
-    # We return info@ as the most universally common business email
-    for prefix in _COMMON_EMAIL_PREFIXES:
-        email = f"{prefix}@{domain}"
-        # Basic sanity: domain must have a dot and TLD
-        if "." in domain and len(domain) > 4:
-            return {"email": email, "phone": None, "linkedin": None}
+    if not ("." in domain and len(domain) > 4):
+        raise RuntimeError("could not construct valid email pattern")
 
-    raise RuntimeError("could not construct valid email pattern")
+    candidates = []
+
+    # Name-based patterns first (much higher deliverability than info@)
+    if person_name:
+        # Strip company suffix ("Name @ Company" → "Name")
+        clean = person_name.split("@")[0].strip()
+        parts = clean.lower().split()
+        if len(parts) >= 2:
+            first, last = parts[0], parts[-1]
+            candidates += [
+                f"{first}@{domain}",
+                f"{first}.{last}@{domain}",
+                f"{first[0]}{last}@{domain}",
+                f"{first}_{last}@{domain}",
+            ]
+        elif len(parts) == 1:
+            candidates.append(f"{parts[0]}@{domain}")
+
+    # Generic business prefixes as fallback
+    candidates += [f"{p}@{domain}" for p in _COMMON_EMAIL_PREFIXES]
+
+    return {"email": candidates[0], "phone": None, "linkedin": None}
 
 
 # ---------------------------------------------------------------------------
@@ -210,7 +233,7 @@ def enrich_lead(website: str, name: str) -> dict | None:
     strategies = [
         ("AgentCash Minerva", lambda: _via_agentcash(website, name)),
         ("Website scraping",  lambda: _scrape_website(website)),
-        ("Email pattern",     lambda: _guess_email(website)),
+        ("Email pattern",     lambda: _guess_email(website, name)),
     ]
 
     for label, fn in strategies:
