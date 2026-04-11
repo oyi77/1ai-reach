@@ -20,12 +20,21 @@ def send_email(email, subject, body):
     if not email:
         print("Skip Email: No email address.")
         return
-    print(f"Sending Email to {email}...")
-    cmd = ["himalaya", "send", "--to", email, "--subject", subject, "--body", body]
+    print(f"Sending Email to {email} using gogcli...")
+    # Using gogcli to send via Gmail
+    # Format: gog gmail send --to <email> --subject "<subject>" --body "<body>"
+    cmd = ["gog", "gmail", "send", "--to", email, "--subject", subject, "--body", body]
     try:
-        subprocess.run(cmd, capture_output=True, text=True)
+        result = subprocess.run(cmd, capture_output=True, text=True)
+        if result.returncode == 0:
+            print(f"Email successfully sent to {email}")
+        else:
+            print(f"gogcli error: {result.stderr}")
+            # Fallback to himalaya if gogcli fails
+            print("Trying fallback to himalaya...")
+            subprocess.run(["himalaya", "send", "--to", email, "--subject", subject, "--body", body])
     except FileNotFoundError:
-        print(f"[MOCK] Email Sent to {email}: {subject}")
+        print("[MOCK] gogcli not found. Email simulation.")
 
 def blast(filename="1ai-engage/data/leads.csv"):
     if not os.path.exists(filename):
