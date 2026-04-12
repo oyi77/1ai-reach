@@ -34,13 +34,18 @@ _load_dotenv()
 GOOGLE_API_KEY: str = os.getenv("GOOGLE_API_KEY", "")
 
 # ---------------------------------------------------------------------------
-# Stalwart SMTP (primary outbound — marketing@berkahkarya.org)
+# Brevo (primary outbound — trusted IP, 300 emails/day free)
+# ---------------------------------------------------------------------------
+BREVO_API_KEY = os.getenv("BREVO_API_KEY", "")
+SMTP_FROM     = os.getenv("SMTP_FROM", "BerkahKarya <marketing@berkahkarya.org>")
+
+# ---------------------------------------------------------------------------
+# Stalwart SMTP (fallback outbound — marketing@berkahkarya.org)
 # ---------------------------------------------------------------------------
 SMTP_HOST     = os.getenv("SMTP_HOST", "mail.berkahkarya.org")
 SMTP_PORT     = int(os.getenv("SMTP_PORT", "587"))
 SMTP_USER     = os.getenv("SMTP_USER", "marketing")
 SMTP_PASSWORD = os.getenv("SMTP_PASSWORD", "BerkahKarya2026!")
-SMTP_FROM     = os.getenv("SMTP_FROM", "BerkahKarya <marketing@berkahkarya.org>")
 
 # ---------------------------------------------------------------------------
 # Gmail / gog (fallback)

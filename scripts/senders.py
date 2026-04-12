@@ -16,6 +16,7 @@ from config import (
     GMAIL_ACCOUNT, GMAIL_KEYRING_PASSWORD, LOGS_DIR,
     WAHA_URL, WAHA_API_KEY, WAHA_SESSION,
     SMTP_HOST, SMTP_PORT, SMTP_USER, SMTP_PASSWORD, SMTP_FROM,
+    BREVO_API_KEY,
 )
 
 EMAIL_QUEUE_LOG = str(LOGS_DIR / "email_queue.log")
@@ -82,8 +83,39 @@ def send_whatsapp(phone: str, message: str) -> bool:
     return False
 
 
+def _send_via_brevo(email: str, subject: str, body: str) -> bool:
+    """Primary: send via Brevo HTTP API (trusted IP, 300/day free)."""
+    from email.utils import parseaddr
+    print(f"Attempting email via Brevo to {email}...")
+    if not _HTTP_OK:
+        print("❌ Brevo: requests not available")
+        return False
+    try:
+        _, from_email = parseaddr(SMTP_FROM)
+        from_name = SMTP_FROM.split("<")[0].strip() if "<" in SMTP_FROM else "BerkahKarya"
+        resp = _req.post(
+            "https://api.brevo.com/v3/smtp/email",
+            headers={"api-key": BREVO_API_KEY, "Content-Type": "application/json"},
+            json={
+                "sender": {"name": from_name, "email": from_email},
+                "to": [{"email": email}],
+                "subject": subject,
+                "textContent": body,
+            },
+            timeout=30,
+        )
+        if resp.status_code in (200, 201) or "messageId" in resp.text:
+            print(f"✅ Email sent via Brevo to {email}")
+            return True
+        print(f"❌ Brevo error {resp.status_code}: {resp.text[:200]}")
+        return False
+    except Exception as e:
+        print(f"❌ Brevo failed: {e}")
+        return False
+
+
 def _send_via_stalwart(email: str, subject: str, body: str) -> bool:
-    """Primary: send via Stalwart SMTP as marketing@berkahkarya.org."""
+    """Fallback: send via Stalwart SMTP as marketing@berkahkarya.org."""
     from email.utils import parseaddr
     print(f"Attempting email via Stalwart SMTP to {email}...")
     try:
@@ -158,6 +190,7 @@ def send_email(email: str, subject: str, body: str) -> bool:
         print("Skip Email: No email address.")
         return False
     for name, method in [
+        ("brevo",    lambda: _send_via_brevo(email, subject, body)),
         ("stalwart", lambda: _send_via_stalwart(email, subject, body)),
         ("gog",      lambda: _send_via_gog(email, subject, body)),
         ("himalaya", lambda: _send_via_himalaya(email, subject, body)),
