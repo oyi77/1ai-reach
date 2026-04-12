@@ -90,7 +90,7 @@ def _build_prompt(
     csv_research = str(lead.get("research") or "")
 
     system_prompt = (
-        "You are a senior Solution Architect at BerkahKarya, a digital agency in Jakarta.\n\n"
+        "You are a senior Solution Architect at BerkahKarya, a technology and growth partner.\n\n"
         f"Available capability matrix:\n{capability_matrix}\n\n"
         "Your task: Based on the prospect's research data below, INVENT a specific, tailored digital solution.\n"
         "DO NOT use generic phrases like 'we are a digital agency' or 'we help businesses grow'.\n"
