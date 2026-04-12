@@ -42,6 +42,39 @@ CREATE TABLE IF NOT EXISTS event_log (
 CREATE INDEX IF NOT EXISTS idx_leads_status ON leads(status);
 CREATE INDEX IF NOT EXISTS idx_leads_email ON leads(email);
 CREATE INDEX IF NOT EXISTS idx_event_log_lead ON event_log(lead_id);
+
+CREATE TABLE IF NOT EXISTS control_jobs (
+    job_id TEXT PRIMARY KEY,
+    stage TEXT NOT NULL,
+    pid INTEGER,
+    command TEXT NOT NULL,
+    status TEXT NOT NULL,
+    log_path TEXT,
+    created_at TEXT DEFAULT (datetime('now')),
+    started_at TEXT,
+    finished_at TEXT,
+    exit_code INTEGER,
+    error TEXT
+);
+
+CREATE TABLE IF NOT EXISTS control_locks (
+    name TEXT PRIMARY KEY,
+    owner TEXT NOT NULL,
+    acquired_at TEXT DEFAULT (datetime('now')),
+    heartbeat_at TEXT DEFAULT (datetime('now'))
+);
+
+CREATE TABLE IF NOT EXISTS tool_audit (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    tool_name TEXT NOT NULL,
+    action TEXT NOT NULL,
+    payload TEXT,
+    created_at TEXT DEFAULT (datetime('now'))
+);
+
+CREATE INDEX IF NOT EXISTS idx_control_jobs_stage ON control_jobs(stage);
+CREATE INDEX IF NOT EXISTS idx_control_jobs_status ON control_jobs(status);
+CREATE INDEX IF NOT EXISTS idx_tool_audit_tool ON tool_audit(tool_name);
 """
 
 _LEAD_COLUMNS = [
@@ -197,6 +230,168 @@ def get_all_leads() -> list[dict]:
     conn = _connect()
     try:
         rows = conn.execute("SELECT * FROM leads").fetchall()
+        return [dict(r) for r in rows]
+    finally:
+        conn.close()
+
+
+def get_event_logs(lead_id: str | None = None, limit: int = 100) -> list[dict]:
+    conn = _connect()
+    try:
+        if lead_id:
+            rows = conn.execute(
+                """
+                SELECT * FROM event_log
+                WHERE lead_id = ?
+                ORDER BY timestamp DESC, id DESC
+                LIMIT ?
+                """,
+                (lead_id, limit),
+            ).fetchall()
+        else:
+            rows = conn.execute(
+                "SELECT * FROM event_log ORDER BY timestamp DESC, id DESC LIMIT ?",
+                (limit,),
+            ).fetchall()
+        return [dict(r) for r in rows]
+    finally:
+        conn.close()
+
+
+def create_control_job(
+    job_id: str,
+    stage: str,
+    command: str,
+    *,
+    pid: int | None = None,
+    status: str = "created",
+    log_path: str = "",
+) -> None:
+    conn = _connect()
+    try:
+        conn.execute("BEGIN IMMEDIATE")
+        conn.execute(
+            """
+            INSERT OR REPLACE INTO control_jobs (
+                job_id, stage, pid, command, status, log_path, started_at
+            ) VALUES (?, ?, ?, ?, ?, ?, datetime('now'))
+            """,
+            (job_id, stage, pid, command, status, log_path),
+        )
+        conn.commit()
+    except Exception:
+        conn.rollback()
+        raise
+    finally:
+        conn.close()
+
+
+def update_control_job(job_id: str, **fields) -> None:
+    if not fields:
+        return
+    set_clause = ", ".join(f"{k} = ?" for k in fields)
+    values = list(fields.values()) + [job_id]
+    conn = _connect()
+    try:
+        conn.execute("BEGIN IMMEDIATE")
+        conn.execute(f"UPDATE control_jobs SET {set_clause} WHERE job_id = ?", values)
+        conn.commit()
+    except Exception:
+        conn.rollback()
+        raise
+    finally:
+        conn.close()
+
+
+def get_control_job(job_id: str) -> dict | None:
+    conn = _connect()
+    try:
+        row = conn.execute(
+            "SELECT * FROM control_jobs WHERE job_id = ?", (job_id,)
+        ).fetchone()
+        return dict(row) if row else None
+    finally:
+        conn.close()
+
+
+def list_control_jobs(limit: int = 100) -> list[dict]:
+    conn = _connect()
+    try:
+        rows = conn.execute(
+            "SELECT * FROM control_jobs ORDER BY created_at DESC LIMIT ?", (limit,)
+        ).fetchall()
+        return [dict(r) for r in rows]
+    finally:
+        conn.close()
+
+
+def acquire_control_lock(name: str, owner: str) -> bool:
+    conn = _connect()
+    try:
+        conn.execute("BEGIN IMMEDIATE")
+        existing = conn.execute(
+            "SELECT owner FROM control_locks WHERE name = ?", (name,)
+        ).fetchone()
+        if existing and existing["owner"] != owner:
+            conn.rollback()
+            return False
+        conn.execute(
+            """
+            INSERT INTO control_locks (name, owner, acquired_at, heartbeat_at)
+            VALUES (?, ?, datetime('now'), datetime('now'))
+            ON CONFLICT(name) DO UPDATE SET
+                owner = excluded.owner,
+                heartbeat_at = datetime('now')
+            """,
+            (name, owner),
+        )
+        conn.commit()
+        return True
+    except Exception:
+        conn.rollback()
+        raise
+    finally:
+        conn.close()
+
+
+def release_control_lock(name: str, owner: str) -> None:
+    conn = _connect()
+    try:
+        conn.execute("BEGIN IMMEDIATE")
+        conn.execute(
+            "DELETE FROM control_locks WHERE name = ? AND owner = ?", (name, owner)
+        )
+        conn.commit()
+    except Exception:
+        conn.rollback()
+        raise
+    finally:
+        conn.close()
+
+
+def add_tool_audit(tool_name: str, action: str, payload: str = "") -> None:
+    conn = _connect()
+    try:
+        conn.execute("BEGIN IMMEDIATE")
+        conn.execute(
+            "INSERT INTO tool_audit (tool_name, action, payload) VALUES (?, ?, ?)",
+            (tool_name, action, payload),
+        )
+        conn.commit()
+    except Exception:
+        conn.rollback()
+        raise
+    finally:
+        conn.close()
+
+
+def get_tool_audit(limit: int = 100) -> list[dict]:
+    conn = _connect()
+    try:
+        rows = conn.execute(
+            "SELECT * FROM tool_audit ORDER BY created_at DESC, id DESC LIMIT ?",
+            (limit,),
+        ).fetchall()
         return [dict(r) for r in rows]
     finally:
         conn.close()
