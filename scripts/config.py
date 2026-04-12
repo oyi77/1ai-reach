@@ -13,6 +13,35 @@ RESEARCH_DIR = DATA_DIR / "research"
 PROPOSALS_DIR = _ROOT / "proposals" / "drafts"
 LOGS_DIR = _ROOT / "logs"
 LEADS_FILE = DATA_DIR / "leads.csv"
+DB_FILE = DATA_DIR / "leads.db"
+
+# ---------------------------------------------------------------------------
+# Pipeline loop settings
+# ---------------------------------------------------------------------------
+LOOP_SLEEP_SECONDS = int(os.getenv("LOOP_SLEEP_SECONDS", "60"))
+MIN_NEW_LEADS_THRESHOLD = int(os.getenv("MIN_NEW_LEADS_THRESHOLD", "10"))
+
+# ---------------------------------------------------------------------------
+# Payment & booking links
+# ---------------------------------------------------------------------------
+PAYMENT_LINK = os.getenv("PAYMENT_LINK", "https://berkahkarya.org/pay")
+CALENDLY_LINK = os.getenv("CALENDLY_LINK", "https://calendly.com/berkahkarya/15min")
+
+# ---------------------------------------------------------------------------
+# Default verticals for autonomous scraping
+# ---------------------------------------------------------------------------
+DEFAULT_VERTICALS = [
+    "Digital Agency",
+    "Coffee Shop",
+    "Restaurant",
+    "Retail Store",
+    "Hotel",
+    "Clinic",
+    "E-commerce",
+    "Startup",
+    "Property",
+    "Education",
+]
 
 
 def _load_dotenv() -> None:

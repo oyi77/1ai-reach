@@ -45,6 +45,5 @@ def safe_filename(name: str) -> str:
     return "".join(c if c.isalnum() else "_" for c in str(name))
 
 
-def draft_path(index: int, name: str) -> str:
-    """Return the canonical path for a proposal draft file."""
-    return str(PROPOSALS_DIR / f"{index}_{safe_filename(name)}.txt")
+def draft_path(lead_id, name: str) -> str:
+    return str(PROPOSALS_DIR / f"{lead_id}_{safe_filename(name)}.txt")

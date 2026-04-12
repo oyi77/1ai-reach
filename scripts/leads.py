@@ -1,10 +1,9 @@
 import os
-from pathlib import Path
 
 import pandas as pd
 
 from config import LEADS_FILE as _LEADS_PATH
-from utils import is_empty
+import state_manager
 
 LEADS_FILE = str(_LEADS_PATH)
 
@@ -28,9 +27,6 @@ _STR_COLS = (
     "type",
 )
 
-# Full funnel stages (in order):
-#   new → enriched → draft_ready → needs_revision → reviewed →
-#   contacted → followed_up → replied → meeting_booked → won / lost / cold / unsubscribed
 FUNNEL_STAGES = (
     "new",
     "enriched",
@@ -47,51 +43,69 @@ FUNNEL_STAGES = (
     "unsubscribed",
 )
 
+_DEFAULTS = {
+    "status": "new",
+    "contacted_at": None,
+    "followup_at": None,
+    "replied_at": None,
+    "research": None,
+    "review_score": None,
+    "review_issues": None,
+}
+
+state_manager.init_db()
+
 
 def load_leads(path: str = LEADS_FILE) -> pd.DataFrame | None:
-    if not os.path.exists(path):
-        print(f"No leads file found at {path}.")
-        return None
-    df = pd.read_csv(path, dtype={c: str for c in _STR_COLS})
-    # Ensure all funnel-tracking columns always exist
-    defaults = {
-        "status": "new",
-        "contacted_at": None,
-        "followup_at": None,
-        "replied_at": None,
-        "research": None,
-        "review_score": None,
-        "review_issues": None,
-    }
-    for col, default in defaults.items():
+    rows = state_manager.get_all_leads()
+    if not rows:
+        if not os.path.exists(path):
+            print(f"No leads file found at {path}.")
+            return None
+        df = pd.read_csv(path, dtype={c: str for c in _STR_COLS})
+    else:
+        df = pd.DataFrame(rows)
+    for col, default in _DEFAULTS.items():
         if col not in df.columns:
             df[col] = default
+    for col in _STR_COLS:
+        if col in df.columns:
+            df[col] = df[col].astype(str).replace({"None": pd.NA, "nan": pd.NA})
     return df
 
 
 def save_leads(df: pd.DataFrame, path: str = LEADS_FILE) -> None:
+    for _, row in df.iterrows():
+        lead = row.to_dict()
+        for k, v in lead.items():
+            if pd.isna(v):
+                lead[k] = None
+            else:
+                lead[k] = str(v)
+        if not lead.get("id"):
+            continue
+        state_manager.upsert_lead(lead)
     os.makedirs(os.path.dirname(path), exist_ok=True)
     df.to_csv(path, index=False)
     print(f"Saved {len(df)} leads to {path}")
 
 
 def funnel_summary(path: str = LEADS_FILE) -> None:
-    """Print a quick funnel stage breakdown."""
-    df = load_leads(path)
-    if df is None:
-        return
-    counts = df["status"].value_counts()
+    counts = state_manager.count_by_status()
+    if not counts:
+        df = load_leads(path)
+        if df is None:
+            return
+        counts = df["status"].value_counts().to_dict()
+
     print("\n📊 Funnel Summary")
     print(f"{'Stage':<20} {'Count':>6}")
     print("-" * 28)
+    total = 0
     for stage in FUNNEL_STAGES:
         n = counts.get(stage, 0)
+        total += n
         if n > 0:
             bar = "█" * min(n, 30)
             print(f"{stage:<20} {n:>6}  {bar}")
-    total = len(df)
     print(f"\n  Total leads: {total}")
-    has_email = (~df["email"].apply(is_empty)).sum()
-    has_phone = (~df["internationalPhoneNumber"].apply(is_empty)).sum()
-    print(f"  With email:  {has_email}")
-    print(f"  With phone:  {has_phone}")
