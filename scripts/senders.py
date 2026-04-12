@@ -4,6 +4,7 @@ import sys
 
 try:
     import requests as _req
+
     _HTTP_OK = True
 except ImportError:
     _HTTP_OK = False
@@ -13,11 +14,20 @@ from email.mime.text import MIMEText
 from email.mime.multipart import MIMEMultipart
 
 from config import (
-    GMAIL_ACCOUNT, GMAIL_KEYRING_PASSWORD, LOGS_DIR,
-    WAHA_URL, WAHA_API_KEY, WAHA_SESSION,
-    SMTP_HOST, SMTP_PORT, SMTP_USER, SMTP_PASSWORD, SMTP_FROM,
+    GMAIL_ACCOUNT,
+    GMAIL_KEYRING_PASSWORD,
+    LOGS_DIR,
+    WAHA_URL,
+    WAHA_API_KEY,
+    WAHA_SESSION,
+    SMTP_HOST,
+    SMTP_PORT,
+    SMTP_USER,
+    SMTP_PASSWORD,
+    SMTP_FROM,
     BREVO_API_KEY,
 )
+from utils import is_empty
 
 EMAIL_QUEUE_LOG = str(LOGS_DIR / "email_queue.log")
 
@@ -34,11 +44,16 @@ def _send_wa_waha(phone: str, message: str) -> bool:
     chat_id = f"{clean}@c.us"
     url = f"{WAHA_URL}/api/sendText"
     try:
-        r = _req.post(url, json={
-            "chatId":  chat_id,
-            "text":    message,
-            "session": WAHA_SESSION,
-        }, headers=_WAHA_HEADERS, timeout=15)
+        r = _req.post(
+            url,
+            json={
+                "chatId": chat_id,
+                "text": message,
+                "session": WAHA_SESSION,
+            },
+            headers=_WAHA_HEADERS,
+            timeout=15,
+        )
         if r.status_code < 300:
             print(f"✅ WA sent via WAHA to {clean}")
             return True
@@ -54,7 +69,8 @@ def _send_wa_wacli(phone: str, message: str) -> bool:
     try:
         result = subprocess.run(
             ["wacli", "send", "text", "--to", clean_phone, "--message", message],
-            capture_output=True, text=True,
+            capture_output=True,
+            text=True,
         )
         if "not authenticated" in result.stderr:
             print("WA Error: wacli not authenticated. Run 'wacli auth'.")
@@ -69,7 +85,7 @@ def _send_wa_wacli(phone: str, message: str) -> bool:
 
 
 def send_whatsapp(phone: str, message: str) -> bool:
-    if not phone or str(phone).lower() in ("nan", "none", ""):
+    if is_empty(phone):
         print("Skip WA: No phone number.")
         return False
     # Try WAHA first (HTTP API), fall back to wacli
@@ -85,9 +101,12 @@ def send_whatsapp(phone: str, message: str) -> bool:
 
 LOGO_URL = "https://raw.githubusercontent.com/oyi77/1ai-engage/master/assets/logo.svg"
 
+
 def _make_html_body(body: str) -> str:
     """Wrap plain text body in a branded HTML email template."""
-    paragraphs = "".join(f"<p>{line if line.strip() else '&nbsp;'}</p>" for line in body.split("\n"))
+    paragraphs = "".join(
+        f"<p>{line if line.strip() else '&nbsp;'}</p>" for line in body.split("\n")
+    )
     return f"""<!DOCTYPE html>
 <html><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"></head>
 <body style="margin:0;padding:0;background:#f4f6f8;font-family:Arial,Helvetica,sans-serif;">
@@ -117,13 +136,16 @@ def _make_html_body(body: str) -> str:
 def _send_via_brevo(email: str, subject: str, body: str) -> bool:
     """Primary: send via Brevo HTTP API (trusted IP, 300/day free)."""
     from email.utils import parseaddr
+
     print(f"Attempting email via Brevo to {email}...")
     if not _HTTP_OK:
         print("❌ Brevo: requests not available")
         return False
     try:
         _, from_email = parseaddr(SMTP_FROM)
-        from_name = SMTP_FROM.split("<")[0].strip() if "<" in SMTP_FROM else "BerkahKarya"
+        from_name = (
+            SMTP_FROM.split("<")[0].strip() if "<" in SMTP_FROM else "BerkahKarya"
+        )
         resp = _req.post(
             "https://api.brevo.com/v3/smtp/email",
             headers={"api-key": BREVO_API_KEY, "Content-Type": "application/json"},
@@ -149,13 +171,15 @@ def _send_via_brevo(email: str, subject: str, body: str) -> bool:
 def _send_via_stalwart(email: str, subject: str, body: str) -> bool:
     """Fallback: send via Stalwart SMTP as marketing@berkahkarya.org."""
     from email.utils import parseaddr
+
     print(f"Attempting email via Stalwart SMTP to {email}...")
     try:
         msg = MIMEMultipart("alternative")
-        msg["From"]    = SMTP_FROM
-        msg["To"]      = email
+        msg["From"] = SMTP_FROM
+        msg["To"] = email
         msg["Subject"] = subject
         msg.attach(MIMEText(body, "plain", "utf-8"))
+        msg.attach(MIMEText(_make_html_body(body), "html", "utf-8"))
         _, mail_from = parseaddr(SMTP_FROM)
         mail_from = mail_from or SMTP_USER
         with smtplib.SMTP(SMTP_HOST, SMTP_PORT, timeout=30) as server:
@@ -173,11 +197,28 @@ def _send_via_stalwart(email: str, subject: str, body: str) -> bool:
 def _send_via_gog(email: str, subject: str, body: str) -> bool:
     """Primary: send via gog Gmail CLI (free)."""
     print(f"Attempting email via gog to {email}...")
-    env = {**os.environ, "GOG_KEYRING_PASSWORD": GMAIL_KEYRING_PASSWORD, "GOG_ACCOUNT": GMAIL_ACCOUNT}
+    env = {
+        **os.environ,
+        "GOG_KEYRING_PASSWORD": GMAIL_KEYRING_PASSWORD,
+        "GOG_ACCOUNT": GMAIL_ACCOUNT,
+    }
     try:
         result = subprocess.run(
-            ["gog", "gmail", "send", "--to", email, "--subject", subject, "--body", body],
-            capture_output=True, text=True, timeout=30, env=env,
+            [
+                "gog",
+                "gmail",
+                "send",
+                "--to",
+                email,
+                "--subject",
+                subject,
+                "--body",
+                body,
+            ],
+            capture_output=True,
+            text=True,
+            timeout=30,
+            env=env,
         )
         if result.returncode == 0:
             print(f"✅ Email sent via gog to {email}")
@@ -196,7 +237,10 @@ def _send_via_himalaya(email: str, subject: str, body: str) -> bool:
     try:
         result = subprocess.run(
             ["himalaya", "template", "send"],
-            input=template, capture_output=True, text=True, timeout=30,
+            input=template,
+            capture_output=True,
+            text=True,
+            timeout=30,
         )
         if result.returncode == 0:
             print(f"✅ Email sent via himalaya to {email}")
@@ -218,15 +262,15 @@ def _send_via_mock(email: str, subject: str, body: str) -> bool:
 
 
 def send_email(email: str, subject: str, body: str) -> bool:
-    if not email or str(email).lower() == "nan":
+    if is_empty(email):
         print("Skip Email: No email address.")
         return False
     for name, method in [
-        ("brevo",    lambda: _send_via_brevo(email, subject, body)),
+        ("brevo", lambda: _send_via_brevo(email, subject, body)),
         ("stalwart", lambda: _send_via_stalwart(email, subject, body)),
-        ("gog",      lambda: _send_via_gog(email, subject, body)),
+        ("gog", lambda: _send_via_gog(email, subject, body)),
         ("himalaya", lambda: _send_via_himalaya(email, subject, body)),
-        ("queue",    lambda: _send_via_mock(email, subject, body)),
+        ("queue", lambda: _send_via_mock(email, subject, body)),
     ]:
         try:
             if method():

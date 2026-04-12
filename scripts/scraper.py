@@ -6,6 +6,7 @@ Priority order:
   2. Yellow Pages ID     — yellowpages.co.id (free, real Indonesian businesses)
   3. DuckDuckGo          — filtered to skip known aggregator domains
 """
+
 import sys
 import time
 from urllib.parse import urlparse
@@ -17,11 +18,14 @@ from bs4 import BeautifulSoup
 from config import GOOGLE_API_KEY, AGGREGATOR_DOMAINS
 from leads import load_leads, save_leads
 
-_HEADERS = {"User-Agent": "Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 Chrome/120"}
+_HEADERS = {
+    "User-Agent": "Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 Chrome/120"
+}
 
 # ---------------------------------------------------------------------------
 # Source 1 – Google Places API (new v1)
 # ---------------------------------------------------------------------------
+
 
 def search_google_places(query: str, max_pages: int = 3) -> list:
     """Fetch real business listings from Google Places API (new v1)."""
@@ -52,17 +56,19 @@ def search_google_places(query: str, max_pages: int = 3) -> list:
         data = resp.json()
 
         for p in data.get("places", []):
-            leads.append({
-                "id":                      p.get("id"),
-                "displayName":             p.get("displayName", {}).get("text"),
-                "formattedAddress":        p.get("formattedAddress"),
-                "internationalPhoneNumber": p.get("internationalPhoneNumber"),
-                "phone":                   p.get("nationalPhoneNumber"),
-                "websiteUri":              p.get("websiteUri"),
-                "primaryType":             p.get("primaryType"),
-                "type":                    p.get("primaryTypeDisplayName", {}).get("text"),
-                "source":                  "google_places",
-            })
+            leads.append(
+                {
+                    "id": p.get("id"),
+                    "displayName": p.get("displayName", {}).get("text"),
+                    "formattedAddress": p.get("formattedAddress"),
+                    "internationalPhoneNumber": p.get("internationalPhoneNumber"),
+                    "phone": p.get("nationalPhoneNumber"),
+                    "websiteUri": p.get("websiteUri"),
+                    "primaryType": p.get("primaryType"),
+                    "type": p.get("primaryTypeDisplayName", {}).get("text"),
+                    "source": "google_places",
+                }
+            )
 
         page_token = data.get("nextPageToken")
         if not page_token:
@@ -75,6 +81,7 @@ def search_google_places(query: str, max_pages: int = 3) -> list:
 # ---------------------------------------------------------------------------
 # Source 2 – Yellow Pages Indonesia
 # ---------------------------------------------------------------------------
+
 
 def _yp_clean_text(el) -> str:
     return el.get_text(strip=True) if el else ""
@@ -96,29 +103,39 @@ def search_yellowpages(query: str, city: str = "jakarta") -> list:
     soup = BeautifulSoup(resp.text, "html.parser")
     leads = []
 
-    for card in soup.select(".listing-item, .business-listing, .result-item, article.listing"):
-        name_el   = card.select_one("h2, h3, .listing-name, .business-name")
-        phone_el  = card.select_one(".phone, .tel, [href^='tel:']")
-        web_el    = card.select_one("a.website, a[href^='http']:not([href*='yellowpages'])")
+    for card in soup.select(
+        ".listing-item, .business-listing, .result-item, article.listing"
+    ):
+        name_el = card.select_one("h2, h3, .listing-name, .business-name")
+        phone_el = card.select_one(".phone, .tel, [href^='tel:']")
+        web_el = card.select_one(
+            "a.website, a[href^='http']:not([href*='yellowpages'])"
+        )
 
-        name    = _yp_clean_text(name_el)
-        phone   = _yp_clean_text(phone_el) or (phone_el.get("href", "").replace("tel:", "") if phone_el else None)
+        name = _yp_clean_text(name_el)
+        phone = _yp_clean_text(phone_el) or (
+            phone_el.get("href", "").replace("tel:", "") if phone_el else None
+        )
         website = web_el.get("href") if web_el else None
 
         if not name:
             continue
 
-        leads.append({
-            "id":                      f"yp_{abs(hash(name + str(website))) % 999999}",
-            "displayName":             name,
-            "formattedAddress":        _yp_clean_text(card.select_one(".address, .location")),
-            "internationalPhoneNumber": phone,
-            "phone":                   phone,
-            "websiteUri":              website,
-            "primaryType":             query,
-            "type":                    query,
-            "source":                  "yellowpages_id",
-        })
+        leads.append(
+            {
+                "id": f"yp_{abs(hash(name + str(website))) % 999999}",
+                "displayName": name,
+                "formattedAddress": _yp_clean_text(
+                    card.select_one(".address, .location")
+                ),
+                "internationalPhoneNumber": phone,
+                "phone": phone,
+                "websiteUri": website,
+                "primaryType": query,
+                "type": query,
+                "source": "yellowpages_id",
+            }
+        )
 
     if not leads:
         raise RuntimeError(f"Yellow Pages returned 0 results for '{query}' in {city}")
@@ -128,6 +145,7 @@ def search_yellowpages(query: str, city: str = "jakarta") -> list:
 # ---------------------------------------------------------------------------
 # Source 3 – DuckDuckGo (filtered)
 # ---------------------------------------------------------------------------
+
 
 def _is_real_business(url: str) -> bool:
     """Return True if the URL looks like a real business site, not a directory."""
@@ -159,11 +177,11 @@ def search_duckduckgo(query: str) -> list:
 
     for idx, result in enumerate(soup.select(".result")):
         title_el = result.select_one(".result__title")
-        url_el   = result.select_one(".result__url")
+        url_el = result.select_one(".result__url")
         if not title_el or not url_el:
             continue
 
-        name    = title_el.get_text(strip=True)
+        name = title_el.get_text(strip=True)
         website = url_el.get_text(strip=True).strip()
         if not website.startswith("http"):
             website = "https://" + website
@@ -171,17 +189,19 @@ def search_duckduckgo(query: str) -> list:
         if not _is_real_business(website):
             continue
 
-        leads.append({
-            "id":                      f"ddg_{abs(hash(website)) % 999999}",
-            "displayName":             name,
-            "formattedAddress":        None,
-            "internationalPhoneNumber": None,
-            "phone":                   None,
-            "websiteUri":              website,
-            "primaryType":             None,
-            "type":                    None,
-            "source":                  "duckduckgo",
-        })
+        leads.append(
+            {
+                "id": f"ddg_{abs(hash(website)) % 999999}",
+                "displayName": name,
+                "formattedAddress": None,
+                "internationalPhoneNumber": None,
+                "phone": None,
+                "websiteUri": website,
+                "primaryType": None,
+                "type": None,
+                "source": "duckduckgo",
+            }
+        )
 
         if len(leads) >= 10:
             break
@@ -195,6 +215,7 @@ def search_duckduckgo(query: str) -> list:
 # Orchestrator
 # ---------------------------------------------------------------------------
 
+
 def search_leads(query: str, city: str = "Jakarta") -> list:
     full_query = f"{query} in {city}" if city.lower() not in query.lower() else query
     print(f"Searching: {full_query}")
@@ -202,7 +223,7 @@ def search_leads(query: str, city: str = "Jakarta") -> list:
     for source_name, fn in [
         ("Google Places", lambda: search_google_places(full_query)),
         ("Yellow Pages ID", lambda: search_yellowpages(query, city.lower())),
-        ("DuckDuckGo",    lambda: search_duckduckgo(full_query)),
+        ("DuckDuckGo", lambda: search_duckduckgo(full_query)),
     ]:
         try:
             results = fn()
@@ -217,6 +238,7 @@ def search_leads(query: str, city: str = "Jakarta") -> list:
 
 def merge_and_save(new_leads: list) -> None:
     df_new = pd.DataFrame(new_leads)
+    df_new["status"] = "new"
     df_old = load_leads()
     if df_old is not None:
         df = pd.concat([df_old, df_new]).drop_duplicates(subset=["id"], keep="last")
@@ -231,7 +253,7 @@ if __name__ == "__main__":
         print('  e.g. python3 scraper.py "Coffee Shop" Bandung', file=sys.stderr)
         sys.exit(1)
     query = sys.argv[1]
-    city  = sys.argv[2] if len(sys.argv) > 2 else "Jakarta"
+    city = sys.argv[2] if len(sys.argv) > 2 else "Jakarta"
     leads = search_leads(query, city)
     merge_and_save(leads)
     print(f"Done. {len(leads)} leads saved.")

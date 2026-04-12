@@ -7,18 +7,19 @@ For each lead with an email:
   3. Falls back to gemini → oracle if Claude unavailable
   4. Skips lead (logs error) if all LLMs fail — no template fallback
 """
+
 import os
 import subprocess
 import sys
 
 from leads import load_leads
-from utils import parse_display_name, draft_path, safe_filename
+from utils import parse_display_name, draft_path, safe_filename, is_empty
 
 from config import PROPOSALS_DIR as _PROPOSALS_DIR, RESEARCH_DIR as _RESEARCH_DIR
 import brain_client as _brain
 
 PROPOSALS_DIR = str(_PROPOSALS_DIR)
-RESEARCH_DIR  = str(_RESEARCH_DIR)
+RESEARCH_DIR = str(_RESEARCH_DIR)
 
 
 def _load_research(index: int, name: str) -> str:
@@ -30,12 +31,23 @@ def _load_research(index: int, name: str) -> str:
     return ""
 
 
-def _build_prompt(lead_name: str, lead_business: str, research: str, csv_research: str,
-                  brain_context: str = "") -> str:
+def _build_prompt(
+    lead_name: str,
+    lead_business: str,
+    research: str,
+    csv_research: str,
+    brain_context: str = "",
+) -> str:
     research_section = ""
     if research:
-        research_section = f"\nProspect Research (scraped from their website):\n{research}\n"
-    elif csv_research and csv_research.lower() not in ("nan", "none", "no_data", ""):
+        research_section = (
+            f"\nProspect Research (scraped from their website):\n{research}\n"
+        )
+    elif (
+        csv_research
+        and not is_empty(csv_research)
+        and csv_research.lower() != "no_data"
+    ):
         research_section = f"\nProspect Research Summary: {csv_research}\n"
 
     brain_section = f"\n{brain_context}\n" if brain_context else ""
@@ -44,8 +56,8 @@ def _build_prompt(lead_name: str, lead_business: str, research: str, csv_researc
         "Use the research above to write a HIGHLY PERSONALIZED proposal. "
         "Reference their specific services, observed gaps, or tech stack. "
         "Do NOT write generic filler."
-        if research_section else
-        "Write a proposal specific to their business type. "
+        if research_section
+        else "Write a proposal specific to their business type. "
         "Reference challenges common to this niche."
     )
 
@@ -72,10 +84,14 @@ def _build_prompt(lead_name: str, lead_business: str, research: str, csv_researc
     )
 
 
-def generate_proposal(index: int, lead_name: str, lead_business: str, csv_research: str = "") -> str:
+def generate_proposal(
+    index: int, lead_name: str, lead_business: str, csv_research: str = ""
+) -> str:
     research = _load_research(index, lead_name)
     brain_context = _brain.get_strategy(lead_business)
-    prompt = _build_prompt(lead_name, lead_business, research, csv_research, brain_context)
+    prompt = _build_prompt(
+        lead_name, lead_business, research, csv_research, brain_context
+    )
 
     tools = [
         ("claude", ["claude", "-p", "--model", "sonnet"], True),
@@ -91,7 +107,10 @@ def generate_proposal(index: int, lead_name: str, lead_business: str, csv_resear
             result = subprocess.run(cmd, **kwargs)
             if result.returncode == 0 and result.stdout.strip():
                 return result.stdout
-            print(f"{tool} failed (exit {result.returncode}): {result.stderr.strip()[:120]}", file=sys.stderr)
+            print(
+                f"{tool} failed (exit {result.returncode}): {result.stderr.strip()[:120]}",
+                file=sys.stderr,
+            )
         except Exception as e:
             print(f"{tool} error: {e}", file=sys.stderr)
 
@@ -111,13 +130,21 @@ def process_proposals() -> None:
         status = str(row.get("status") or "")
 
         # Skip already-processed leads (reviewed, contacted, replied, etc.)
-        if status in ("reviewed", "contacted", "followed_up", "replied", "meeting_booked", "won", "lost"):
+        if status in (
+            "reviewed",
+            "contacted",
+            "followed_up",
+            "replied",
+            "meeting_booked",
+            "won",
+            "lost",
+        ):
             skipped += 1
             continue
 
         # Only generate for leads with email (so we can actually reach them)
         email = str(row.get("email") or "").strip()
-        if not email or email.lower() in ("nan", "none", ""):
+        if is_empty(email):
             skipped += 1
             continue
 

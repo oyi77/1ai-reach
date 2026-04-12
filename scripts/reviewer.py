@@ -6,6 +6,7 @@ Checks: personalization, specific pain points, clear CTA, professional tone.
 Marks lead status as 'reviewed' if passed, 'needs_revision' if failed.
 Optionally regenerates weak proposals in-place.
 """
+
 import os
 import subprocess
 import sys
@@ -40,7 +41,10 @@ def _call_claude(prompt: str) -> str:
     try:
         result = subprocess.run(
             ["claude", "-p", "--model", "sonnet"],
-            input=prompt, capture_output=True, text=True, timeout=60
+            input=prompt,
+            capture_output=True,
+            text=True,
+            timeout=60,
         )
         if result.returncode == 0:
             return result.stdout.strip()
@@ -69,14 +73,24 @@ def _parse_review(output: str) -> dict:
         elif line.startswith("SUGGESTION:"):
             suggestion = line.split(":", 1)[1].strip()
 
-    return {"score": score, "verdict": verdict, "issues": issues, "suggestion": suggestion}
+    return {
+        "score": score,
+        "verdict": verdict,
+        "issues": issues,
+        "suggestion": suggestion,
+    }
 
 
 def review_proposal(index: int, name: str, proposal: str, research: str) -> dict:
     prompt = _review_prompt(name, proposal, research)
     output = _call_claude(prompt)
     if not output:
-        return {"score": 0, "verdict": "ERROR", "issues": ["reviewer failed"], "suggestion": ""}
+        return {
+            "score": 0,
+            "verdict": "ERROR",
+            "issues": ["reviewer failed"],
+            "suggestion": "",
+        }
     return _parse_review(output)
 
 
@@ -97,7 +111,15 @@ def process_reviews(regenerate_weak: bool = True) -> None:
         status = str(row.get("status") or "")
 
         # Skip already reviewed or contacted leads
-        if status in ("reviewed", "contacted", "followed_up", "replied", "meeting_booked", "won", "lost"):
+        if status in (
+            "reviewed",
+            "contacted",
+            "followed_up",
+            "replied",
+            "meeting_booked",
+            "won",
+            "lost",
+        ):
             skipped += 1
             continue
 
@@ -108,7 +130,9 @@ def process_reviews(regenerate_weak: bool = True) -> None:
         with open(path) as f:
             content = f.read()
 
-        proposal = content.split("---WHATSAPP---")[0].replace("---PROPOSAL---", "").strip()
+        proposal = (
+            content.split("---WHATSAPP---")[0].replace("---PROPOSAL---", "").strip()
+        )
         research = str(row.get("research") or "No research available.")
 
         print(f"Reviewing: {name}...")
@@ -129,14 +153,13 @@ def process_reviews(regenerate_weak: bool = True) -> None:
             print(f"  ❌ FAIL ({score}/10) — {issues}")
             if regenerate_weak and review.get("suggestion"):
                 print(f"  Suggestion: {review['suggestion']}")
-                # Mark for regeneration — orchestrator can re-run generator
-                df.at[index, "status"] = "needs_revision"
-            else:
-                df.at[index, "status"] = "needs_revision"
+            df.at[index, "status"] = "needs_revision"
             failed += 1
 
     save_leads(df)
-    print(f"\nReview complete: {passed} passed, {failed} need revision, {skipped} skipped.")
+    print(
+        f"\nReview complete: {passed} passed, {failed} need revision, {skipped} skipped."
+    )
 
 
 if __name__ == "__main__":

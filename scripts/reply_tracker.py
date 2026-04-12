@@ -9,6 +9,7 @@ Methods tried in order:
   2. WAHA API          (WhatsApp inbox)
   3. himalaya          (IMAP fallback)
 """
+
 import json
 import os
 import subprocess
@@ -17,27 +18,40 @@ from datetime import datetime, timezone
 
 try:
     import requests as _req
+
     _HTTP_OK = True
 except ImportError:
     _HTTP_OK = False
 
 import pandas as pd
 
-from config import GMAIL_ACCOUNT, GMAIL_KEYRING_PASSWORD, WAHA_URL, WAHA_API_KEY, WAHA_SESSION
+from config import (
+    GMAIL_ACCOUNT,
+    GMAIL_KEYRING_PASSWORD,
+    WAHA_URL,
+    WAHA_API_KEY,
+    WAHA_SESSION,
+)
 from leads import load_leads, save_leads
-from utils import parse_display_name
+from utils import parse_display_name, is_empty, normalize_phone
 
 _WAHA_HEADERS = {"X-Api-Key": WAHA_API_KEY}
 
 
 def _gog_search(query: str) -> list[dict]:
     """Search Gmail via gog CLI, returns list of thread dicts."""
-    env = {**os.environ, "GOG_KEYRING_PASSWORD": GMAIL_KEYRING_PASSWORD, "GOG_ACCOUNT": GMAIL_ACCOUNT}
+    env = {
+        **os.environ,
+        "GOG_KEYRING_PASSWORD": GMAIL_KEYRING_PASSWORD,
+        "GOG_ACCOUNT": GMAIL_ACCOUNT,
+    }
     cmd = ["gog", "gmail", "search", "-j"]
     if query:
         cmd.append(query)
     try:
-        result = subprocess.run(cmd, capture_output=True, text=True, timeout=30, env=env)
+        result = subprocess.run(
+            cmd, capture_output=True, text=True, timeout=30, env=env
+        )
         if result.returncode == 0 and result.stdout.strip():
             data = json.loads(result.stdout)
             # gog returns {"threads": [...]} or a list directly
@@ -73,9 +87,9 @@ def check_replies() -> None:
 
     # Get all leads that were contacted and have email addresses
     contacted = df[
-        df["status"].isin(["contacted", "followed_up"]) &
-        df["email"].notna() &
-        ~df["email"].isin(["nan", "none", ""])
+        df["status"].isin(["contacted", "followed_up"])
+        & df["email"].notna()
+        & ~df["email"].apply(is_empty)
     ]
 
     if contacted.empty:
@@ -121,11 +135,9 @@ def check_replies() -> None:
 
 
 def _phone_digits(phone: str) -> str:
-    import re
-    digits = re.sub(r'\D', '', str(phone))
-    if digits.startswith("0"):
-        digits = "62" + digits[1:]
-    return digits
+    """Return raw digits (no '+') for a phone number, normalized to 62xxx."""
+    p = normalize_phone(phone)
+    return p.lstrip("+") if p else ""
 
 
 def _check_replies_waha(df: pd.DataFrame, contacted: pd.DataFrame) -> None:
@@ -154,8 +166,10 @@ def _check_replies_waha(df: pd.DataFrame, contacted: pd.DataFrame) -> None:
                 wa_senders.add(_phone_digits(chat_id))
 
         for index, row in contacted.iterrows():
-            phone = str(row.get("internationalPhoneNumber") or row.get("phone") or "").strip()
-            if not phone or phone.lower() in ("nan", "none", ""):
+            phone = str(
+                row.get("internationalPhoneNumber") or row.get("phone") or ""
+            ).strip()
+            if not phone or is_empty(phone):
                 continue
             digits = _phone_digits(phone)
             if digits in wa_senders:
@@ -173,7 +187,9 @@ def _check_replies_himalaya(df: pd.DataFrame, contacted: pd.DataFrame) -> None:
     try:
         result = subprocess.run(
             ["himalaya", "envelope", "list", "--output", "json"],
-            capture_output=True, text=True, timeout=30,
+            capture_output=True,
+            text=True,
+            timeout=30,
         )
         if result.returncode != 0 or not result.stdout.strip():
             print("Himalaya fallback also failed.", file=sys.stderr)

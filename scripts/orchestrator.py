@@ -23,32 +23,37 @@ Modes:
   enrich-only   python3 orchestrator.py --enrich-only
   sync-only     python3 orchestrator.py --sync-only
 """
+
 import subprocess
 import sys
 from datetime import datetime
 
+from config import _SCRIPTS_DIR
 
-def run_step(script: str, label: str, args: list[str] = []) -> bool:
-    print(f"\n{'='*60}")
+
+def run_step(script: str, label: str, args: list[str] | None = None) -> bool:
+    if args is None:
+        args = []
+    print(f"\n{'=' * 60}")
     print(f"[{datetime.now().strftime('%H:%M:%S')}] {label}")
-    print(f"{'='*60}")
+    print(f"{'=' * 60}")
     result = subprocess.run(
-        ["python3", f"1ai-engage/scripts/{script}"] + args,
+        ["python3", str(_SCRIPTS_DIR / script)] + args,
         capture_output=False,
     )
     if result.returncode != 0:
-        print(f"⚠️  {script} exited with code {result.returncode}. Continuing pipeline...")
+        print(
+            f"⚠️  {script} exited with code {result.returncode}. Continuing pipeline..."
+        )
     return result.returncode == 0
 
 
 def _brain_sync() -> None:
     """Store all new outcomes in the hub brain for future proposal intelligence."""
-    print(f"\n{'='*60}")
+    print(f"\n{'=' * 60}")
     print(f"[{datetime.now().strftime('%H:%M:%S')}] Syncing outcomes to hub brain")
-    print(f"{'='*60}")
+    print(f"{'=' * 60}")
     try:
-        import sys, os
-        sys.path.insert(0, "1ai-engage/scripts")
         from leads import load_leads
         import brain_client as brain
 
@@ -68,9 +73,9 @@ def _brain_sync() -> None:
 
 
 def main() -> None:
-    args    = sys.argv[1:]
-    mode    = "full"
-    query   = None
+    args = sys.argv[1:]
+    mode = "full"
+    query = None
 
     if "--dry-run" in args:
         mode = "dry_run"
@@ -98,25 +103,27 @@ def main() -> None:
     # ── Followup only ──────────────────────────────────────────────────────────
     if mode == "followup":
         run_step("reply_tracker.py", "Checking for replies (Gmail + WAHA)")
-        run_step("converter.py",     "Converting replies → meeting invites")
-        run_step("followup.py",      "Sending follow-ups to non-responders")
-        run_step("sheets_sync.py",   "Syncing funnel status to Google Sheet")
+        run_step("converter.py", "Converting replies → meeting invites")
+        run_step("followup.py", "Sending follow-ups to non-responders")
+        run_step("sheets_sync.py", "Syncing funnel status to Google Sheet")
         _brain_sync()
         print("\n✅ Follow-up cycle complete.")
         return
 
     # ── Enrich only ────────────────────────────────────────────────────────────
     if mode == "enrich":
-        run_step("enricher.py",  "Enriching contact info")
-        run_step("researcher.py","Researching prospect pain points")
-        run_step("sheets_sync.py","Syncing funnel status to Google Sheet")
+        run_step("enricher.py", "Enriching contact info")
+        run_step("researcher.py", "Researching prospect pain points")
+        run_step("sheets_sync.py", "Syncing funnel status to Google Sheet")
         print("\n✅ Enrichment complete.")
         return
 
     # ── Full / dry-run pipeline ────────────────────────────────────────────────
     if not query:
         print("Usage: python3 1ai-engage/scripts/orchestrator.py <query> [--dry-run]")
-        print("  e.g. python3 1ai-engage/scripts/orchestrator.py 'Digital Agency in Jakarta'")
+        print(
+            "  e.g. python3 1ai-engage/scripts/orchestrator.py 'Digital Agency in Jakarta'"
+        )
         print("  e.g. python3 1ai-engage/scripts/orchestrator.py --followup-only")
         print("  e.g. python3 1ai-engage/scripts/orchestrator.py --sync-only")
         return
@@ -125,14 +132,17 @@ def main() -> None:
     location = location_part.strip() or "Jakarta, Indonesia"
     industry = industry.strip() or query
 
-    dry = (mode == "dry_run")
+    dry = mode == "dry_run"
     print(f"\n🚀 Starting {'DRY RUN' if dry else 'FULL'} pipeline")
     print(f"   Industry: {industry}")
     print(f"   Location: {location}")
 
     # Step 0: Vibe Prospecting (decision-maker leads)
-    run_step("vibe_scraper.py", "Discovering decision-maker leads via Vibe Prospecting",
-             [industry, location, "20"])
+    run_step(
+        "vibe_scraper.py",
+        "Discovering decision-maker leads via Vibe Prospecting",
+        [industry, location, "20"],
+    )
 
     # Step 1: Google Places fallback
     run_step("scraper.py", "Scraping additional leads via Google Places", [query])
@@ -172,13 +182,15 @@ def main() -> None:
     # Step 12: Brain sync
     _brain_sync()
 
-    print(f"\n{'='*60}")
+    print(f"\n{'=' * 60}")
     print("✅ Pipeline complete.")
     print(f"   Leads:     data/leads.csv")
     print(f"   Proposals: proposals/drafts/")
-    print(f"   Sheet:     https://docs.google.com/spreadsheets/d/10tRBCuRl_T6_nmdN1ycHaSRmsK-7jGKLtbJewKAUz_I/edit")
+    print(
+        f"   Sheet:     https://docs.google.com/spreadsheets/d/10tRBCuRl_T6_nmdN1ycHaSRmsK-7jGKLtbJewKAUz_I/edit"
+    )
     print(f"   Queue:     logs/email_queue.log")
-    print(f"{'='*60}")
+    print(f"{'=' * 60}")
 
 
 if __name__ == "__main__":

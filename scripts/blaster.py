@@ -5,6 +5,7 @@ Blast proposals to enriched leads.
 - Marks each lead as contacted with a timestamp after sending.
 - Sends WhatsApp (wacli) + Email (senders.py chain: gog → himalaya → queue).
 """
+
 import os
 import sys
 from datetime import datetime, timedelta, timezone
@@ -13,15 +14,15 @@ import pandas as pd
 
 from leads import load_leads, save_leads
 from senders import send_email, send_whatsapp
-from utils import draft_path, parse_display_name
+from utils import draft_path, is_empty, parse_display_name
 
 PROPOSAL_SUBJECT = "Collaboration Proposal from BerkahKarya"
-COOLDOWN_DAYS    = 30  # don't re-contact the same lead within this window
+COOLDOWN_DAYS = 30  # don't re-contact the same lead within this window
 
 
 def _is_recently_contacted(row: pd.Series) -> bool:
     val = row.get("contacted_at")
-    if not val or str(val).lower() in ("nan", "none", ""):
+    if is_empty(val):
         return False
     try:
         contacted = datetime.fromisoformat(str(val)).replace(tzinfo=timezone.utc)
@@ -62,10 +63,12 @@ def blast() -> None:
             continue
 
         email = str(row.get("email") or "").strip()
-        phone = str(row.get("internationalPhoneNumber") or row.get("phone") or "").strip()
-        if email.lower() in ("nan", "none", ""):
+        phone = str(
+            row.get("internationalPhoneNumber") or row.get("phone") or ""
+        ).strip()
+        if is_empty(email):
             email = ""
-        if phone.lower() in ("nan", "none", ""):
+        if is_empty(phone):
             phone = ""
 
         path = draft_path(index, name)
@@ -77,23 +80,22 @@ def blast() -> None:
         with open(path) as f:
             content = f.read()
 
-        parts   = content.split("---WHATSAPP---")
+        parts = content.split("---WHATSAPP---")
         proposal = parts[0].replace("---PROPOSAL---", "").strip()
         wa_draft = parts[1].strip() if len(parts) > 1 else proposal
 
         print(f"\nProcessing: {name}")
-        wa_sent    = False
+        wa_sent = False
         email_sent = False
 
         if phone:
-            send_whatsapp(phone, wa_draft)
-            wa_sent = True
+            wa_sent = send_whatsapp(phone, wa_draft)
 
         if email:
             email_sent = send_email(email, PROPOSAL_SUBJECT, proposal)
 
         if wa_sent or email_sent:
-            df.at[index, "status"]       = "contacted"
+            df.at[index, "status"] = "contacted"
             df.at[index, "contacted_at"] = datetime.now(timezone.utc).isoformat()
             sent += 1
 

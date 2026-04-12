@@ -5,14 +5,14 @@ from pathlib import Path
 # Base paths (absolute, relative to this file's location)
 # ---------------------------------------------------------------------------
 _SCRIPTS_DIR = Path(__file__).parent
-_ROOT        = _SCRIPTS_DIR.parent          # 1ai-engage/
-_HUB_DIR     = Path("/home/openclaw/projects/berkahkarya-hub")
+_ROOT = _SCRIPTS_DIR.parent  # 1ai-engage/
+_HUB_DIR = Path("/home/openclaw/projects/berkahkarya-hub")
 
-DATA_DIR      = _ROOT / "data"
-RESEARCH_DIR  = DATA_DIR / "research"
+DATA_DIR = _ROOT / "data"
+RESEARCH_DIR = DATA_DIR / "research"
 PROPOSALS_DIR = _ROOT / "proposals" / "drafts"
-LOGS_DIR      = _ROOT / "logs"
-LEADS_FILE    = DATA_DIR / "leads.csv"
+LOGS_DIR = _ROOT / "logs"
+LEADS_FILE = DATA_DIR / "leads.csv"
 
 
 def _load_dotenv() -> None:
@@ -37,66 +37,90 @@ GOOGLE_API_KEY: str = os.getenv("GOOGLE_API_KEY", "")
 # Brevo (primary outbound — trusted IP, 300 emails/day free)
 # ---------------------------------------------------------------------------
 BREVO_API_KEY = os.getenv("BREVO_API_KEY", "")
-SMTP_FROM     = os.getenv("SMTP_FROM", "BerkahKarya <marketing@berkahkarya.org>")
+SMTP_FROM = os.getenv("SMTP_FROM", "BerkahKarya <marketing@berkahkarya.org>")
 
 # ---------------------------------------------------------------------------
 # Stalwart SMTP (fallback outbound — marketing@berkahkarya.org)
 # ---------------------------------------------------------------------------
-SMTP_HOST     = os.getenv("SMTP_HOST", "mail.berkahkarya.org")
-SMTP_PORT     = int(os.getenv("SMTP_PORT", "587"))
-SMTP_USER     = os.getenv("SMTP_USER", "marketing")
-SMTP_PASSWORD = os.getenv("SMTP_PASSWORD", "BerkahKarya2026!")
+SMTP_HOST = os.getenv("SMTP_HOST", "mail.berkahkarya.org")
+SMTP_PORT = int(os.getenv("SMTP_PORT", "587"))
+SMTP_USER = os.getenv("SMTP_USER", "marketing")
+SMTP_PASSWORD = os.getenv("SMTP_PASSWORD", "")
 
 # ---------------------------------------------------------------------------
 # Gmail / gog (fallback)
 # ---------------------------------------------------------------------------
-GMAIL_ACCOUNT          = "moliangellina@gmail.com"
-GMAIL_KEYRING_PASSWORD = "openclaw"
-SHEET_ID               = "10tRBCuRl_T6_nmdN1ycHaSRmsK-7jGKLtbJewKAUz_I"
+GMAIL_ACCOUNT = os.getenv("GMAIL_ACCOUNT", "moliangellina@gmail.com")
+GMAIL_KEYRING_PASSWORD = os.getenv("GMAIL_KEYRING_PASSWORD", "openclaw")
+SHEET_ID = os.getenv("SHEET_ID", "10tRBCuRl_T6_nmdN1ycHaSRmsK-7jGKLtbJewKAUz_I")
 
 # ---------------------------------------------------------------------------
 # BerkahKarya Hub (FastAPI, port 9099)
 # ---------------------------------------------------------------------------
-HUB_URL     = os.getenv("HUB_URL", "http://localhost:9099")
-HUB_API_KEY = os.getenv("HUB_HUB_API_KEY", "")   # empty = dev mode (no auth)
+HUB_URL = os.getenv("HUB_URL", "http://localhost:9099")
+HUB_API_KEY = os.getenv("HUB_HUB_API_KEY", "")  # empty = dev mode (no auth)
 
 # ---------------------------------------------------------------------------
 # WAHA (WhatsApp HTTP API)
 # ---------------------------------------------------------------------------
-WAHA_URL     = os.getenv("WAHA_URL", "http://localhost:3333")
-WAHA_API_KEY = os.getenv("WAHA_API_KEY", "666")
+WAHA_URL = os.getenv("WAHA_URL", "http://localhost:3333")
+WAHA_API_KEY = os.getenv("WAHA_API_KEY", "")
 WAHA_SESSION = os.getenv("WAHA_SESSION", "berkahkarya")
-WAHA_OWN_NUMBER = "6282247006969"   # BerkahKarya WA number
+WAHA_OWN_NUMBER = os.getenv("WAHA_OWN_NUMBER", "6282247006969")
 
 # ---------------------------------------------------------------------------
 # n8n workflows (optional — leave N8N_MEETING_WF empty to skip)
 # ---------------------------------------------------------------------------
-N8N_BASE        = "https://n8n.aitradepulse.com/webhook"
-N8N_MEETING_WF  = os.getenv("N8N_MEETING_WF", "")
+N8N_BASE = "https://n8n.aitradepulse.com/webhook"
+N8N_MEETING_WF = os.getenv("N8N_MEETING_WF", "")
 
 # ---------------------------------------------------------------------------
 # Telegram (team alerts)
 # ---------------------------------------------------------------------------
-TELEGRAM_BOT_TOKEN = os.getenv("TELEGRAM_BOT_TOKEN", "8581574594:AAGzrA9DGjzJx3Ak2D6P3NhoQyXyskpMF2Q")
-TELEGRAM_CHAT_ID   = os.getenv("TELEGRAM_CHAT_ID", "5220170786")
+TELEGRAM_BOT_TOKEN = os.getenv("TELEGRAM_BOT_TOKEN", "")
+TELEGRAM_CHAT_ID = os.getenv("TELEGRAM_CHAT_ID", "")
 
 # ---------------------------------------------------------------------------
 # PaperClip (AI Company OS)
 # ---------------------------------------------------------------------------
-PAPERCLIP_URL        = "http://localhost:3100"
-PAPERCLIP_COMPANY_ID = "33e1e20e-d9f2-45f2-b907-0579ab795942"
-PAPERCLIP_AGENT_CMO  = "ea3bb337-656a-4158-804d-fa1f7fab6dbc"
+PAPERCLIP_URL = os.getenv("PAPERCLIP_URL", "http://localhost:3100")
+PAPERCLIP_COMPANY_ID = os.getenv(
+    "PAPERCLIP_COMPANY_ID", "33e1e20e-d9f2-45f2-b907-0579ab795942"
+)
+PAPERCLIP_AGENT_CMO = os.getenv(
+    "PAPERCLIP_AGENT_CMO", "ea3bb337-656a-4158-804d-fa1f7fab6dbc"
+)
 
 # ---------------------------------------------------------------------------
 # Aggregator domains to skip in scraper
 # ---------------------------------------------------------------------------
 AGGREGATOR_DOMAINS = {
-    "clutch.co", "sortlist.com", "themanifest.com", "goodfirms.co",
-    "upwork.com", "fiverr.com", "linkedin.com", "facebook.com",
-    "instagram.com", "twitter.com", "youtube.com", "wikipedia.org",
-    "blogspot.com", "medium.com", "wordpress.com",
-    "kumparan.com", "detik.com", "kompas.com", "tribunnews.com",
-    "bisnis.com", "kontan.co.id", "cnbcindonesia.com",
-    "yelp.com", "yellowpages.com", "foursquare.com",
-    "g2.com", "capterra.com", "trustpilot.com",
+    "clutch.co",
+    "sortlist.com",
+    "themanifest.com",
+    "goodfirms.co",
+    "upwork.com",
+    "fiverr.com",
+    "linkedin.com",
+    "facebook.com",
+    "instagram.com",
+    "twitter.com",
+    "youtube.com",
+    "wikipedia.org",
+    "blogspot.com",
+    "medium.com",
+    "wordpress.com",
+    "kumparan.com",
+    "detik.com",
+    "kompas.com",
+    "tribunnews.com",
+    "bisnis.com",
+    "kontan.co.id",
+    "cnbcindonesia.com",
+    "yelp.com",
+    "yellowpages.com",
+    "foursquare.com",
+    "g2.com",
+    "capterra.com",
+    "trustpilot.com",
 }

@@ -4,22 +4,47 @@ from pathlib import Path
 import pandas as pd
 
 from config import LEADS_FILE as _LEADS_PATH
+from utils import is_empty
 
 LEADS_FILE = str(_LEADS_PATH)
 
-_STR_COLS = ("email", "phone", "internationalPhoneNumber", "linkedin",
-             "status", "contacted_at", "followup_at", "replied_at",
-             "research", "review_score", "review_issues",
-             "source", "displayName", "websiteUri", "formattedAddress",
-             "primaryType", "type")
+_STR_COLS = (
+    "email",
+    "phone",
+    "internationalPhoneNumber",
+    "linkedin",
+    "status",
+    "contacted_at",
+    "followup_at",
+    "replied_at",
+    "research",
+    "review_score",
+    "review_issues",
+    "source",
+    "displayName",
+    "websiteUri",
+    "formattedAddress",
+    "primaryType",
+    "type",
+)
 
 # Full funnel stages (in order):
 #   new → enriched → draft_ready → needs_revision → reviewed →
 #   contacted → followed_up → replied → meeting_booked → won / lost / cold / unsubscribed
 FUNNEL_STAGES = (
-    "new", "enriched", "draft_ready", "needs_revision", "reviewed",
-    "contacted", "followed_up", "replied", "meeting_booked",
-    "won", "lost", "cold", "unsubscribed",
+    "new",
+    "enriched",
+    "draft_ready",
+    "needs_revision",
+    "reviewed",
+    "contacted",
+    "followed_up",
+    "replied",
+    "meeting_booked",
+    "won",
+    "lost",
+    "cold",
+    "unsubscribed",
 )
 
 
@@ -30,12 +55,12 @@ def load_leads(path: str = LEADS_FILE) -> pd.DataFrame | None:
     df = pd.read_csv(path, dtype={c: str for c in _STR_COLS})
     # Ensure all funnel-tracking columns always exist
     defaults = {
-        "status":        "new",
-        "contacted_at":  None,
-        "followup_at":   None,
-        "replied_at":    None,
-        "research":      None,
-        "review_score":  None,
+        "status": "new",
+        "contacted_at": None,
+        "followup_at": None,
+        "replied_at": None,
+        "research": None,
+        "review_score": None,
         "review_issues": None,
     }
     for col, default in defaults.items():
@@ -66,7 +91,7 @@ def funnel_summary(path: str = LEADS_FILE) -> None:
             print(f"{stage:<20} {n:>6}  {bar}")
     total = len(df)
     print(f"\n  Total leads: {total}")
-    has_email = (df["email"].notna() & ~df["email"].isin(["nan", "none", ""])).sum()
-    has_phone = (df["internationalPhoneNumber"].notna() & ~df["internationalPhoneNumber"].isin(["nan", "none", ""])).sum()
+    has_email = (~df["email"].apply(is_empty)).sum()
+    has_phone = (~df["internationalPhoneNumber"].apply(is_empty)).sum()
     print(f"  With email:  {has_email}")
     print(f"  With phone:  {has_phone}")

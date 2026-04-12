@@ -8,28 +8,39 @@ When a lead has status=replied:
 
 Run after reply_tracker.py in the pipeline.
 """
+
 import sys
 from datetime import datetime, timezone
 
 try:
     import requests as _req
+
     _HTTP_OK = True
 except ImportError:
     _HTTP_OK = False
 
 from config import (
-    HUB_URL, HUB_API_KEY,
-    N8N_BASE, N8N_MEETING_WF,
-    PAPERCLIP_URL, PAPERCLIP_COMPANY_ID, PAPERCLIP_AGENT_CMO,
-    GMAIL_ACCOUNT, GMAIL_KEYRING_PASSWORD,
-    TELEGRAM_BOT_TOKEN, TELEGRAM_CHAT_ID,
-    WAHA_URL, WAHA_API_KEY, WAHA_SESSION, WAHA_OWN_NUMBER,
+    HUB_URL,
+    HUB_API_KEY,
+    N8N_BASE,
+    N8N_MEETING_WF,
+    PAPERCLIP_URL,
+    PAPERCLIP_COMPANY_ID,
+    PAPERCLIP_AGENT_CMO,
+    GMAIL_ACCOUNT,
+    GMAIL_KEYRING_PASSWORD,
+    TELEGRAM_BOT_TOKEN,
+    TELEGRAM_CHAT_ID,
+    WAHA_URL,
+    WAHA_API_KEY,
+    WAHA_SESSION,
+    WAHA_OWN_NUMBER,
 )
 from leads import load_leads, save_leads
 from senders import send_email
-from utils import parse_display_name
+from utils import parse_display_name, is_empty
 
-CALENDLY_LINK = "https://calendly.com/berkahkarya/15min"   # update with real link
+CALENDLY_LINK = "https://calendly.com/berkahkarya/15min"  # update with real link
 MEETING_SUBJECT = "Let's Connect — BerkahKarya x {name}"
 
 _HEADERS = {"Content-Type": "application/json"}
@@ -45,13 +56,17 @@ def _n8n_trigger(lead_name: str, email: str, vertical: str) -> bool:
         return False
     url = f"{N8N_BASE}/{N8N_MEETING_WF}"
     try:
-        r = _req.post(url, json={
-            "lead_name": lead_name,
-            "email": email,
-            "vertical": vertical,
-            "calendly": CALENDLY_LINK,
-            "source": "1ai-engage",
-        }, timeout=10)
+        r = _req.post(
+            url,
+            json={
+                "lead_name": lead_name,
+                "email": email,
+                "vertical": vertical,
+                "calendly": CALENDLY_LINK,
+                "source": "1ai-engage",
+            },
+            timeout=10,
+        )
         if r.status_code < 300:
             print(f"  [n8n] Meeting workflow triggered for {lead_name}")
             return True
@@ -65,7 +80,6 @@ def _notify_team(lead_name: str, email: str, vertical: str, phone: str) -> None:
     """Alert the BerkahKarya team via Telegram + WhatsApp when a lead replies."""
     if not _HTTP_OK:
         return
-    from datetime import datetime
     now = datetime.now().strftime("%d %b %Y %H:%M WIB")
     tg_msg = (
         f"🔥 *HOT LEAD — 1ai-engage*\n\n"
@@ -86,13 +100,19 @@ def _notify_team(lead_name: str, email: str, vertical: str, phone: str) -> None:
     try:
         r = _req.post(
             f"https://api.telegram.org/bot{TELEGRAM_BOT_TOKEN}/sendMessage",
-            json={"chat_id": TELEGRAM_CHAT_ID, "text": tg_msg, "parse_mode": "Markdown"},
+            json={
+                "chat_id": TELEGRAM_CHAT_ID,
+                "text": tg_msg,
+                "parse_mode": "Markdown",
+            },
             timeout=10,
         )
         if r.status_code < 300:
             print(f"  [telegram] Team notified")
         else:
-            print(f"  [telegram] Error {r.status_code}: {r.text[:100]}", file=sys.stderr)
+            print(
+                f"  [telegram] Error {r.status_code}: {r.text[:100]}", file=sys.stderr
+            )
     except Exception as e:
         print(f"  [telegram] Failed: {e}", file=sys.stderr)
 
@@ -102,7 +122,11 @@ def _notify_team(lead_name: str, email: str, vertical: str, phone: str) -> None:
         try:
             r = _req.post(
                 f"{WAHA_URL}/api/sendText",
-                json={"chatId": f"{clean}@c.us", "text": wa_msg, "session": WAHA_SESSION},
+                json={
+                    "chatId": f"{clean}@c.us",
+                    "text": wa_msg,
+                    "session": WAHA_SESSION,
+                },
                 headers={"X-Api-Key": WAHA_API_KEY, "Content-Type": "application/json"},
                 timeout=10,
             )
@@ -112,13 +136,15 @@ def _notify_team(lead_name: str, email: str, vertical: str, phone: str) -> None:
             print(f"  [whatsapp] Team alert failed: {e}", file=sys.stderr)
 
 
-def _paperclip_create_issue(lead_name: str, email: str, vertical: str, phone: str) -> bool:
+def _paperclip_create_issue(
+    lead_name: str, email: str, vertical: str, phone: str
+) -> bool:
     """Create a PaperClip issue so the CMO agent can track this lead."""
     if not _HTTP_OK:
         return False
     url = f"{PAPERCLIP_URL}/api/companies/{PAPERCLIP_COMPANY_ID}/issues"
     payload = {
-        "title":       f"Hot Lead: {lead_name} replied to outreach",
+        "title": f"Hot Lead: {lead_name} replied to outreach",
         "description": (
             f"**Lead:** {lead_name}\n"
             f"**Vertical:** {vertical}\n"
@@ -129,9 +155,9 @@ def _paperclip_create_issue(lead_name: str, email: str, vertical: str, phone: st
             f"**Source:** 1ai-engage pipeline\n"
             f"**Date:** {datetime.now(timezone.utc).strftime('%Y-%m-%d %H:%M UTC')}"
         ),
-        "priority":    "high",
+        "priority": "high",
         "assignee_id": PAPERCLIP_AGENT_CMO,
-        "labels":      ["hot-lead", "outreach", "discovery-call"],
+        "labels": ["hot-lead", "outreach", "discovery-call"],
     }
     try:
         r = _req.post(url, json=payload, headers=_PAPER_HEADERS, timeout=10)
@@ -183,12 +209,14 @@ def process_replied_leads() -> None:
     converted = 0
 
     for index, row in replied.iterrows():
-        name     = parse_display_name(row.get("displayName"))
-        email    = str(row.get("email") or "").strip()
-        phone    = str(row.get("internationalPhoneNumber") or row.get("phone") or "").strip()
+        name = parse_display_name(row.get("displayName"))
+        email = str(row.get("email") or "").strip()
+        phone = str(
+            row.get("internationalPhoneNumber") or row.get("phone") or ""
+        ).strip()
         vertical = str(row.get("type") or row.get("primaryType") or "Business")
 
-        if not email or email.lower() in ("nan", "none", ""):
+        if is_empty(email):
             print(f"  [skip] {name} — no email for conversion.")
             continue
 

@@ -9,15 +9,16 @@ Sends a short follow-up email to leads that:
 After sending, marks status as 'followed_up' and sets followup_at timestamp.
 A second follow-up at SECOND_FOLLOWUP_DAYS marks status 'cold' and stops.
 """
+
 import subprocess
 import sys
 from datetime import datetime, timedelta, timezone
 
 from leads import load_leads, save_leads
 from senders import send_email
-from utils import parse_display_name
+from utils import parse_display_name, is_empty
 
-FOLLOWUP_DAYS        = 7   # days after first contact before follow-up
+FOLLOWUP_DAYS = 7  # days after first contact before follow-up
 SECOND_FOLLOWUP_DAYS = 14  # days after first contact before marking cold
 PROPOSAL_SUBJECT_PREFIX = "Re: Collaboration Proposal from BerkahKarya"
 
@@ -47,7 +48,10 @@ def _generate_followup(name: str, business_type: str, is_second: bool = False) -
     try:
         result = subprocess.run(
             ["claude", "-p", "--model", "haiku"],
-            input=prompt, capture_output=True, text=True, timeout=30,
+            input=prompt,
+            capture_output=True,
+            text=True,
+            timeout=30,
         )
         if result.returncode == 0 and result.stdout.strip():
             return result.stdout.strip()
@@ -98,9 +102,9 @@ def send_followups() -> None:
 
         if status not in ("contacted", "followed_up"):
             continue
-        if not email or email.lower() in ("nan", "none", ""):
+        if is_empty(email):
             continue
-        if not contacted_at or contacted_at.lower() in ("nan", "none", ""):
+        if is_empty(contacted_at):
             continue
 
         name = parse_display_name(row.get("displayName"))
@@ -109,10 +113,16 @@ def send_followups() -> None:
 
         # Mark cold after second follow-up window
         original_contacted_at = str(row.get("contacted_at") or "")
-        total_days = _days_since(original_contacted_at) if original_contacted_at else days_since_contact
+        total_days = (
+            _days_since(original_contacted_at)
+            if original_contacted_at
+            else days_since_contact
+        )
 
         if total_days >= SECOND_FOLLOWUP_DAYS and status == "followed_up":
-            print(f"[cold] {name} — no reply after {total_days:.0f} days. Marking cold.")
+            print(
+                f"[cold] {name} — no reply after {total_days:.0f} days. Marking cold."
+            )
             df.at[index, "status"] = "cold"
             cold_marked += 1
             continue
@@ -121,11 +131,13 @@ def send_followups() -> None:
             skipped += 1
             continue
 
-        is_second = (status == "followed_up")
+        is_second = status == "followed_up"
         subject_prefix = "Final Check-in" if is_second else "Following Up"
         subject = f"{subject_prefix}: Collaboration Proposal from BerkahKarya"
 
-        print(f"\n[followup{'#2' if is_second else '#1'}] {name} ({days_since_contact:.0f} days since last contact)")
+        print(
+            f"\n[followup{'#2' if is_second else '#1'}] {name} ({days_since_contact:.0f} days since last contact)"
+        )
         body = _generate_followup(name, business_type, is_second)
 
         success = send_email(email, subject, body)

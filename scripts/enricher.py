@@ -7,6 +7,7 @@ Priority order per lead:
   3. Mailto: link scan    — free, most reliable email signal on a page
   4. Common email patterns — free, guess info@/contact@/hello@ and verify
 """
+
 import json
 import re
 import subprocess
@@ -14,26 +15,53 @@ import sys
 import time
 from urllib.parse import urljoin, urlparse
 
-import pandas as pd
 import requests
 from bs4 import BeautifulSoup
 
 from leads import load_leads, save_leads
-from utils import parse_display_name
+from utils import parse_display_name, is_empty, normalize_phone
 
-_HEADERS  = {"User-Agent": "Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 Chrome/120"}
-_PHONE_RE = re.compile(r'(?:\+62|(?<!\d)62|08\d)\d{7,11}')
-_EMAIL_RE = re.compile(r'[a-zA-Z0-9._%+\-]+@[a-zA-Z0-9.\-]+\.[a-zA-Z]{2,}')
+_HEADERS = {
+    "User-Agent": "Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 Chrome/120"
+}
+_PHONE_RE = re.compile(r"(?:\+62|(?<!\d)62|08\d)\d{7,11}")
+_EMAIL_RE = re.compile(r"[a-zA-Z0-9._%+\-]+@[a-zA-Z0-9.\-]+\.[a-zA-Z]{2,}")
 _EMAIL_NOISE = {
-    "example", "domain", "user@", "test@", "email@", "name@", "your@",
-    "noreply@", "no-reply@", "sentry", "wixpress", "squarespace",
-    "wordpress", "schema.org", "w3.org", "apple.com", "google.com",
+    "example",
+    "domain",
+    "user@",
+    "test@",
+    "email@",
+    "name@",
+    "your@",
+    "noreply@",
+    "no-reply@",
+    "sentry",
+    "wixpress",
+    "squarespace",
+    "wordpress",
+    "schema.org",
+    "w3.org",
+    "apple.com",
+    "google.com",
 }
 
 # Image/file extensions that should never appear in a valid email
 _EMAIL_INVALID_EXTENSIONS = {
-    ".webp", ".png", ".jpg", ".jpeg", ".gif", ".svg", ".ico",
-    ".pdf", ".doc", ".docx", ".xls", ".xlsx", ".zip", ".mp4",
+    ".webp",
+    ".png",
+    ".jpg",
+    ".jpeg",
+    ".gif",
+    ".svg",
+    ".ico",
+    ".pdf",
+    ".doc",
+    ".docx",
+    ".xls",
+    ".xlsx",
+    ".zip",
+    ".mp4",
 }
 
 
@@ -44,7 +72,10 @@ def _is_valid_email(email: str) -> bool:
     local, domain = email.rsplit("@", 1)
     # Reject if local part looks like a file (contains dot + known image ext)
     lower = email.lower()
-    if any(lower.endswith(ext) or (ext in lower and lower.index(ext) < lower.index("@")) for ext in _EMAIL_INVALID_EXTENSIONS):
+    if any(
+        lower.endswith(ext) or (ext in lower and lower.index(ext) < lower.index("@"))
+        for ext in _EMAIL_INVALID_EXTENSIONS
+    ):
         return False
     # Domain must have a TLD
     if "." not in domain or len(domain) < 4:
@@ -54,26 +85,51 @@ def _is_valid_email(email: str) -> bool:
         return False
     return True
 
+
 _CONTACT_PATHS = [
-    "/contact", "/contact-us", "/kontak", "/hubungi-kami", "/hubungi",
-    "/about", "/tentang-kami", "/about-us", "/reach-us", "/get-in-touch",
+    "/contact",
+    "/contact-us",
+    "/kontak",
+    "/hubungi-kami",
+    "/hubungi",
+    "/about",
+    "/tentang-kami",
+    "/about-us",
+    "/reach-us",
+    "/get-in-touch",
 ]
 
-_COMMON_EMAIL_PREFIXES = ["info", "contact", "hello", "admin", "marketing", "sales", "cs", "halo"]
+_COMMON_EMAIL_PREFIXES = [
+    "info",
+    "contact",
+    "hello",
+    "admin",
+    "marketing",
+    "sales",
+    "cs",
+    "halo",
+]
 
 
 # ---------------------------------------------------------------------------
 # Strategy 1 – AgentCash Minerva (paid)
 # ---------------------------------------------------------------------------
 
+
 def _via_agentcash(website: str, name: str) -> dict:
     result = subprocess.run(
         [
-            "npx", "agentcash@latest", "fetch",
+            "npx",
+            "agentcash@latest",
+            "fetch",
             "https://stableenrich.dev/api/minerva/enrich",
-            "-m", "POST", "-b", json.dumps({"domain": website, "name": name}),
+            "-m",
+            "POST",
+            "-b",
+            json.dumps({"domain": website, "name": name}),
         ],
-        capture_output=True, text=True,
+        capture_output=True,
+        text=True,
     )
     if result.returncode != 0:
         # Check if it's a balance issue — no point retrying
@@ -89,8 +145,8 @@ def _via_agentcash(website: str, name: str) -> dict:
     if not person.get("email") and not person.get("phone"):
         raise RuntimeError("no contact info returned")
     return {
-        "email":    person.get("email"),
-        "phone":    person.get("phone"),
+        "email": person.get("email"),
+        "phone": person.get("phone"),
         "linkedin": person.get("linkedin_url"),
     }
 
@@ -98,6 +154,7 @@ def _via_agentcash(website: str, name: str) -> dict:
 # ---------------------------------------------------------------------------
 # Strategy 2 & 3 – Website scraping
 # ---------------------------------------------------------------------------
+
 
 def _fetch_page(url: str) -> str | None:
     try:
@@ -122,7 +179,8 @@ def _extract_mailto_emails(html: str) -> list[str]:
 def _extract_text_emails(html: str) -> list[str]:
     """Extract emails via regex from page text."""
     return [
-        e for e in _EMAIL_RE.findall(html)
+        e
+        for e in _EMAIL_RE.findall(html)
         if _is_valid_email(e) and not any(n in e.lower() for n in _EMAIL_NOISE)
     ]
 
@@ -133,23 +191,12 @@ def _extract_phones(html: str) -> list[str]:
     phones = []
     for a in soup.select("a[href^='tel:']"):
         raw = a["href"].replace("tel:", "").strip()
-        phones.append(_normalize_phone(raw))
+        phones.append(normalize_phone(raw))
 
     if not phones:
         for m in _PHONE_RE.findall(html):
-            phones.append(_normalize_phone(m))
+            phones.append(normalize_phone(m))
     return [p for p in phones if p]
-
-
-def _normalize_phone(raw: str) -> str | None:
-    digits = re.sub(r'\D', '', raw)
-    if not digits:
-        return None
-    if digits.startswith("08"):
-        digits = "62" + digits[1:]
-    elif not digits.startswith("62"):
-        digits = "62" + digits
-    return "+" + digits
 
 
 def _scrape_website(base_url: str) -> dict:
@@ -177,8 +224,8 @@ def _scrape_website(base_url: str) -> dict:
         raise RuntimeError("no contact info found on website or contact pages")
 
     return {
-        "email":    all_emails[0] if all_emails else None,
-        "phone":    all_phones[0] if all_phones else None,
+        "email": all_emails[0] if all_emails else None,
+        "phone": all_phones[0] if all_phones else None,
         "linkedin": None,
     }
 
@@ -187,10 +234,13 @@ def _scrape_website(base_url: str) -> dict:
 # Strategy 4 – Common email pattern guessing
 # ---------------------------------------------------------------------------
 
+
 def _guess_email(website: str, person_name: str = "") -> dict:
     """Try name-based then common prefix patterns at the business domain."""
     try:
-        domain = urlparse(website if website.startswith("http") else "https://" + website).netloc
+        domain = urlparse(
+            website if website.startswith("http") else "https://" + website
+        ).netloc
         domain = domain.lstrip("www.")
     except Exception:
         raise RuntimeError("invalid website URL")
@@ -226,14 +276,15 @@ def _guess_email(website: str, person_name: str = "") -> dict:
 # Main enrichment pipeline
 # ---------------------------------------------------------------------------
 
+
 def enrich_lead(website: str, name: str) -> dict | None:
-    if not website or str(website).lower() in ("nan", "none", ""):
+    if is_empty(website):
         return None
 
     strategies = [
         ("AgentCash Minerva", lambda: _via_agentcash(website, name)),
-        ("Website scraping",  lambda: _scrape_website(website)),
-        ("Email pattern",     lambda: _guess_email(website, name)),
+        ("Website scraping", lambda: _scrape_website(website)),
+        ("Email pattern", lambda: _guess_email(website, name)),
     ]
 
     for label, fn in strategies:
@@ -260,8 +311,8 @@ def process_leads() -> None:
 
     enriched = 0
     for index, row in df.iterrows():
-        has_email = pd.notna(row.get("email")) and str(row.get("email")).lower() not in ("nan", "none", "")
-        has_phone = pd.notna(row.get("phone")) and str(row.get("phone")).lower() not in ("nan", "none", "")
+        has_email = not is_empty(row.get("email"))
+        has_phone = not is_empty(row.get("phone"))
         if has_email and has_phone:
             continue  # already fully enriched
 
@@ -277,6 +328,8 @@ def process_leads() -> None:
             if info.get("linkedin"):
                 df.at[index, "linkedin"] = info["linkedin"]
             enriched += 1
+            if str(df.at[index, "status"] or "") in ("new", ""):
+                df.at[index, "status"] = "enriched"
         time.sleep(0.5)
 
     save_leads(df)
