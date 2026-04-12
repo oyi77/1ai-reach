@@ -33,6 +33,7 @@ from config import (
     WAHA_SESSION,
 )
 from leads import load_leads, save_leads
+from state_manager import update_lead
 from utils import parse_display_name, is_empty, normalize_phone
 
 _WAHA_HEADERS = {"X-Api-Key": WAHA_API_KEY}
@@ -111,20 +112,35 @@ def check_replies() -> None:
         save_leads(df)
         return
 
-    # Build set of sender emails from inbox
-    inbox_senders = {_extract_sender_email(m) for m in messages}
-    inbox_senders.discard("")
+    # Build map of sender emails → reply text from inbox
+    inbox_replies: dict[str, str] = {}
+    for m in messages:
+        sender = _extract_sender_email(m)
+        if sender:
+            body = m.get("body", "") or m.get("snippet", "") or m.get("text", "") or ""
+            inbox_replies[sender] = str(body).strip()[:2000]
 
     updated = 0
     for index, row in contacted.iterrows():
         lead_email = str(row.get("email") or "").strip().lower()
         if not lead_email:
             continue
-        if lead_email in inbox_senders:
+        if lead_email in inbox_replies:
             name = parse_display_name(row.get("displayName"))
+            reply_text = inbox_replies[lead_email]
             print(f"  📬 REPLY from {name} ({lead_email})")
             df.at[index, "status"] = "replied"
             df.at[index, "replied_at"] = datetime.now(timezone.utc).isoformat()
+            # Store reply text in DB
+            lead_id = str(row.get("id") or row.name or "")
+            if lead_id and reply_text:
+                try:
+                    update_lead(lead_id, reply_text=reply_text)
+                except Exception as e:
+                    print(
+                        f"  ⚠️ Failed to store reply text for {name}: {e}",
+                        file=sys.stderr,
+                    )
             updated += 1
 
     # Also check WAHA (WhatsApp) for replies by phone number
@@ -158,12 +174,19 @@ def _check_replies_waha(df: pd.DataFrame, contacted: pd.DataFrame) -> None:
 
         chats = r.json() if isinstance(r.json(), list) else r.json().get("chats", [])
 
-        # Build set of phone numbers that sent us messages
-        wa_senders: set[str] = set()
+        # Build map of phone digits → reply text from WA chats
+        wa_replies: dict[str, str] = {}
         for chat in chats:
             chat_id = str(chat.get("id", {}).get("user", "") or chat.get("id", ""))
             if chat_id:
-                wa_senders.add(_phone_digits(chat_id))
+                digits = _phone_digits(chat_id)
+                body = str(
+                    chat.get("lastMessage", {}).get("body", "")
+                    or chat.get("last_message", "")
+                    or chat.get("body", "")
+                    or ""
+                ).strip()[:2000]
+                wa_replies[digits] = body
 
         for index, row in contacted.iterrows():
             phone = str(
@@ -172,12 +195,22 @@ def _check_replies_waha(df: pd.DataFrame, contacted: pd.DataFrame) -> None:
             if not phone or is_empty(phone):
                 continue
             digits = _phone_digits(phone)
-            if digits in wa_senders:
+            if digits in wa_replies:
                 name = parse_display_name(row.get("displayName"))
                 if str(df.at[index, "status"]) != "replied":
+                    reply_text = wa_replies[digits]
                     print(f"  📱 WA REPLY from {name} ({phone}) [via WAHA]")
                     df.at[index, "status"] = "replied"
                     df.at[index, "replied_at"] = datetime.now(timezone.utc).isoformat()
+                    lead_id = str(row.get("id") or row.name or "")
+                    if lead_id and reply_text:
+                        try:
+                            update_lead(lead_id, reply_text=reply_text)
+                        except Exception as e:
+                            print(
+                                f"  ⚠️ Failed to store WA reply text for {name}: {e}",
+                                file=sys.stderr,
+                            )
     except Exception as e:
         print(f"WAHA reply check error: {e}", file=sys.stderr)
 
@@ -196,7 +229,7 @@ def _check_replies_himalaya(df: pd.DataFrame, contacted: pd.DataFrame) -> None:
             return
 
         messages = json.loads(result.stdout)
-        inbox_senders = set()
+        inbox_replies: dict[str, str] = {}
         for m in messages:
             sender = m.get("from", {})
             if isinstance(sender, dict):
@@ -206,15 +239,28 @@ def _check_replies_himalaya(df: pd.DataFrame, contacted: pd.DataFrame) -> None:
             else:
                 addr = ""
             if "@" in addr:
-                inbox_senders.add(addr)
+                body = str(
+                    m.get("body", "") or m.get("text", "") or m.get("subject", "") or ""
+                ).strip()[:2000]
+                inbox_replies[addr] = body
 
         for index, row in contacted.iterrows():
             lead_email = str(row.get("email") or "").strip().lower()
-            if lead_email in inbox_senders:
+            if lead_email in inbox_replies:
                 name = parse_display_name(row.get("displayName"))
+                reply_text = inbox_replies[lead_email]
                 print(f"  📬 REPLY from {name} ({lead_email}) [via himalaya]")
                 df.at[index, "status"] = "replied"
                 df.at[index, "replied_at"] = datetime.now(timezone.utc).isoformat()
+                lead_id = str(row.get("id") or row.name or "")
+                if lead_id and reply_text:
+                    try:
+                        update_lead(lead_id, reply_text=reply_text)
+                    except Exception as e:
+                        print(
+                            f"  ⚠️ Failed to store reply text for {name}: {e}",
+                            file=sys.stderr,
+                        )
     except Exception as e:
         print(f"Himalaya fallback error: {e}", file=sys.stderr)
 
