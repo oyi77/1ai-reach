@@ -1,3 +1,4 @@
+import json
 import os
 from pathlib import Path
 
@@ -7,6 +8,7 @@ from pathlib import Path
 _SCRIPTS_DIR = Path(__file__).parent
 _ROOT = _SCRIPTS_DIR.parent  # 1ai-engage/
 _HUB_DIR = Path("/home/openclaw/projects/berkahkarya-hub")
+_HUB_SERVICES_JSON = _HUB_DIR / "config" / "services.json"
 
 DATA_DIR = _ROOT / "data"
 RESEARCH_DIR = DATA_DIR / "research"
@@ -57,6 +59,19 @@ def _load_dotenv() -> None:
 
 _load_dotenv()
 
+
+def _load_hub_services() -> dict:
+    if not _HUB_SERVICES_JSON.exists():
+        return {}
+    try:
+        return json.loads(_HUB_SERVICES_JSON.read_text())
+    except Exception:
+        return {}
+
+
+_HUB_SERVICES = _load_hub_services()
+_WAHA_CFG = _HUB_SERVICES.get("waha", {})
+
 # ---------------------------------------------------------------------------
 # API keys
 # ---------------------------------------------------------------------------
@@ -92,10 +107,20 @@ HUB_API_KEY = os.getenv("HUB_HUB_API_KEY", "")  # empty = dev mode (no auth)
 # ---------------------------------------------------------------------------
 # WAHA (WhatsApp HTTP API)
 # ---------------------------------------------------------------------------
-WAHA_URL = os.getenv("WAHA_URL", "http://localhost:3333")
-WAHA_API_KEY = os.getenv("WAHA_API_KEY", "")
-WAHA_SESSION = os.getenv("WAHA_SESSION", "berkahkarya")
-WAHA_OWN_NUMBER = os.getenv("WAHA_OWN_NUMBER", "6282247006969")
+WAHA_URL = os.getenv(
+    "WAHA_URL", _WAHA_CFG.get("domain_url", "https://waha.aitradepulse.com")
+)
+WAHA_DIRECT_URL = os.getenv(
+    "WAHA_DIRECT_URL", _WAHA_CFG.get("base_url", "http://5.189.138.144:3000")
+)
+WAHA_API_KEY = os.getenv("WAHA_API_KEY", _WAHA_CFG.get("api_key", ""))
+WAHA_DIRECT_API_KEY = os.getenv(
+    "WAHA_DIRECT_API_KEY", _WAHA_CFG.get("api_key", WAHA_API_KEY)
+)
+WAHA_SESSION = os.getenv("WAHA_SESSION", _WAHA_CFG.get("default_session", "default"))
+WAHA_OWN_NUMBER = os.getenv(
+    "WAHA_OWN_NUMBER", _WAHA_CFG.get("wa_number", "6282247006969")
+)
 
 # ---------------------------------------------------------------------------
 # n8n workflows (optional — leave N8N_MEETING_WF empty to skip)
