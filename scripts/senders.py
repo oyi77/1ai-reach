@@ -18,7 +18,9 @@ from config import (
     GMAIL_KEYRING_PASSWORD,
     LOGS_DIR,
     WAHA_URL,
+    WAHA_DIRECT_URL,
     WAHA_API_KEY,
+    WAHA_DIRECT_API_KEY,
     WAHA_SESSION,
     SMTP_HOST,
     SMTP_PORT,
@@ -31,7 +33,51 @@ from utils import is_empty
 
 EMAIL_QUEUE_LOG = str(LOGS_DIR / "email_queue.log")
 
-_WAHA_HEADERS = {"X-Api-Key": WAHA_API_KEY, "Content-Type": "application/json"}
+
+def _waha_targets() -> list[tuple[str, str, dict[str, str]]]:
+    targets: list[tuple[str, str, dict[str, str]]] = []
+    seen: set[tuple[str, str]] = set()
+    for name, base_url, api_key in [
+        ("WAHA", WAHA_URL, WAHA_API_KEY),
+        ("WAHA_DIRECT", WAHA_DIRECT_URL, WAHA_DIRECT_API_KEY),
+    ]:
+        url = str(base_url or "").rstrip("/")
+        key = str(api_key or "")
+        if not url or (url, key) in seen:
+            continue
+        seen.add((url, key))
+        targets.append(
+            (
+                name,
+                url,
+                {"X-Api-Key": key, "Content-Type": "application/json"},
+            )
+        )
+    return targets
+
+
+def _waha_sessions(base_url: str, headers: dict[str, str]) -> list[str]:
+    sessions = [WAHA_SESSION]
+    if not _HTTP_OK:
+        return sessions
+    try:
+        r = _req.get(
+            f"{base_url}/api/sessions",
+            params={"all": "true"},
+            headers={k: v for k, v in headers.items() if k != "Content-Type"},
+            timeout=10,
+        )
+        if r.status_code == 200:
+            data = r.json()
+            if isinstance(data, list):
+                for item in data:
+                    name = str(item.get("name") or "").strip()
+                    status = str(item.get("status") or "").upper()
+                    if name and status == "WORKING" and name not in sessions:
+                        sessions.append(name)
+    except Exception:
+        pass
+    return sessions
 
 
 def _send_wa_waha(phone: str, message: str) -> bool:
@@ -42,24 +88,28 @@ def _send_wa_waha(phone: str, message: str) -> bool:
     if not clean.startswith("62"):
         clean = "62" + clean.lstrip("0")
     chat_id = f"{clean}@c.us"
-    url = f"{WAHA_URL}/api/sendText"
-    try:
-        r = _req.post(
-            url,
-            json={
-                "chatId": chat_id,
-                "text": message,
-                "session": WAHA_SESSION,
-            },
-            headers=_WAHA_HEADERS,
-            timeout=15,
-        )
-        if r.status_code < 300:
-            print(f"✅ WA sent via WAHA to {clean}")
-            return True
-        print(f"❌ WAHA error {r.status_code}: {r.text[:200]}", file=sys.stderr)
-    except Exception as e:
-        print(f"❌ WAHA failed: {e}", file=sys.stderr)
+    for target_name, base_url, headers in _waha_targets():
+        for session_name in _waha_sessions(base_url, headers):
+            try:
+                r = _req.post(
+                    f"{base_url}/api/sendText",
+                    json={
+                        "chatId": chat_id,
+                        "text": message,
+                        "session": session_name,
+                    },
+                    headers=headers,
+                    timeout=15,
+                )
+                if r.status_code < 300:
+                    print(f"✅ WA sent via {target_name} ({session_name}) to {clean}")
+                    return True
+                print(
+                    f"❌ {target_name} ({session_name}) error {r.status_code}: {r.text[:200]}",
+                    file=sys.stderr,
+                )
+            except Exception as e:
+                print(f"❌ {target_name} ({session_name}) failed: {e}", file=sys.stderr)
     return False
 
 

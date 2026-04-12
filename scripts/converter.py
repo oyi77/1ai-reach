@@ -20,19 +20,18 @@ except ImportError:
     _HTTP_OK = False
 
 from config import (
-    HUB_URL,
     HUB_API_KEY,
     N8N_BASE,
     N8N_MEETING_WF,
     PAPERCLIP_URL,
     PAPERCLIP_COMPANY_ID,
     PAPERCLIP_AGENT_CMO,
-    GMAIL_ACCOUNT,
-    GMAIL_KEYRING_PASSWORD,
     TELEGRAM_BOT_TOKEN,
     TELEGRAM_CHAT_ID,
     WAHA_URL,
+    WAHA_DIRECT_URL,
     WAHA_API_KEY,
+    WAHA_DIRECT_API_KEY,
     WAHA_SESSION,
     WAHA_OWN_NUMBER,
 )
@@ -48,6 +47,28 @@ if HUB_API_KEY:
     _HEADERS["X-Api-Key"] = HUB_API_KEY
 
 _PAPER_HEADERS = {"Content-Type": "application/json"}
+
+
+def _waha_targets() -> list[tuple[str, str, dict[str, str]]]:
+    targets: list[tuple[str, str, dict[str, str]]] = []
+    seen: set[tuple[str, str]] = set()
+    for name, base_url, api_key in [
+        ("WAHA", WAHA_URL, WAHA_API_KEY),
+        ("WAHA_DIRECT", WAHA_DIRECT_URL, WAHA_DIRECT_API_KEY),
+    ]:
+        url = str(base_url or "").rstrip("/")
+        key = str(api_key or "")
+        if not url or (url, key) in seen:
+            continue
+        seen.add((url, key))
+        targets.append(
+            (
+                name,
+                url,
+                {"X-Api-Key": key, "Content-Type": "application/json"},
+            )
+        )
+    return targets
 
 
 def _n8n_trigger(lead_name: str, email: str, vertical: str) -> bool:
@@ -108,7 +129,7 @@ def _notify_team(lead_name: str, email: str, vertical: str, phone: str) -> None:
             timeout=10,
         )
         if r.status_code < 300:
-            print(f"  [telegram] Team notified")
+            print("  [telegram] Team notified")
         else:
             print(
                 f"  [telegram] Error {r.status_code}: {r.text[:100]}", file=sys.stderr
@@ -119,21 +140,27 @@ def _notify_team(lead_name: str, email: str, vertical: str, phone: str) -> None:
     # WhatsApp to team's own number
     if WAHA_OWN_NUMBER:
         clean = "".join(filter(str.isdigit, WAHA_OWN_NUMBER))
-        try:
-            r = _req.post(
-                f"{WAHA_URL}/api/sendText",
-                json={
-                    "chatId": f"{clean}@c.us",
-                    "text": wa_msg,
-                    "session": WAHA_SESSION,
-                },
-                headers={"X-Api-Key": WAHA_API_KEY, "Content-Type": "application/json"},
-                timeout=10,
-            )
-            if r.status_code < 300:
-                print(f"  [whatsapp] Team notified via WA")
-        except Exception as e:
-            print(f"  [whatsapp] Team alert failed: {e}", file=sys.stderr)
+        sent = False
+        for target_name, base_url, headers in _waha_targets():
+            try:
+                r = _req.post(
+                    f"{base_url}/api/sendText",
+                    json={
+                        "chatId": f"{clean}@c.us",
+                        "text": wa_msg,
+                        "session": WAHA_SESSION,
+                    },
+                    headers=headers,
+                    timeout=10,
+                )
+                if r.status_code < 300:
+                    print(f"  [whatsapp] Team notified via {target_name}")
+                    sent = True
+                    break
+            except Exception as e:
+                print(f"  [whatsapp] {target_name} alert failed: {e}", file=sys.stderr)
+        if not sent:
+            print("  [whatsapp] Team alert failed", file=sys.stderr)
 
 
 def _paperclip_create_issue(

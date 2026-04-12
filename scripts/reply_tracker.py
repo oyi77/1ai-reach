@@ -29,14 +29,54 @@ from config import (
     GMAIL_ACCOUNT,
     GMAIL_KEYRING_PASSWORD,
     WAHA_URL,
+    WAHA_DIRECT_URL,
     WAHA_API_KEY,
+    WAHA_DIRECT_API_KEY,
     WAHA_SESSION,
 )
 from leads import load_leads, save_leads
 from state_manager import update_lead
 from utils import parse_display_name, is_empty, normalize_phone
 
-_WAHA_HEADERS = {"X-Api-Key": WAHA_API_KEY}
+
+def _waha_targets() -> list[tuple[str, str, dict[str, str]]]:
+    targets: list[tuple[str, str, dict[str, str]]] = []
+    seen: set[tuple[str, str]] = set()
+    for name, base_url, api_key in [
+        ("WAHA", WAHA_URL, WAHA_API_KEY),
+        ("WAHA_DIRECT", WAHA_DIRECT_URL, WAHA_DIRECT_API_KEY),
+    ]:
+        url = str(base_url or "").rstrip("/")
+        key = str(api_key or "")
+        if not url or (url, key) in seen:
+            continue
+        seen.add((url, key))
+        targets.append((name, url, {"X-Api-Key": key}))
+    return targets
+
+
+def _waha_sessions(base_url: str, headers: dict[str, str]) -> list[str]:
+    sessions = [WAHA_SESSION]
+    if not _HTTP_OK:
+        return sessions
+    try:
+        r = _req.get(
+            f"{base_url}/api/sessions",
+            params={"all": "true"},
+            headers=headers,
+            timeout=10,
+        )
+        if r.status_code == 200:
+            data = r.json()
+            if isinstance(data, list):
+                for item in data:
+                    name = str(item.get("name") or "").strip()
+                    status = str(item.get("status") or "").upper()
+                    if name and status == "WORKING" and name not in sessions:
+                        sessions.append(name)
+    except Exception:
+        pass
+    return sessions
 
 
 def _gog_search(query: str) -> list[dict]:
@@ -160,59 +200,75 @@ def _check_replies_waha(df: pd.DataFrame, contacted: pd.DataFrame) -> None:
     """Check WAHA inbox for WhatsApp replies from contacted leads."""
     if not _HTTP_OK:
         return
-    try:
-        # Get recent chats from WAHA
-        r = _req.get(
-            f"{WAHA_URL}/api/chats",
-            params={"session": WAHA_SESSION, "limit": 100},
-            headers=_WAHA_HEADERS,
-            timeout=10,
-        )
-        if r.status_code != 200:
-            print(f"WAHA chats error {r.status_code}", file=sys.stderr)
-            return
+    last_error = ""
+    for target_name, base_url, headers in _waha_targets():
+        for session_name in _waha_sessions(base_url, headers):
+            try:
+                r = _req.get(
+                    f"{base_url}/api/chats",
+                    params={"session": session_name, "limit": 100},
+                    headers=headers,
+                    timeout=10,
+                )
+                if r.status_code != 200:
+                    last_error = (
+                        f"{target_name} ({session_name}) chats error {r.status_code}"
+                    )
+                    continue
 
-        chats = r.json() if isinstance(r.json(), list) else r.json().get("chats", [])
+                chats = (
+                    r.json()
+                    if isinstance(r.json(), list)
+                    else r.json().get("chats", [])
+                )
 
-        # Build map of phone digits → reply text from WA chats
-        wa_replies: dict[str, str] = {}
-        for chat in chats:
-            chat_id = str(chat.get("id", {}).get("user", "") or chat.get("id", ""))
-            if chat_id:
-                digits = _phone_digits(chat_id)
-                body = str(
-                    chat.get("lastMessage", {}).get("body", "")
-                    or chat.get("last_message", "")
-                    or chat.get("body", "")
-                    or ""
-                ).strip()[:2000]
-                wa_replies[digits] = body
+                wa_replies: dict[str, str] = {}
+                for chat in chats:
+                    chat_id = str(
+                        chat.get("id", {}).get("user", "") or chat.get("id", "")
+                    )
+                    if chat_id:
+                        digits = _phone_digits(chat_id)
+                        body = str(
+                            chat.get("lastMessage", {}).get("body", "")
+                            or chat.get("last_message", "")
+                            or chat.get("body", "")
+                            or ""
+                        ).strip()[:2000]
+                        wa_replies[digits] = body
 
-        for index, row in contacted.iterrows():
-            phone = str(
-                row.get("internationalPhoneNumber") or row.get("phone") or ""
-            ).strip()
-            if not phone or is_empty(phone):
-                continue
-            digits = _phone_digits(phone)
-            if digits in wa_replies:
-                name = parse_display_name(row.get("displayName"))
-                if str(df.at[index, "status"]) != "replied":
-                    reply_text = wa_replies[digits]
-                    print(f"  📱 WA REPLY from {name} ({phone}) [via WAHA]")
-                    df.at[index, "status"] = "replied"
-                    df.at[index, "replied_at"] = datetime.now(timezone.utc).isoformat()
-                    lead_id = str(row.get("id") or row.name or "")
-                    if lead_id and reply_text:
-                        try:
-                            update_lead(lead_id, reply_text=reply_text)
-                        except Exception as e:
+                for index, row in contacted.iterrows():
+                    phone = str(
+                        row.get("internationalPhoneNumber") or row.get("phone") or ""
+                    ).strip()
+                    if not phone or is_empty(phone):
+                        continue
+                    digits = _phone_digits(phone)
+                    if digits in wa_replies:
+                        name = parse_display_name(row.get("displayName"))
+                        if str(df.at[index, "status"]) != "replied":
+                            reply_text = wa_replies[digits]
                             print(
-                                f"  ⚠️ Failed to store WA reply text for {name}: {e}",
-                                file=sys.stderr,
+                                f"  📱 WA REPLY from {name} ({phone}) [via {target_name}/{session_name}]"
                             )
-    except Exception as e:
-        print(f"WAHA reply check error: {e}", file=sys.stderr)
+                            df.at[index, "status"] = "replied"
+                            df.at[index, "replied_at"] = datetime.now(
+                                timezone.utc
+                            ).isoformat()
+                            lead_id = str(row.get("id") or row.name or "")
+                            if lead_id and reply_text:
+                                try:
+                                    update_lead(lead_id, reply_text=reply_text)
+                                except Exception as e:
+                                    print(
+                                        f"  ⚠️ Failed to store WA reply text for {name}: {e}",
+                                        file=sys.stderr,
+                                    )
+                return
+            except Exception as e:
+                last_error = f"{target_name} ({session_name}) reply check error: {e}"
+    if last_error:
+        print(last_error, file=sys.stderr)
 
 
 def _check_replies_himalaya(df: pd.DataFrame, contacted: pd.DataFrame) -> None:
