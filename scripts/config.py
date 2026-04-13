@@ -129,6 +129,25 @@ WAHA_OWN_NUMBER = os.getenv(
 )
 
 # ---------------------------------------------------------------------------
+# Multi-number CS / Warmcall engine
+# ---------------------------------------------------------------------------
+MCP_BASE_URL = os.getenv("MCP_BASE_URL", "http://localhost:8766")
+WAHA_WEBHOOK_PATH = "/webhook/waha"
+WAHA_WEBHOOK_SECRET = os.getenv("WAHA_WEBHOOK_SECRET", "")
+CS_REPLY_DELAY_SECONDS = int(os.getenv("CS_REPLY_DELAY_SECONDS", "3"))
+CS_MAX_REPLIES_PER_MINUTE = int(os.getenv("CS_MAX_REPLIES_PER_MINUTE", "10"))
+CS_ESCALATION_TELEGRAM = bool(int(os.getenv("CS_ESCALATION_TELEGRAM", "1")))
+CS_DEFAULT_PERSONA = os.getenv(
+    "CS_DEFAULT_PERSONA",
+    "You are a helpful customer service agent for BerkahKarya. "
+    "Answer questions about our services professionally in the same language the customer uses. "
+    "If you cannot answer, politely escalate to a human agent.",
+)
+WARMCALL_FOLLOWUP_INTERVALS = [1, 3, 7, 14]  # days between follow-ups
+WARMCALL_MAX_TURNS = int(os.getenv("WARMCALL_MAX_TURNS", "5"))
+ENGINE_MODES = {"cold": "Cold Call", "cs": "Customer Service", "warmcall": "Warm Call"}
+
+# ---------------------------------------------------------------------------
 # n8n workflows (optional — leave N8N_MEETING_WF empty to skip)
 # ---------------------------------------------------------------------------
 N8N_BASE = "https://n8n.aitradepulse.com/webhook"

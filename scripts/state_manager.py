@@ -75,6 +75,69 @@ CREATE TABLE IF NOT EXISTS tool_audit (
 CREATE INDEX IF NOT EXISTS idx_control_jobs_stage ON control_jobs(stage);
 CREATE INDEX IF NOT EXISTS idx_control_jobs_status ON control_jobs(status);
 CREATE INDEX IF NOT EXISTS idx_tool_audit_tool ON tool_audit(tool_name);
+
+CREATE TABLE IF NOT EXISTS wa_numbers (
+    id TEXT PRIMARY KEY,
+    session_name TEXT UNIQUE NOT NULL,
+    phone TEXT,
+    label TEXT,
+    mode TEXT DEFAULT 'cs',
+    kb_enabled INTEGER DEFAULT 1,
+    auto_reply INTEGER DEFAULT 1,
+    persona TEXT,
+    status TEXT DEFAULT 'inactive',
+    webhook_url TEXT,
+    created_at TEXT DEFAULT (datetime('now')),
+    updated_at TEXT DEFAULT (datetime('now'))
+);
+
+CREATE TABLE IF NOT EXISTS knowledge_base (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    wa_number_id TEXT,
+    category TEXT,
+    question TEXT,
+    answer TEXT,
+    content TEXT,
+    tags TEXT,
+    priority INTEGER DEFAULT 0,
+    created_at TEXT DEFAULT (datetime('now')),
+    updated_at TEXT DEFAULT (datetime('now')),
+    FOREIGN KEY (wa_number_id) REFERENCES wa_numbers(id)
+);
+
+CREATE TABLE IF NOT EXISTS conversations (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    wa_number_id TEXT,
+    contact_phone TEXT NOT NULL,
+    contact_name TEXT,
+    lead_id TEXT,
+    engine_mode TEXT NOT NULL,
+    status TEXT DEFAULT 'active',
+    last_message_at TEXT,
+    message_count INTEGER DEFAULT 0,
+    created_at TEXT DEFAULT (datetime('now')),
+    updated_at TEXT DEFAULT (datetime('now')),
+    FOREIGN KEY (wa_number_id) REFERENCES wa_numbers(id)
+);
+
+CREATE TABLE IF NOT EXISTS conversation_messages (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    conversation_id INTEGER,
+    direction TEXT NOT NULL,
+    message_text TEXT,
+    message_type TEXT DEFAULT 'text',
+    waha_message_id TEXT,
+    timestamp TEXT DEFAULT (datetime('now')),
+    FOREIGN KEY (conversation_id) REFERENCES conversations(id)
+);
+
+CREATE VIRTUAL TABLE IF NOT EXISTS kb_fts USING fts5(question, answer, content, content='knowledge_base', content_rowid='id');
+
+CREATE INDEX IF NOT EXISTS idx_wa_numbers_session ON wa_numbers(session_name);
+CREATE INDEX IF NOT EXISTS idx_kb_wa_number ON knowledge_base(wa_number_id);
+CREATE INDEX IF NOT EXISTS idx_conversations_contact ON conversations(contact_phone);
+CREATE INDEX IF NOT EXISTS idx_conversations_wa_number ON conversations(wa_number_id);
+CREATE INDEX IF NOT EXISTS idx_conv_messages_conv_id ON conversation_messages(conversation_id);
 """
 
 _LEAD_COLUMNS = [
@@ -393,5 +456,260 @@ def get_tool_audit(limit: int = 100) -> list[dict]:
             (limit,),
         ).fetchall()
         return [dict(r) for r in rows]
+    finally:
+        conn.close()
+
+
+# --- wa_numbers CRUD ---
+
+
+def upsert_wa_number(session_name: str, **fields) -> None:
+    fields["session_name"] = session_name
+    if "id" not in fields:
+        fields["id"] = session_name
+    cols = list(fields.keys())
+    placeholders = ", ".join(["?"] * len(cols))
+    col_names = ", ".join(cols)
+    updates = ", ".join(
+        f"{c} = excluded.{c}" for c in cols if c not in ("id", "created_at")
+    )
+    sql = (
+        f"INSERT INTO wa_numbers ({col_names}) VALUES ({placeholders}) "
+        f"ON CONFLICT(id) DO UPDATE SET {updates}, updated_at = datetime('now')"
+    )
+    values = [fields[c] for c in cols]
+    conn = _connect()
+    try:
+        conn.execute("BEGIN IMMEDIATE")
+        conn.execute(sql, values)
+        conn.commit()
+    except Exception:
+        conn.rollback()
+        raise
+    finally:
+        conn.close()
+
+
+def get_wa_numbers() -> list[dict]:
+    conn = _connect()
+    try:
+        rows = conn.execute("SELECT * FROM wa_numbers ORDER BY created_at").fetchall()
+        return [dict(r) for r in rows]
+    finally:
+        conn.close()
+
+
+def get_wa_number_by_session(session_name: str) -> dict | None:
+    conn = _connect()
+    try:
+        row = conn.execute(
+            "SELECT * FROM wa_numbers WHERE session_name = ?", (session_name,)
+        ).fetchone()
+        return dict(row) if row else None
+    finally:
+        conn.close()
+
+
+def delete_wa_number(session_name: str) -> None:
+    conn = _connect()
+    try:
+        conn.execute("BEGIN IMMEDIATE")
+        conn.execute("DELETE FROM wa_numbers WHERE session_name = ?", (session_name,))
+        conn.commit()
+    except Exception:
+        conn.rollback()
+        raise
+    finally:
+        conn.close()
+
+
+# --- knowledge_base CRUD ---
+
+
+def add_kb_entry(
+    wa_number_id: str,
+    category: str,
+    question: str,
+    answer: str,
+    content: str = "",
+    tags: str = "",
+    priority: int = 0,
+) -> int:
+    conn = _connect()
+    try:
+        conn.execute("BEGIN IMMEDIATE")
+        cur = conn.execute(
+            "INSERT INTO knowledge_base (wa_number_id, category, question, answer, content, tags, priority) VALUES (?, ?, ?, ?, ?, ?, ?)",
+            (wa_number_id, category, question, answer, content, tags, priority),
+        )
+        entry_id = cur.lastrowid
+        conn.commit()
+        return entry_id
+    except Exception:
+        conn.rollback()
+        raise
+    finally:
+        conn.close()
+
+
+def get_kb_entries(wa_number_id: str, category: str | None = None) -> list[dict]:
+    conn = _connect()
+    try:
+        if category:
+            rows = conn.execute(
+                "SELECT * FROM knowledge_base WHERE wa_number_id = ? AND category = ? ORDER BY priority DESC, id",
+                (wa_number_id, category),
+            ).fetchall()
+        else:
+            rows = conn.execute(
+                "SELECT * FROM knowledge_base WHERE wa_number_id = ? ORDER BY priority DESC, id",
+                (wa_number_id,),
+            ).fetchall()
+        return [dict(r) for r in rows]
+    finally:
+        conn.close()
+
+
+def search_kb(wa_number_id: str, query: str, limit: int = 5) -> list[dict]:
+    conn = _connect()
+    try:
+        rows = conn.execute(
+            """
+            SELECT kb.*, rank
+            FROM knowledge_base kb
+            JOIN kb_fts ON kb.id = kb_fts.rowid
+            WHERE kb_fts MATCH ? AND kb.wa_number_id = ?
+            ORDER BY rank
+            LIMIT ?
+            """,
+            (query, wa_number_id, limit),
+        ).fetchall()
+        return [dict(r) for r in rows]
+    finally:
+        conn.close()
+
+
+def delete_kb_entry(entry_id: int) -> None:
+    conn = _connect()
+    try:
+        conn.execute("BEGIN IMMEDIATE")
+        conn.execute("DELETE FROM knowledge_base WHERE id = ?", (entry_id,))
+        conn.commit()
+    except Exception:
+        conn.rollback()
+        raise
+    finally:
+        conn.close()
+
+
+# --- conversations CRUD ---
+
+
+def create_conversation(
+    wa_number_id: str,
+    contact_phone: str,
+    engine_mode: str,
+    contact_name: str = "",
+    lead_id: str | None = None,
+) -> int:
+    conn = _connect()
+    try:
+        conn.execute("BEGIN IMMEDIATE")
+        cur = conn.execute(
+            """
+            INSERT INTO conversations (wa_number_id, contact_phone, contact_name, lead_id, engine_mode, last_message_at)
+            VALUES (?, ?, ?, ?, ?, datetime('now'))
+            """,
+            (wa_number_id, contact_phone, contact_name, lead_id, engine_mode),
+        )
+        conv_id = cur.lastrowid
+        conn.commit()
+        return conv_id
+    except Exception:
+        conn.rollback()
+        raise
+    finally:
+        conn.close()
+
+
+def get_conversation(conversation_id: int) -> dict | None:
+    conn = _connect()
+    try:
+        row = conn.execute(
+            "SELECT * FROM conversations WHERE id = ?", (conversation_id,)
+        ).fetchone()
+        return dict(row) if row else None
+    finally:
+        conn.close()
+
+
+def get_or_create_conversation(
+    wa_number_id: str, contact_phone: str, engine_mode: str
+) -> int:
+    conn = _connect()
+    try:
+        row = conn.execute(
+            "SELECT id FROM conversations WHERE wa_number_id = ? AND contact_phone = ? AND status = 'active'",
+            (wa_number_id, contact_phone),
+        ).fetchone()
+        if row:
+            return row["id"]
+    finally:
+        conn.close()
+    return create_conversation(wa_number_id, contact_phone, engine_mode)
+
+
+def add_conversation_message(
+    conversation_id: int,
+    direction: str,
+    message_text: str,
+    message_type: str = "text",
+    waha_message_id: str = "",
+) -> int:
+    conn = _connect()
+    try:
+        conn.execute("BEGIN IMMEDIATE")
+        cur = conn.execute(
+            "INSERT INTO conversation_messages (conversation_id, direction, message_text, message_type, waha_message_id) VALUES (?, ?, ?, ?, ?)",
+            (conversation_id, direction, message_text, message_type, waha_message_id),
+        )
+        msg_id = cur.lastrowid
+        conn.execute(
+            "UPDATE conversations SET last_message_at = datetime('now'), message_count = message_count + 1, updated_at = datetime('now') WHERE id = ?",
+            (conversation_id,),
+        )
+        conn.commit()
+        return msg_id
+    except Exception:
+        conn.rollback()
+        raise
+    finally:
+        conn.close()
+
+
+def get_conversation_messages(conversation_id: int, limit: int = 50) -> list[dict]:
+    conn = _connect()
+    try:
+        rows = conn.execute(
+            "SELECT * FROM conversation_messages WHERE conversation_id = ? ORDER BY timestamp, id LIMIT ?",
+            (conversation_id, limit),
+        ).fetchall()
+        return [dict(r) for r in rows]
+    finally:
+        conn.close()
+
+
+def update_conversation_status(conversation_id: int, status: str) -> None:
+    conn = _connect()
+    try:
+        conn.execute("BEGIN IMMEDIATE")
+        conn.execute(
+            "UPDATE conversations SET status = ?, updated_at = datetime('now') WHERE id = ?",
+            (status, conversation_id),
+        )
+        conn.commit()
+    except Exception:
+        conn.rollback()
+        raise
     finally:
         conn.close()

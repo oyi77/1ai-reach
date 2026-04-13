@@ -8,13 +8,26 @@ Usage:
 from __future__ import annotations
 
 import argparse
+import asyncio
+import hashlib
+import hmac
+import json as _json
+import sys as _sys
 from typing import Any
 
 from mcp.server.fastmcp import FastMCP
 from mcp.types import ToolAnnotations
 from pydantic import Field
+from starlette.requests import Request
+from starlette.responses import JSONResponse
 
-import agent_control as control
+import agent_control as control  # noqa: E402  (also adds scripts/ to sys.path)
+from config import WAHA_OWN_NUMBER, WAHA_WEBHOOK_SECRET  # noqa: E402
+from state_manager import (  # noqa: E402
+    add_event_log,
+    get_wa_number_by_session,
+    upsert_wa_number,
+)
 
 mcp = FastMCP(
     "1ai-engage",
@@ -307,6 +320,98 @@ def load_dataframe_snapshot(
 ) -> dict[str, Any]:
     """Return a tabular snapshot of current leads for agents that prefer dataframe-like data."""
     return control.load_dataframe_snapshot(limit=limit)
+
+
+# ---------------------------------------------------------------------------
+# WAHA Webhook endpoint — receives inbound WA messages + session status
+# ---------------------------------------------------------------------------
+
+
+def _validate_hmac(body: bytes, header_hmac: str | None) -> bool:
+    """Return True if HMAC is valid (or no secret configured)."""
+    if not WAHA_WEBHOOK_SECRET:
+        return True
+    if not header_hmac:
+        return False
+    expected = hmac.new(WAHA_WEBHOOK_SECRET.encode(), body, hashlib.sha256).hexdigest()
+    return hmac.compare_digest(expected, header_hmac)
+
+
+async def _process_webhook_event(session: str, event: str, payload: dict) -> None:
+    """Background task — process webhook event after 200 is returned."""
+    try:
+        sender = str(payload.get("from") or payload.get("chatId") or "")
+        own = f"{WAHA_OWN_NUMBER}@c.us"
+
+        if event == "session.status":
+            status = str(payload.get("status") or "").lower()
+            if session and status:
+                upsert_wa_number(session, status=status)
+            return
+
+        if event in ("message", "message.any"):
+            if sender == own or not sender:
+                return
+
+            wa_number = get_wa_number_by_session(session)
+            if not wa_number:
+                return
+
+            mode = wa_number.get("mode", "cold")
+            body_text = str(payload.get("body") or "")
+
+            # Handlers added in Tasks 7 (cs) and 9 (warmcall)
+            if mode in ("cs", "warmcall"):
+                add_event_log(
+                    lead_id="webhook",
+                    event_type=f"inbound_{mode}",
+                    details=_json.dumps(
+                        {
+                            "session": session,
+                            "from": sender,
+                            "body": body_text[:500],
+                            "wa_number_id": wa_number.get("id"),
+                            "mode": mode,
+                        }
+                    ),
+                )
+    except Exception as e:
+        print(f"[webhook] background error: {e}", file=_sys.stderr)
+
+
+@mcp.custom_route("/webhook/waha", methods=["POST"])
+async def webhook_waha(request: Request) -> JSONResponse:
+    """Receive WAHA webhook events — inbound messages + session status."""
+    try:
+        body = await request.body()
+
+        if WAHA_WEBHOOK_SECRET:
+            header_hmac = request.headers.get("X-Webhook-Hmac")
+            if not _validate_hmac(body, header_hmac):
+                return JSONResponse({"error": "invalid hmac"}, status_code=401)
+
+        try:
+            data = _json.loads(body)
+        except Exception:
+            return JSONResponse({"error": "invalid json"}, status_code=400)
+
+        event = str(data.get("event") or "")
+        session = str(data.get("session") or "")
+        payload = data.get("payload") or {}
+
+        add_event_log(
+            lead_id="webhook",
+            event_type="webhook_received",
+            details=body.decode("utf-8", errors="replace")[:1000],
+        )
+
+        asyncio.create_task(_process_webhook_event(session, event, payload))
+
+        return JSONResponse({"status": "ok", "event": event})
+
+    except Exception as e:
+        print(f"[webhook] error: {e}", file=_sys.stderr)
+        return JSONResponse({"error": "internal error"}, status_code=500)
 
 
 def main() -> None:
