@@ -18,7 +18,6 @@ if str(_SCRIPTS_DIR) not in sys.path:
 from config import DB_FILE
 from state_manager import (
     add_kb_entry,
-    delete_kb_entry,
     get_kb_entries,
     init_db,
     search_kb,

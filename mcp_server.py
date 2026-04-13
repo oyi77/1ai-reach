@@ -323,6 +323,261 @@ def load_dataframe_snapshot(
 
 
 # ---------------------------------------------------------------------------
+# WA Session management tools
+# ---------------------------------------------------------------------------
+
+
+@mcp.tool(
+    annotations=ToolAnnotations(
+        read_only_hint=True, idempotent_hint=True, open_world_hint=True
+    )
+)
+def list_wa_sessions() -> dict[str, Any]:
+    """List all WhatsApp sessions with WAHA + local DB status."""
+    return control.list_wa_sessions()
+
+
+@mcp.tool(
+    annotations=ToolAnnotations(
+        read_only_hint=False,
+        destructive_hint=False,
+        idempotent_hint=False,
+        open_world_hint=True,
+    )
+)
+def create_wa_session(
+    session_name: str = Field(description="Unique session name for WAHA"),
+    phone: str = Field(
+        default="", description="Phone number associated with this session"
+    ),
+    label: str = Field(default="", description="Human-readable label"),
+    mode: str = Field(default="cs", description="Engine mode: cs, warmcall, or cold"),
+    persona: str = Field(default="", description="Persona override for CS engine"),
+) -> dict[str, Any]:
+    """Create a new WhatsApp session in WAHA + register in local DB + configure webhooks."""
+    return control.create_wa_session(
+        session_name, phone=phone, label=label, mode=mode, persona=persona
+    )
+
+
+@mcp.tool(
+    annotations=ToolAnnotations(
+        read_only_hint=False,
+        destructive_hint=True,
+        idempotent_hint=False,
+        open_world_hint=True,
+    )
+)
+def delete_wa_session(
+    session_name: str = Field(description="Session name to delete from WAHA + DB"),
+) -> dict[str, Any]:
+    """Delete a WhatsApp session from WAHA and local DB."""
+    return control.delete_wa_session(session_name)
+
+
+@mcp.tool(
+    annotations=ToolAnnotations(
+        read_only_hint=True, idempotent_hint=True, open_world_hint=True
+    )
+)
+def get_wa_session_status(
+    session_name: str = Field(description="Session name to query"),
+) -> dict[str, Any]:
+    """Get WAHA status for a specific WhatsApp session."""
+    return control.get_wa_session_status(session_name)
+
+
+@mcp.tool(
+    annotations=ToolAnnotations(
+        read_only_hint=True, idempotent_hint=True, open_world_hint=True
+    )
+)
+def get_wa_qr_code(
+    session_name: str = Field(description="Session name to get QR code for"),
+) -> dict[str, Any]:
+    """Get QR code for a WhatsApp session as base64 image."""
+    return control.get_wa_qr_code(session_name)
+
+
+# ---------------------------------------------------------------------------
+# Knowledge Base tools
+# ---------------------------------------------------------------------------
+
+
+@mcp.tool(
+    annotations=ToolAnnotations(
+        read_only_hint=True, idempotent_hint=True, open_world_hint=False
+    )
+)
+def list_kb_entries(
+    wa_number_id: str = Field(description="WA number ID to list entries for"),
+    category: str | None = Field(
+        default=None, description="Filter by category: faq, doc, snippet"
+    ),
+) -> dict[str, Any]:
+    """List knowledge base entries for a WA number."""
+    return control.list_kb_entries(wa_number_id, category=category)
+
+
+@mcp.tool(
+    annotations=ToolAnnotations(
+        read_only_hint=False,
+        destructive_hint=False,
+        idempotent_hint=False,
+        open_world_hint=False,
+    )
+)
+def add_kb_entry(
+    wa_number_id: str = Field(description="WA number ID to add entry for"),
+    category: str = Field(description="Entry category: faq, doc, or snippet"),
+    question: str = Field(description="Question or title"),
+    answer: str = Field(description="Answer or content body"),
+    tags: str = Field(default="", description="Comma-separated tags"),
+) -> dict[str, Any]:
+    """Add a new knowledge base entry."""
+    return control.add_kb_entry(wa_number_id, category, question, answer, tags=tags)
+
+
+@mcp.tool(
+    annotations=ToolAnnotations(
+        read_only_hint=True, idempotent_hint=True, open_world_hint=False
+    )
+)
+def search_kb(
+    wa_number_id: str = Field(description="WA number ID to search within"),
+    query: str = Field(description="FTS5 search query"),
+) -> dict[str, Any]:
+    """Search knowledge base using full-text search."""
+    return control.search_kb(wa_number_id, query)
+
+
+@mcp.tool(
+    annotations=ToolAnnotations(
+        read_only_hint=False,
+        destructive_hint=True,
+        idempotent_hint=False,
+        open_world_hint=False,
+    )
+)
+def delete_kb_entry(
+    entry_id: int = Field(description="KB entry ID to delete"),
+) -> dict[str, Any]:
+    """Delete a knowledge base entry by ID."""
+    return control.delete_kb_entry(entry_id)
+
+
+@mcp.tool(
+    annotations=ToolAnnotations(
+        read_only_hint=False,
+        destructive_hint=False,
+        idempotent_hint=False,
+        open_world_hint=False,
+    )
+)
+def seed_kb(
+    wa_number_id: str = Field(description="WA number ID to seed default entries for"),
+) -> dict[str, Any]:
+    """Seed default BerkahKarya FAQ entries for a WA number (skips duplicates)."""
+    return control.seed_kb(wa_number_id)
+
+
+# ---------------------------------------------------------------------------
+# Conversation management tools
+# ---------------------------------------------------------------------------
+
+
+@mcp.tool(
+    annotations=ToolAnnotations(
+        read_only_hint=True, idempotent_hint=True, open_world_hint=False
+    )
+)
+def list_active_conversations(
+    wa_number_id: str | None = Field(
+        default=None, description="Filter by WA number ID"
+    ),
+) -> dict[str, Any]:
+    """List active conversations, optionally filtered by WA number."""
+    return control.list_active_conversations(wa_number_id=wa_number_id)
+
+
+@mcp.tool(
+    annotations=ToolAnnotations(
+        read_only_hint=True, idempotent_hint=True, open_world_hint=False
+    )
+)
+def get_conversation_history(
+    conversation_id: int = Field(description="Conversation ID"),
+    limit: int = Field(default=50, description="Maximum messages to return"),
+) -> dict[str, Any]:
+    """Get message history for a conversation."""
+    return control.get_conversation_history(conversation_id, limit=limit)
+
+
+@mcp.tool(
+    annotations=ToolAnnotations(
+        read_only_hint=False,
+        destructive_hint=False,
+        idempotent_hint=True,
+        open_world_hint=False,
+    )
+)
+def resolve_conversation(
+    conversation_id: int = Field(description="Conversation ID to resolve"),
+) -> dict[str, Any]:
+    """Mark a conversation as resolved."""
+    return control.resolve_conversation(conversation_id)
+
+
+@mcp.tool(
+    annotations=ToolAnnotations(
+        read_only_hint=False,
+        destructive_hint=False,
+        idempotent_hint=False,
+        open_world_hint=True,
+    )
+)
+def escalate_conversation(
+    conversation_id: int = Field(description="Conversation ID to escalate"),
+    reason: str = Field(description="Reason for escalation"),
+) -> dict[str, Any]:
+    """Escalate a conversation to human support (triggers Telegram alert)."""
+    return control.escalate_conversation(conversation_id, reason)
+
+
+# ---------------------------------------------------------------------------
+# Warm call tools
+# ---------------------------------------------------------------------------
+
+
+@mcp.tool(
+    annotations=ToolAnnotations(
+        read_only_hint=False,
+        destructive_hint=False,
+        idempotent_hint=False,
+        open_world_hint=True,
+    )
+)
+def start_warmcall(
+    phone: str = Field(description="Target phone number"),
+    name: str = Field(description="Contact name"),
+    context: str = Field(description="Context for the warm call sequence"),
+    session_name: str | None = Field(default=None, description="WAHA session to use"),
+) -> dict[str, Any]:
+    """Start a warm-call outreach sequence for a contact."""
+    return control.start_warmcall(phone, name, context, session_name=session_name)
+
+
+@mcp.tool(
+    annotations=ToolAnnotations(
+        read_only_hint=True, idempotent_hint=True, open_world_hint=False
+    )
+)
+def get_due_warmcall_followups() -> dict[str, Any]:
+    """Get warm-call follow-ups that are currently due."""
+    return control.get_due_warmcall_followups()
+
+
+# ---------------------------------------------------------------------------
 # WAHA Webhook endpoint — receives inbound WA messages + session status
 # ---------------------------------------------------------------------------
 

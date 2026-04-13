@@ -58,6 +58,9 @@ _STAGE_TO_SCRIPT = {
     "sheets_sync": "sheets_sync.py",
     "orchestrator": "orchestrator.py",
     "autonomous_loop": "autonomous_loop.py",
+    "cs_engine": "cs_engine.py",
+    "warmcall_engine": "warmcall_engine.py",
+    "conversation_cleanup": "conversation_cleanup.py",
 }
 
 
@@ -403,3 +406,199 @@ def load_dataframe_snapshot(limit: int = 100) -> dict[str, Any]:
 
 def get_tool_audit(limit: int = 100) -> dict[str, Any]:
     return {"count": limit, "items": state_manager.get_tool_audit(limit=limit)}
+
+
+# ---------------------------------------------------------------------------
+# Session management (wa_manager)
+# ---------------------------------------------------------------------------
+
+try:
+    import wa_manager as _wa_manager
+except ImportError:
+    _wa_manager = None  # type: ignore[assignment]
+
+
+def list_wa_sessions() -> dict[str, Any]:
+    """List all WhatsApp sessions with WAHA + DB status."""
+    if _wa_manager is None:
+        return {"error": "wa_manager not available"}
+    return {"sessions": _wa_manager.list_sessions()}
+
+
+def create_wa_session(
+    session_name: str,
+    phone: str = "",
+    label: str = "",
+    mode: str = "cs",
+    persona: str = "",
+) -> dict[str, Any]:
+    """Create a new WhatsApp session in WAHA + local DB."""
+    if _wa_manager is None:
+        return {"error": "wa_manager not available"}
+    return _wa_manager.create_session(
+        session_name, phone=phone, label=label, mode=mode, persona=persona
+    )
+
+
+def delete_wa_session(session_name: str) -> dict[str, Any]:
+    """Delete a WhatsApp session from WAHA + local DB."""
+    if _wa_manager is None:
+        return {"error": "wa_manager not available"}
+    ok = _wa_manager.delete_session(session_name)
+    return {"ok": ok, "session_name": session_name}
+
+
+def get_wa_session_status(session_name: str) -> dict[str, Any]:
+    """Get WAHA status for a session."""
+    if _wa_manager is None:
+        return {"error": "wa_manager not available"}
+    return _wa_manager.get_session_status(session_name)
+
+
+def get_wa_qr_code(session_name: str) -> dict[str, Any]:
+    """Get QR code for a session, returned as base64 image."""
+    import base64
+
+    if _wa_manager is None:
+        return {"error": "wa_manager not available"}
+    data = _wa_manager.get_qr_code(session_name)
+    if isinstance(data, bytes):
+        return {
+            "ok": True,
+            "session_name": session_name,
+            "qr_base64": base64.b64encode(data).decode("ascii"),
+            "content_type": "image/png",
+        }
+    return {"ok": False, "session_name": session_name, "error": str(data)}
+
+
+# ---------------------------------------------------------------------------
+# Knowledge Base (kb_manager)
+# ---------------------------------------------------------------------------
+
+try:
+    import kb_manager as _kb_manager
+except ImportError:
+    _kb_manager = None  # type: ignore[assignment]
+
+
+def list_kb_entries(wa_number_id: str, category: str | None = None) -> dict[str, Any]:
+    """List KB entries for a WA number, optionally filtered by category."""
+    if _kb_manager is None:
+        return {"error": "kb_manager not available"}
+    entries = _kb_manager.get_entries(wa_number_id, category)
+    return {"count": len(entries), "entries": entries}
+
+
+def add_kb_entry(
+    wa_number_id: str,
+    category: str,
+    question: str,
+    answer: str,
+    tags: str = "",
+) -> dict[str, Any]:
+    """Add a KB entry and return the new entry id."""
+    if _kb_manager is None:
+        return {"error": "kb_manager not available"}
+    entry_id = _kb_manager.add_entry(
+        wa_number_id, category, question, answer, tags=tags
+    )
+    return {"ok": True, "entry_id": entry_id}
+
+
+def search_kb(wa_number_id: str, query: str) -> dict[str, Any]:
+    """FTS5 search KB entries."""
+    if _kb_manager is None:
+        return {"error": "kb_manager not available"}
+    results = _kb_manager.search(wa_number_id, query)
+    return {"count": len(results), "results": results}
+
+
+def delete_kb_entry(entry_id: int) -> dict[str, Any]:
+    """Delete a KB entry by ID."""
+    if _kb_manager is None:
+        return {"error": "kb_manager not available"}
+    ok = _kb_manager.delete_entry(entry_id)
+    return {"ok": ok, "entry_id": entry_id}
+
+
+def seed_kb(wa_number_id: str) -> dict[str, Any]:
+    """Seed default BerkahKarya FAQ entries for a WA number."""
+    if _kb_manager is None:
+        return {"error": "kb_manager not available"}
+    count = _kb_manager.seed_default_kb(wa_number_id)
+    return {"ok": True, "seeded_count": count, "wa_number_id": wa_number_id}
+
+
+# ---------------------------------------------------------------------------
+# Conversation management (conversation_tracker)
+# ---------------------------------------------------------------------------
+
+try:
+    import conversation_tracker as _conv_tracker
+except ImportError:
+    _conv_tracker = None  # type: ignore[assignment]
+
+
+def list_active_conversations(wa_number_id: str | None = None) -> dict[str, Any]:
+    """List active conversations, optionally filtered by WA number."""
+    if _conv_tracker is None:
+        return {"error": "conversation_tracker not available"}
+    convs = _conv_tracker.get_active_conversations(wa_number_id)
+    return {"count": len(convs), "conversations": convs}
+
+
+def get_conversation_history(conversation_id: int, limit: int = 50) -> dict[str, Any]:
+    """Get message history for a conversation."""
+    if _conv_tracker is None:
+        return {"error": "conversation_tracker not available"}
+    messages = _conv_tracker.get_messages(conversation_id, limit=limit)
+    return {"count": len(messages), "messages": messages}
+
+
+def resolve_conversation(conversation_id: int) -> dict[str, Any]:
+    """Mark a conversation as resolved."""
+    if _conv_tracker is None:
+        return {"error": "conversation_tracker not available"}
+    ok = _conv_tracker.update_status(conversation_id, "resolved")
+    return {"ok": ok, "conversation_id": conversation_id, "status": "resolved"}
+
+
+def escalate_conversation(conversation_id: int, reason: str) -> dict[str, Any]:
+    """Escalate a conversation with a reason (triggers Telegram alert)."""
+    if _conv_tracker is None:
+        return {"error": "conversation_tracker not available"}
+    ok = _conv_tracker.escalate(conversation_id, reason)
+    return {"ok": ok, "conversation_id": conversation_id, "reason": reason}
+
+
+# ---------------------------------------------------------------------------
+# Warm call (warmcall_engine — may not exist yet)
+# ---------------------------------------------------------------------------
+
+try:
+    import warmcall_engine as _warmcall_engine
+except ImportError:
+    _warmcall_engine = None  # type: ignore[assignment]
+
+
+def start_warmcall(
+    phone: str,
+    name: str,
+    context: str,
+    session_name: str | None = None,
+) -> dict[str, Any]:
+    """Start a warm-call sequence for a contact."""
+    if _warmcall_engine is None:
+        return {"error": "warmcall_engine not available"}
+    return _warmcall_engine.start_sequence(
+        phone, name, context, session_name=session_name
+    )
+
+
+def get_due_warmcall_followups() -> dict[str, Any]:
+    """Get warm-call follow-ups that are due."""
+    if _warmcall_engine is None:
+        return {"error": "warmcall_engine not available"}
+    followups = _warmcall_engine.get_due_followups()
+    return {"count": len(followups), "followups": followups}

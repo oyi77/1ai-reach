@@ -3,10 +3,12 @@ Reply tracker — Gmail + WAHA (WhatsApp).
 
 Checks both Gmail inbox and WAHA WhatsApp inbox for replies from contacted leads.
 Updates funnel status: contacted/followed_up → replied.
+Routes inbound WhatsApp messages by engine mode (cold/cs/warmcall) based on
+the ``wa_numbers`` DB table.
 
 Methods tried in order:
   1. gog gmail search  (primary, free)
-  2. WAHA API          (WhatsApp inbox)
+  2. WAHA API          (WhatsApp inbox — multi-session, mode-aware)
   3. himalaya          (IMAP fallback)
 """
 
@@ -35,8 +37,47 @@ from config import (
     WAHA_SESSION,
 )
 from leads import load_leads, save_leads
-from state_manager import update_lead
+from state_manager import update_lead, get_wa_numbers, _connect as _db_connect
 from utils import parse_display_name, is_empty, normalize_phone
+
+# Graceful imports — cs_engine / warmcall_engine may not exist yet
+try:
+    from cs_engine import handle_inbound_message as _cs_handle
+except Exception:  # ImportError or transitive failures
+    _cs_handle = None
+
+try:
+    from warmcall_engine import process_reply as _warmcall_process
+except Exception:
+    _warmcall_process = None
+
+
+# ---------------------------------------------------------------------------
+# Deduplication helper
+# ---------------------------------------------------------------------------
+
+
+def _is_waha_msg_processed(waha_message_id: str) -> bool:
+    """Return True if this WAHA message ID already exists in conversation_messages."""
+    if not waha_message_id:
+        return False
+    conn = _db_connect()
+    try:
+        row = conn.execute(
+            "SELECT id FROM conversation_messages WHERE waha_message_id = ?",
+            (waha_message_id,),
+        ).fetchone()
+        return row is not None
+    except Exception:
+        # Table may not exist yet in older DBs — treat as not processed
+        return False
+    finally:
+        conn.close()
+
+
+# ---------------------------------------------------------------------------
+# WAHA targets & sessions
+# ---------------------------------------------------------------------------
 
 
 def _waha_targets() -> list[tuple[str, str, dict[str, str]]]:
@@ -55,28 +96,81 @@ def _waha_targets() -> list[tuple[str, str, dict[str, str]]]:
     return targets
 
 
-def _waha_sessions(base_url: str, headers: dict[str, str]) -> list[str]:
-    sessions = [WAHA_SESSION]
-    if not _HTTP_OK:
-        return sessions
+def _waha_sessions(base_url: str, headers: dict[str, str]) -> list[dict]:
+    """Return WAHA sessions merged with ``wa_numbers`` DB table.
+
+    Each entry: ``{"session_name": str, "mode": str, "wa_number_id": str | None}``
+
+    Merge strategy:
+      1. Query WAHA API for all WORKING sessions.
+      2. Load ``wa_numbers`` from DB and index by ``session_name``.
+      3. For every WORKING session that has a DB row, use the DB ``mode``.
+      4. For WORKING sessions *without* a DB row, default to ``"cold"``.
+      5. If no wa_numbers entries exist at all, fall back to the legacy
+         single-session behaviour (``WAHA_SESSION``, mode ``"cold"``).
+    """
+    # --- 1. Collect WORKING sessions from WAHA API ---
+    api_session_names: list[str] = []
+    if _HTTP_OK:
+        try:
+            r = _req.get(
+                f"{base_url}/api/sessions",
+                params={"all": "true"},
+                headers=headers,
+                timeout=10,
+            )
+            if r.status_code == 200:
+                data = r.json()
+                if isinstance(data, list):
+                    for item in data:
+                        name = str(item.get("name") or "").strip()
+                        status = str(item.get("status") or "").upper()
+                        if name and status == "WORKING":
+                            api_session_names.append(name)
+        except Exception:
+            pass
+
+    # Always include the default session as a baseline
+    if WAHA_SESSION and WAHA_SESSION not in api_session_names:
+        api_session_names.insert(0, WAHA_SESSION)
+
+    # --- 2. Load wa_numbers from DB ---
     try:
-        r = _req.get(
-            f"{base_url}/api/sessions",
-            params={"all": "true"},
-            headers=headers,
-            timeout=10,
-        )
-        if r.status_code == 200:
-            data = r.json()
-            if isinstance(data, list):
-                for item in data:
-                    name = str(item.get("name") or "").strip()
-                    status = str(item.get("status") or "").upper()
-                    if name and status == "WORKING" and name not in sessions:
-                        sessions.append(name)
+        wa_rows = get_wa_numbers()
     except Exception:
-        pass
-    return sessions
+        wa_rows = []
+
+    wa_by_session: dict[str, dict] = {}
+    for row in wa_rows:
+        sn = row.get("session_name", "")
+        if sn:
+            wa_by_session[sn] = row
+
+    # --- 3. Merge ---
+    # If DB has wa_numbers entries, iterate ALL known sessions (API ∪ DB)
+    if wa_by_session:
+        all_session_names = list(
+            dict.fromkeys(api_session_names + list(wa_by_session.keys()))
+        )
+        result: list[dict] = []
+        for sn in all_session_names:
+            db_row = wa_by_session.get(sn)
+            mode = db_row["mode"] if db_row and db_row.get("mode") else "cold"
+            wa_id = db_row["id"] if db_row else None
+            result.append(
+                {
+                    "session_name": sn,
+                    "mode": mode,
+                    "wa_number_id": wa_id,
+                }
+            )
+        return result
+
+    # --- 4. Fallback: no wa_numbers in DB → legacy single/multi session as cold ---
+    return [
+        {"session_name": sn, "mode": "cold", "wa_number_id": None}
+        for sn in api_session_names
+    ]
 
 
 def _gog_search(query: str) -> list[dict]:
@@ -197,12 +291,16 @@ def _phone_digits(phone: str) -> str:
 
 
 def _check_replies_waha(df: pd.DataFrame, contacted: pd.DataFrame) -> None:
-    """Check WAHA inbox for WhatsApp replies from contacted leads."""
+    """Check WAHA inbox for WhatsApp replies — routes by engine mode."""
     if not _HTTP_OK:
         return
     last_error = ""
     for target_name, base_url, headers in _waha_targets():
-        for session_name in _waha_sessions(base_url, headers):
+        sessions = _waha_sessions(base_url, headers)
+        for sess_info in sessions:
+            session_name = sess_info["session_name"]
+            mode = sess_info["mode"]
+            wa_number_id = sess_info["wa_number_id"]
             try:
                 r = _req.get(
                     f"{base_url}/api/chats",
@@ -216,59 +314,148 @@ def _check_replies_waha(df: pd.DataFrame, contacted: pd.DataFrame) -> None:
                     )
                     continue
 
-                chats = (
-                    r.json()
-                    if isinstance(r.json(), list)
-                    else r.json().get("chats", [])
-                )
+                raw = r.json()
+                chats = raw if isinstance(raw, list) else raw.get("chats", [])
 
-                wa_replies: dict[str, str] = {}
                 for chat in chats:
                     chat_id = str(
                         chat.get("id", {}).get("user", "") or chat.get("id", "")
                     )
-                    if chat_id:
-                        digits = _phone_digits(chat_id)
-                        body = str(
-                            chat.get("lastMessage", {}).get("body", "")
-                            or chat.get("last_message", "")
-                            or chat.get("body", "")
-                            or ""
-                        ).strip()[:2000]
-                        wa_replies[digits] = body
-
-                for index, row in contacted.iterrows():
-                    phone = str(
-                        row.get("internationalPhoneNumber") or row.get("phone") or ""
-                    ).strip()
-                    if not phone or is_empty(phone):
+                    if not chat_id:
                         continue
-                    digits = _phone_digits(phone)
-                    if digits in wa_replies:
-                        name = parse_display_name(row.get("displayName"))
-                        if str(df.at[index, "status"]) != "replied":
-                            reply_text = wa_replies[digits]
-                            print(
-                                f"  📱 WA REPLY from {name} ({phone}) [via {target_name}/{session_name}]"
-                            )
-                            df.at[index, "status"] = "replied"
-                            df.at[index, "replied_at"] = datetime.now(
-                                timezone.utc
-                            ).isoformat()
-                            lead_id = str(row.get("id") or row.name or "")
-                            if lead_id and reply_text:
-                                try:
-                                    update_lead(lead_id, reply_text=reply_text)
-                                except Exception as e:
-                                    print(
-                                        f"  ⚠️ Failed to store WA reply text for {name}: {e}",
-                                        file=sys.stderr,
-                                    )
+
+                    last_msg = chat.get("lastMessage") or {}
+                    waha_msg_id = str(
+                        last_msg.get("id", "") or chat.get("messageId", "") or ""
+                    ).strip()
+
+                    if _is_waha_msg_processed(waha_msg_id):
+                        continue
+
+                    body = str(
+                        last_msg.get("body", "")
+                        or chat.get("last_message", "")
+                        or chat.get("body", "")
+                        or ""
+                    ).strip()[:2000]
+
+                    if not body:
+                        continue
+
+                    contact_phone = chat_id
+                    digits = _phone_digits(chat_id)
+
+                    _route_waha_message(
+                        mode=mode,
+                        wa_number_id=wa_number_id,
+                        session_name=session_name,
+                        contact_phone=contact_phone,
+                        digits=digits,
+                        body=body,
+                        waha_msg_id=waha_msg_id,
+                        target_name=target_name,
+                        df=df,
+                        contacted=contacted,
+                    )
                 return
             except Exception as e:
                 last_error = f"{target_name} ({session_name}) reply check error: {e}"
     if last_error:
         print(last_error, file=sys.stderr)
+
+
+def _route_waha_message(
+    *,
+    mode: str,
+    wa_number_id: str | None,
+    session_name: str,
+    contact_phone: str,
+    digits: str,
+    body: str,
+    waha_msg_id: str,
+    target_name: str,
+    df: pd.DataFrame,
+    contacted: pd.DataFrame,
+) -> None:
+    """Route a single inbound WAHA message to the correct engine handler."""
+
+    if mode == "cs" and _cs_handle is not None:
+        effective_wa_id = wa_number_id or session_name
+        try:
+            _cs_handle(effective_wa_id, contact_phone, body, session_name)
+            print(
+                f"  🤖 CS handled: {contact_phone} [via {target_name}/{session_name}]"
+            )
+        except Exception as e:
+            print(
+                f"  ⚠️ cs_engine error for {contact_phone}: {e}",
+                file=sys.stderr,
+            )
+        return
+
+    if mode == "warmcall" and _warmcall_process is not None:
+        try:
+            from state_manager import get_or_create_conversation as _get_conv
+
+            effective_wa_id = wa_number_id or session_name
+            conv_id = _get_conv(effective_wa_id, contact_phone, "warmcall")
+            _warmcall_process(conv_id, body)
+            print(
+                f"  🔥 Warmcall handled: {contact_phone} [via {target_name}/{session_name}]"
+            )
+        except Exception as e:
+            print(
+                f"  ⚠️ warmcall_engine error for {contact_phone}: {e}",
+                file=sys.stderr,
+            )
+        return
+
+    # Default: cold-call lead matching (existing behaviour)
+    _handle_cold_reply(
+        digits=digits,
+        body=body,
+        target_name=target_name,
+        session_name=session_name,
+        df=df,
+        contacted=contacted,
+    )
+
+
+def _handle_cold_reply(
+    *,
+    digits: str,
+    body: str,
+    target_name: str,
+    session_name: str,
+    df: pd.DataFrame,
+    contacted: pd.DataFrame,
+) -> None:
+    """Match a WAHA reply to a contacted lead and mark as replied (cold mode)."""
+    for index, row in contacted.iterrows():
+        phone = str(
+            row.get("internationalPhoneNumber") or row.get("phone") or ""
+        ).strip()
+        if not phone or is_empty(phone):
+            continue
+        lead_digits = _phone_digits(phone)
+        if lead_digits != digits:
+            continue
+        if str(df.at[index, "status"]) == "replied":
+            continue
+        name = parse_display_name(row.get("displayName"))
+        print(f"  📱 WA REPLY from {name} ({phone}) [via {target_name}/{session_name}]")
+        df.at[index, "status"] = "replied"
+        df.at[index, "replied_at"] = datetime.now(timezone.utc).isoformat()
+        lead_id = str(row.get("id") or row.name or "")
+        if lead_id and body:
+            try:
+                update_lead(lead_id, reply_text=body)
+            except Exception as e:
+                print(
+                    f"  ⚠️ Failed to store WA reply text for {name}: {e}",
+                    file=sys.stderr,
+                )
+        return
 
 
 def _check_replies_himalaya(df: pd.DataFrame, contacted: pd.DataFrame) -> None:
@@ -319,6 +506,9 @@ def _check_replies_himalaya(df: pd.DataFrame, contacted: pd.DataFrame) -> None:
                         )
     except Exception as e:
         print(f"Himalaya fallback error: {e}", file=sys.stderr)
+
+
+track_replies = check_replies
 
 
 if __name__ == "__main__":
