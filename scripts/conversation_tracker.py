@@ -265,6 +265,114 @@ def auto_resolve_stale(hours: int = 48) -> int:
         conn.close()
 
 
+# ---------------------------------------------------------------------------
+# Sales Stage Advancement
+# ---------------------------------------------------------------------------
+
+STAGE_ORDER = ["discovery", "interest", "proposal", "negotiation", "close"]
+STAGE_KEYWORDS = {
+    "discovery": {
+        "halo",
+        "hi",
+        "hallo",
+        "apa",
+        "siapa",
+        "dimana",
+        "tanya",
+        "info",
+        "kenalan",
+        "perkenalan",
+    },
+    "interest": {
+        "harga",
+        "berapa",
+        "cara",
+        "boleh",
+        "bisa",
+        "kirim",
+        "dapat",
+        "lihat",
+        "pakai",
+        "coba",
+    },
+    "proposal": {
+        "ok",
+        "iya",
+        "mau",
+        "tertarik",
+        "lihat",
+        "katalog",
+        "produk",
+        "order",
+        "booking",
+    },
+    "negotiation": {
+        "nego",
+        "diskon",
+        "murah",
+        "lebih",
+        "banding",
+        "bandingin",
+        "kurangi",
+        "promo",
+        "bonus",
+    },
+    "close": {
+        "beli",
+        "pesan",
+        "transfer",
+        "bayar",
+        "order",
+        "ya",
+        "deal",
+        "siap",
+        "lunas",
+        "account",
+    },
+}
+
+
+def advance_stage(
+    conversation_id: int, message_text: str, kb_results: list = None
+) -> str | None:
+    """Detect if message advances the sales stage. Return new stage or None."""
+    from state_manager import get_conversation_stage, set_conversation_stage
+
+    current = get_conversation_stage(conversation_id) or "discovery"
+    text_lower = message_text.lower()
+
+    try:
+        current_idx = STAGE_ORDER.index(current)
+    except ValueError:
+        current_idx = 0
+
+    for next_idx in range(current_idx + 1, len(STAGE_ORDER)):
+        next_stage = STAGE_ORDER[next_idx]
+        triggers = STAGE_KEYWORDS.get(next_stage, set())
+        matched = [t for t in triggers if t in text_lower]
+        if matched:
+            set_conversation_stage(conversation_id, next_stage, matched[0])
+            return next_stage
+
+    return None  # No advancement
+
+
+def get_stage_context(conversation_id: int) -> str:
+    """Return formatted stage context for LLM prompts."""
+    from state_manager import get_conversation_stage
+
+    stage = get_conversation_stage(conversation_id) or "discovery"
+    stage_hints = {
+        "discovery": "Fokus pada membangun rapport. Tanya nama, lokasi, dan kebutuhan mereka. Jangan langsung promosi produk.",
+        "interest": "Tunjukkan minat pada kebutuhan mereka. Berikan info dasar tentang layanan yang relevan.",
+        "proposal": "Tawarkan solusi spesifik yang cocok untuk kebutuhan mereka. Sertakan harga dan manfaat utama.",
+        "negotiation": "Bersikap fleksibel. Jika mereka minta diskon, tunjukkan value lebih. Jangan langsung kasih harga termurah.",
+        "close": "Dorong untuk keputusan. Kirim payment link atau ajak schedule demo. Pastikan tidak ada hambatan lagi.",
+    }
+    hint = stage_hints.get(stage, "")
+    return f"\n[Sales Stage: {stage.upper()}]\n{hint}\n"
+
+
 if __name__ == "__main__":
     init_db()
     print("[conversation_tracker] DB initialized")

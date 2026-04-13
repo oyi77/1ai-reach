@@ -105,6 +105,17 @@ CREATE TABLE IF NOT EXISTS knowledge_base (
     FOREIGN KEY (wa_number_id) REFERENCES wa_numbers(id)
 );
 
+CREATE TABLE IF NOT EXISTS sales_stages (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    wa_number_id TEXT NOT NULL,
+    conversation_id INTEGER NOT NULL,
+    stage TEXT NOT NULL DEFAULT 'discovery',
+    entry_trigger TEXT,
+    updated_at TEXT DEFAULT (datetime('now')),
+    FOREIGN KEY (conversation_id) REFERENCES conversations(id),
+    FOREIGN KEY (wa_number_id) REFERENCES wa_numbers(id)
+);
+
 CREATE TABLE IF NOT EXISTS conversations (
     id INTEGER PRIMARY KEY AUTOINCREMENT,
     wa_number_id TEXT,
@@ -135,6 +146,8 @@ CREATE VIRTUAL TABLE IF NOT EXISTS kb_fts USING fts5(question, answer, content, 
 
 CREATE INDEX IF NOT EXISTS idx_wa_numbers_session ON wa_numbers(session_name);
 CREATE INDEX IF NOT EXISTS idx_kb_wa_number ON knowledge_base(wa_number_id);
+CREATE INDEX IF NOT EXISTS idx_sales_stages_conv ON sales_stages(conversation_id);
+CREATE INDEX IF NOT EXISTS idx_sales_stages_wa ON sales_stages(wa_number_id);
 CREATE INDEX IF NOT EXISTS idx_conversations_contact ON conversations(contact_phone);
 CREATE INDEX IF NOT EXISTS idx_conversations_wa_number ON conversations(wa_number_id);
 CREATE INDEX IF NOT EXISTS idx_conv_messages_conv_id ON conversation_messages(conversation_id);
@@ -576,7 +589,8 @@ def search_kb(wa_number_id: str, query: str, limit: int = 5) -> list[dict]:
     # e.g. "paket mingguan" -> "(paket* OR mingguan*)"
     import re
 
-    words = query.strip().split()
+    cleaned_words = [re.sub(r"[^\w]", "", w) for w in query.strip().split()]
+    words = [w for w in cleaned_words if w]
     if not words:
         return []
     # Wrap each word in parentheses with OR, apply prefix matching to words >= 2 chars
@@ -723,5 +737,78 @@ def update_conversation_status(conversation_id: int, status: str) -> None:
     except Exception:
         conn.rollback()
         raise
+    finally:
+        conn.close()
+
+
+def set_conversation_stage(
+    conversation_id: int, stage: str, trigger: str = None
+) -> None:
+    """Set or update the sales stage for a conversation."""
+    conn = _connect()
+    try:
+        conn.execute("BEGIN IMMEDIATE")
+        existing = conn.execute(
+            "SELECT id FROM sales_stages WHERE conversation_id = ?", (conversation_id,)
+        ).fetchone()
+        if existing:
+            conn.execute(
+                "UPDATE sales_stages SET stage = ?, entry_trigger = ?, updated_at = datetime('now') WHERE conversation_id = ?",
+                (stage, trigger, conversation_id),
+            )
+        else:
+            conv = conn.execute(
+                "SELECT wa_number_id FROM conversations WHERE id = ?",
+                (conversation_id,),
+            ).fetchone()
+            if conv:
+                conn.execute(
+                    "INSERT INTO sales_stages (wa_number_id, conversation_id, stage, entry_trigger) VALUES (?, ?, ?, ?)",
+                    (conv["wa_number_id"], conversation_id, stage, trigger),
+                )
+        conn.commit()
+    finally:
+        conn.close()
+
+
+def get_conversation_stage(conversation_id: int) -> str | None:
+    """Get current sales stage for a conversation."""
+    conn = _connect()
+    try:
+        row = conn.execute(
+            "SELECT stage FROM sales_stages WHERE conversation_id = ? ORDER BY updated_at DESC LIMIT 1",
+            (conversation_id,),
+        ).fetchone()
+        return row["stage"] if row else None
+    finally:
+        conn.close()
+
+
+def get_all_conversation_stages(wa_number_id: str | None = None) -> list[dict]:
+    """Get all conversations with their current sales stage."""
+    conn = _connect()
+    try:
+        if wa_number_id:
+            rows = conn.execute(
+                """
+                SELECT c.id, c.contact_phone, c.contact_name, c.wa_number_id, c.status,
+                       s.stage, s.entry_trigger, s.updated_at
+                FROM conversations c
+                LEFT JOIN sales_stages s ON c.id = s.conversation_id
+                WHERE c.wa_number_id = ? AND c.engine_mode = 'cs'
+                ORDER BY s.updated_at DESC NULLS LAST
+            """,
+                (wa_number_id,),
+            ).fetchall()
+        else:
+            rows = conn.execute("""
+                SELECT c.id, c.contact_phone, c.contact_name, c.wa_number_id, c.status,
+                       s.stage, s.entry_trigger, s.updated_at
+                FROM conversations c
+                LEFT JOIN sales_stages s ON c.id = s.conversation_id
+                WHERE c.engine_mode = 'cs'
+                ORDER BY s.updated_at DESC NULLS LAST
+            """).fetchall()
+        return [dict(r) for r in rows]
     finally:
         conn.close()

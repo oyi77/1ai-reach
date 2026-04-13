@@ -212,6 +212,7 @@ def generate_cs_response(
     kb_results: list[dict],
     persona: str,
     message: str,
+    stage_context: str = "",
 ) -> str:
     """Generate a customer service response.
 
@@ -238,6 +239,9 @@ def generate_cs_response(
         f"[SYSTEM]\n{persona}\n",
         f"Language instruction: {lang_instruction}\n",
     ]
+
+    if stage_context:
+        prompt_parts.append(f"{stage_context}\n")
 
     if kb_context:
         prompt_parts.append(
@@ -363,25 +367,40 @@ def handle_inbound_message(
             "reason": reason,
         }
 
-    # 7. Generate AI response
+    # 6b. Fetch session-specific persona
+    from state_manager import get_wa_number_by_session
+
+    wa_num = get_wa_number_by_session(session_name)
+    persona = wa_num.get("persona") if wa_num else None
+    if not persona:
+        persona = CS_DEFAULT_PERSONA
+
+    # 7. Advance sales stage
+    from conversation_tracker import advance_stage, get_stage_context
+
+    advance_stage(conv_id, message_text, kb_results)
+    stage_context = get_stage_context(conv_id)
+
+    # 8. Generate AI response
     conversation_context = get_conversation_context(conv_id, max_messages=10)
     response_text = generate_cs_response(
         conversation_context,
         kb_results,
-        CS_DEFAULT_PERSONA,
+        persona,
         message_text,
+        stage_context,
     )
 
-    # 8. Send reply with typing indicator
+    # 9. Send reply with typing indicator
     send_typing_indicator(session_name, contact_phone, typing=True)
     time.sleep(CS_REPLY_DELAY_SECONDS)
     send_whatsapp_session(contact_phone, response_text, session_name)
     send_typing_indicator(session_name, contact_phone, typing=False)
 
-    # 9. Record outbound message
+    # 10. Record outbound message
     add_message(conv_id, direction="out", message_text=response_text)
 
-    # 10. Record for rate limiting
+    # 11. Record for rate limiting
     _record_reply(session_name)
 
     return {

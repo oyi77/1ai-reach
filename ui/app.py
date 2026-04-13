@@ -46,7 +46,7 @@ with st.sidebar:
     st.markdown("Use the tabs in the main area to navigate.")
 
 # Page routing via tabs
-tab1, tab2, tab3, tab4, tab5, tab6, tab7 = st.tabs(
+tab1, tab2, tab3, tab4, tab5, tab6, tab7, tab8 = st.tabs(
     [
         "📊 Funnel",
         "🚀 Run Pipeline",
@@ -55,6 +55,7 @@ tab1, tab2, tab3, tab4, tab5, tab6, tab7 = st.tabs(
         "📱 WA Numbers",
         "💬 Conversations",
         "📚 Knowledge Base",
+        "💰 Sales Pipeline",
     ]
 )
 
@@ -79,3 +80,82 @@ with tab6:
 
 with tab7:
     render_kb_editor()
+
+with tab8:
+    st.subheader("💰 Sales Pipeline")
+
+    import sys
+
+    sys.path.insert(0, str(Path(__file__).parent.parent / "scripts"))
+    from state_manager import get_wa_numbers, get_all_conversation_stages
+    from conversation_tracker import get_messages
+    from datetime import datetime
+
+    sessions = get_wa_numbers()
+    session_options = ["All"] + [
+        s["session_name"] for s in sessions if s.get("mode") == "cs"
+    ]
+    selected_session = st.selectbox("Filter by Session", session_options)
+
+    wa_filter = None if selected_session == "All" else selected_session
+    convs = get_all_conversation_stages(wa_number_id=wa_filter)
+
+    STAGE_COLS = [
+        "discovery",
+        "interest",
+        "proposal",
+        "negotiation",
+        "close_won",
+        "close_lost",
+    ]
+    STAGE_EMOJI = {
+        "discovery": "🔍",
+        "interest": "🤔",
+        "proposal": "📋",
+        "negotiation": "🤝",
+        "close_won": "✅",
+        "close_lost": "❌",
+    }
+
+    # Group conversations by stage
+    by_stage = {s: [] for s in STAGE_COLS}
+    for conv in convs:
+        stage = conv.get("stage") or "discovery"
+        if stage not in STAGE_COLS:
+            stage = "discovery"
+        by_stage[stage].append(conv)
+
+    cols = st.columns(len(STAGE_COLS))
+    for col, stage in zip(cols, STAGE_COLS):
+        with col:
+            count = len(by_stage[stage])
+            st.markdown(
+                f"**{STAGE_EMOJI.get(stage, '')} {stage.replace('_', ' ').title()}** `({count})`"
+            )
+            for conv in by_stage[stage]:
+                phone = conv.get("contact_phone", "Unknown")
+                name = conv.get("contact_name") or phone.split("@")[0]
+                updated = conv.get("updated_at") or conv.get("created_at", "")
+                try:
+                    if updated:
+                        dt = datetime.fromisoformat(str(updated).replace("Z", "+00:00"))
+                        ago = (datetime.now() - dt.replace(tzinfo=None)).days
+                        time_str = f"{ago}d ago"
+                    else:
+                        time_str = "new"
+                except:
+                    time_str = "new"
+
+                msg = get_messages(conv["id"], limit=1)
+                last_msg = msg[-1]["message_text"][:50] if msg else "..."
+
+                st.markdown(
+                    f"""
+                <div style="background:#f0f0f0;padding:8px;border-radius:6px;margin-bottom:6px;font-size:12px;">
+                    <strong>{name}</strong><br/>
+                    <span style="color:#666">{last_msg}...</span><br/>
+                    <span style="color:#999;font-size:10px">{time_str}</span>
+                </div>
+                """,
+                    unsafe_allow_html=True,
+                )
