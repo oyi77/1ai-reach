@@ -15,8 +15,10 @@ import requests
 
 from config import (
     MCP_BASE_URL,
+    WAHA_API_KEY,
     WAHA_DIRECT_API_KEY,
     WAHA_DIRECT_URL,
+    WAHA_URL,
     WAHA_WEBHOOK_PATH,
     WAHA_WEBHOOK_SECRET,
 )
@@ -28,11 +30,16 @@ from state_manager import (
     upsert_wa_number,
 )
 
-# ---------------------------------------------------------------------------
-# Constants
-# ---------------------------------------------------------------------------
-_BASE_URL = str(WAHA_DIRECT_URL or "").rstrip("/")
-_API_KEY = str(WAHA_DIRECT_API_KEY or "")
+
+def _resolve_waha_url_key() -> tuple[str, str]:
+    if WAHA_URL and WAHA_API_KEY:
+        return str(WAHA_URL).rstrip("/"), str(WAHA_API_KEY)
+    if WAHA_DIRECT_URL and WAHA_DIRECT_API_KEY:
+        return str(WAHA_DIRECT_URL).rstrip("/"), str(WAHA_DIRECT_API_KEY)
+    return "", ""
+
+
+_BASE_URL, _API_KEY = _resolve_waha_url_key()
 _HEADERS: dict[str, str] = {
     "X-Api-Key": _API_KEY,
     "Content-Type": "application/json",
@@ -46,7 +53,6 @@ _TIMEOUT = 15
 
 
 def _get(path: str, **kwargs) -> requests.Response:
-    """GET helper — strips Content-Type for query-only requests."""
     h = {k: v for k, v in _HEADERS.items() if k != "Content-Type"}
     return requests.get(f"{_BASE_URL}{path}", headers=h, timeout=_TIMEOUT, **kwargs)
 
