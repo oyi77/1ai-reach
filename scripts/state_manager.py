@@ -571,6 +571,18 @@ def get_kb_entries(wa_number_id: str, category: str | None = None) -> list[dict]
 
 
 def search_kb(wa_number_id: str, query: str, limit: int = 5) -> list[dict]:
+    # Build OR-based FTS5 query: users expect results if ANY word matches
+    # e.g. "harga laundry" -> "(harga* OR laundry*)"
+    # e.g. "paket mingguan" -> "(paket* OR mingguan*)"
+    import re
+
+    words = query.strip().split()
+    if not words:
+        return []
+    # Wrap each word in parentheses with OR, apply prefix matching to words >= 2 chars
+    terms = [w + "*" if len(w) >= 2 else w for w in words]
+    fts_query = "(" + " OR ".join(terms) + ")"
+
     conn = _connect()
     try:
         rows = conn.execute(
@@ -582,7 +594,7 @@ def search_kb(wa_number_id: str, query: str, limit: int = 5) -> list[dict]:
             ORDER BY rank
             LIMIT ?
             """,
-            (query, wa_number_id, limit),
+            (fts_query, wa_number_id, limit),
         ).fetchall()
         return [dict(r) for r in rows]
     finally:

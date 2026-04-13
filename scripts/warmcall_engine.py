@@ -20,7 +20,6 @@ CLI:
 
 import argparse
 import os
-import subprocess
 import sys
 import time
 from datetime import datetime, timezone
@@ -125,19 +124,13 @@ def _phone_to_chat_id(phone: str) -> str:
 
 
 def _generate_message(prompt: str) -> str:
-    """Generate a message using Claude via subprocess, matching project pattern."""
-    try:
-        result = subprocess.run(
-            ["claude", "-p", "--model", GENERATOR_MODEL],
-            input=prompt,
-            capture_output=True,
-            text=True,
-            timeout=60,
-        )
-        if result.returncode == 0 and result.stdout.strip():
-            return result.stdout.strip()
-    except Exception as e:
-        print(f"[warmcall] Claude generation failed: {e}", file=sys.stderr)
+    """Generate a message using the multi-provider LLM client."""
+    import llm_client
+
+    result = llm_client.generate(prompt)
+    if result:
+        return result
+    print("[warmcall] All LLM providers failed", file=sys.stderr)
     return ""
 
 

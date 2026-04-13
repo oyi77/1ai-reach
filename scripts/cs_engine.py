@@ -89,6 +89,7 @@ def _record_reply(session_name: str) -> None:
 
 _INDONESIAN_MARKERS = frozenset(
     {
+        # Core question words
         "apa",
         "apakah",
         "bagaimana",
@@ -96,11 +97,13 @@ _INDONESIAN_MARKERS = frozenset(
         "bisa",
         "boleh",
         "cara",
+        "gimana",
+        "kok",
+        # Common words
         "dan",
         "dari",
         "dengan",
         "di",
-        "gimana",
         "harga",
         "ini",
         "itu",
@@ -109,11 +112,28 @@ _INDONESIAN_MARKERS = frozenset(
         "mau",
         "minta",
         "mohon",
+        "nya",
         "saya",
         "selamat",
         "sudah",
         "untuk",
         "yang",
+        # Sentence-final / colloquial particles
+        "ga",
+        "gak",
+        "nggak",
+        "dong",
+        "deh",
+        "si",
+        "aja",
+        "tuh",
+        "nih",
+        "lho",
+        "loh",
+        # Informal pronouns
+        "gue",
+        "gua",
+        "aneh",
     }
 )
 
@@ -122,7 +142,10 @@ def _detect_language(text: str) -> str:
     """Return 'id' for Indonesian, 'en' for English."""
     words = set(text.lower().split())
     matches = words & _INDONESIAN_MARKERS
-    return "id" if len(matches) >= 2 else "en"
+    # Single marker is enough for short messages (question phrases)
+    if len(matches) >= 1:
+        return "id"
+    return "en"
 
 
 # ---------------------------------------------------------------------------
