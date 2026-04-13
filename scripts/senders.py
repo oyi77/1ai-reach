@@ -80,36 +80,82 @@ def _waha_sessions(base_url: str, headers: dict[str, str]) -> list[str]:
     return sessions
 
 
-def _send_wa_waha(phone: str, message: str) -> bool:
-    """Primary: send WhatsApp via WAHA HTTP API."""
-    if not _HTTP_OK:
-        return False
+def _normalize_phone(phone: str) -> str:
+    """Normalize phone to clean digits starting with 62."""
     clean = "".join(filter(str.isdigit, str(phone)))
     if not clean.startswith("62"):
         clean = "62" + clean.lstrip("0")
-    chat_id = f"{clean}@c.us"
+    return clean
+
+
+def _phone_to_chat_id(phone: str) -> str:
+    """Convert phone to WAHA chat ID format."""
+    return f"{_normalize_phone(phone)}@c.us"
+
+
+def _send_wa_waha(phone: str, message: str, session_name: str = None) -> bool:
+    """Primary: send WhatsApp via WAHA HTTP API.
+
+    If *session_name* is given, sends only through that session on the
+    WAHA_DIRECT target.  Otherwise falls back to the original behaviour
+    of iterating all targets and their working sessions.
+    """
+    if not _HTTP_OK:
+        return False
+    clean = _normalize_phone(phone)
+    chat_id = _phone_to_chat_id(phone)
+
+    if session_name is not None:
+        url = str(WAHA_DIRECT_URL or "").rstrip("/")
+        key = str(WAHA_DIRECT_API_KEY or "")
+        if not url:
+            print(
+                "❌ WAHA_DIRECT_URL not configured for session-aware send",
+                file=sys.stderr,
+            )
+            return False
+        headers = {"X-Api-Key": key, "Content-Type": "application/json"}
+        try:
+            r = _req.post(
+                f"{url}/api/sendText",
+                json={"chatId": chat_id, "text": message, "session": session_name},
+                headers=headers,
+                timeout=15,
+            )
+            if r.status_code < 300:
+                print(f"✅ WA sent via WAHA_DIRECT ({session_name}) to {clean}")
+                return True
+            print(
+                f"❌ WAHA_DIRECT ({session_name}) error {r.status_code}: "
+                f"{r.text[:200]}",
+                file=sys.stderr,
+            )
+        except Exception as e:
+            print(f"❌ WAHA_DIRECT ({session_name}) failed: {e}", file=sys.stderr)
+        return False
+
     for target_name, base_url, headers in _waha_targets():
-        for session_name in _waha_sessions(base_url, headers):
+        for sess in _waha_sessions(base_url, headers):
             try:
                 r = _req.post(
                     f"{base_url}/api/sendText",
                     json={
                         "chatId": chat_id,
                         "text": message,
-                        "session": session_name,
+                        "session": sess,
                     },
                     headers=headers,
                     timeout=15,
                 )
                 if r.status_code < 300:
-                    print(f"✅ WA sent via {target_name} ({session_name}) to {clean}")
+                    print(f"✅ WA sent via {target_name} ({sess}) to {clean}")
                     return True
                 print(
-                    f"❌ {target_name} ({session_name}) error {r.status_code}: {r.text[:200]}",
+                    f"❌ {target_name} ({sess}) error {r.status_code}: {r.text[:200]}",
                     file=sys.stderr,
                 )
             except Exception as e:
-                print(f"❌ {target_name} ({session_name}) failed: {e}", file=sys.stderr)
+                print(f"❌ {target_name} ({sess}) failed: {e}", file=sys.stderr)
     return False
 
 
@@ -134,19 +180,83 @@ def _send_wa_wacli(phone: str, message: str) -> bool:
     return False
 
 
-def send_whatsapp(phone: str, message: str) -> bool:
+def send_whatsapp(phone: str, message: str, session_name: str = None) -> bool:
     if is_empty(phone):
         print("Skip WA: No phone number.")
         return False
     # Try WAHA first (HTTP API), fall back to wacli
-    for name, fn in [("WAHA", _send_wa_waha), ("wacli", _send_wa_wacli)]:
+    for name, fn in [
+        ("WAHA", lambda: _send_wa_waha(phone, message, session_name)),
+        ("wacli", lambda: _send_wa_wacli(phone, message)),
+    ]:
         try:
-            if fn(phone, message):
+            if fn():
                 return True
         except Exception as e:
             print(f"WA method {name} failed: {e}", file=sys.stderr)
     print(f"❌ All WA methods failed for {phone}")
     return False
+
+
+def send_whatsapp_session(phone: str, message: str, session_name: str) -> bool:
+    """Send WhatsApp message through a specific WAHA session (required)."""
+    if is_empty(phone):
+        print("Skip WA: No phone number.")
+        return False
+    return _send_wa_waha(phone, message, session_name=session_name)
+
+
+def send_typing_indicator(session_name: str, chat_id: str, typing: bool = True) -> bool:
+    """Start or stop typing indicator via WAHA API.
+
+    *chat_id* must already be in WAHA format (e.g. ``628xxx@c.us``).
+    """
+    if not _HTTP_OK:
+        return False
+    url = str(WAHA_DIRECT_URL or "").rstrip("/")
+    if not url:
+        return False
+    endpoint = "startTyping" if typing else "stopTyping"
+    headers = {
+        "X-Api-Key": str(WAHA_DIRECT_API_KEY or ""),
+        "Content-Type": "application/json",
+    }
+    try:
+        r = _req.post(
+            f"{url}/api/{endpoint}",
+            json={"chatId": chat_id, "session": session_name},
+            headers=headers,
+            timeout=10,
+        )
+        return r.status_code < 300
+    except Exception:
+        return False
+
+
+def send_seen(session_name: str, chat_id: str) -> bool:
+    """Mark a chat as seen (read receipt) via WAHA API.
+
+    *chat_id* must already be in WAHA format (e.g. ``628xxx@c.us``).
+    """
+    if not _HTTP_OK:
+        return False
+    url = str(WAHA_DIRECT_URL or "").rstrip("/")
+    if not url:
+        return False
+    headers = {
+        "X-Api-Key": str(WAHA_DIRECT_API_KEY or ""),
+        "Content-Type": "application/json",
+    }
+    try:
+        r = _req.post(
+            f"{url}/api/sendSeen",
+            json={"chatId": chat_id, "session": session_name},
+            headers=headers,
+            timeout=10,
+        )
+        return r.status_code < 300
+    except Exception:
+        return False
 
 
 LOGO_URL = "https://raw.githubusercontent.com/oyi77/1ai-engage/master/assets/logo.svg"
