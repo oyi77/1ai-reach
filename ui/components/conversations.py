@@ -1,7 +1,9 @@
 import sys
 from pathlib import Path
+
 import pandas as pd
 import streamlit as st
+from streamlit_autorefresh import st_autorefresh
 
 _ROOT = Path(__file__).parent.parent.parent
 if str(_ROOT) not in sys.path:
@@ -49,6 +51,9 @@ def _get_all_conversations():
 
 
 def render_conversations():
+    # Auto-refresh every 5 seconds
+    st_autorefresh(interval=5000, key="conversation_refresh")
+
     # Header removed - page title handled by app.py
 
     # Fetch data
