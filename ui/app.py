@@ -18,6 +18,7 @@ from ui.components.settings import render_settings
 from ui.components.conversations import render_conversations
 from ui.components.wa_numbers import render_wa_numbers
 from ui.components.kb_editor import render_kb_editor
+from ui.components.event_log import render_event_log
 
 st.set_page_config(
     page_title="1ai-engage Dashboard",
@@ -34,6 +35,7 @@ PAGES = [
     "💬 Conversations",
     "📚 Knowledge Base",
     "💰 Sales Pipeline",
+    "📋 Event Log",
 ]
 
 if "current_page" not in st.session_state:
