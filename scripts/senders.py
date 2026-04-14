@@ -202,11 +202,82 @@ def send_whatsapp(phone: str, message: str, session_name: str = None) -> bool:
 
 
 def send_whatsapp_session(phone: str, message: str, session_name: str) -> bool:
-    """Send WhatsApp message through a specific WAHA session (required)."""
+    """Send WhatsApp message through a specific WAHA session.
+
+    Accepts phone in various formats: 628xxx, 628xxx@c.us, or XXXX@lid
+    Preserves @lid format as-is (from WAHA webhook), converts others to @c.us
+    """
     if is_empty(phone):
         print("Skip WA: No phone number.")
         return False
-    return _send_wa_waha(phone, message, session_name=session_name)
+
+    # Check if it's already in LID format (from WAHA webhook)
+    if "@lid" in phone:
+        chat_id = phone
+        clean = phone.replace("@lid", "")
+    else:
+        # Normal phone format - convert to @c.us
+        chat_id = _phone_to_chat_id(phone)
+        clean = _normalize_phone(phone)
+
+    return _send_wa_waha_raw(chat_id, message, session_name, clean)
+
+
+def _send_wa_waha_raw(
+    chat_id: str, message: str, session_name: str, clean_phone: str
+) -> bool:
+    """Send WA using raw chat_id (preserves @lid or @c.us format)."""
+    if not _HTTP_OK:
+        return False
+
+    if session_name is not None:
+        targets_to_try = [
+            ("WAHA", WAHA_URL, WAHA_API_KEY),
+            ("WAHA_DIRECT", WAHA_DIRECT_URL, WAHA_DIRECT_API_KEY),
+        ]
+
+        for target_name, base_url, api_key in targets_to_try:
+            url = str(base_url or "").rstrip("/")
+            key = str(api_key or "")
+            if not url:
+                continue
+            headers = {"X-Api-Key": key, "Content-Type": "application/json"}
+            try:
+                r = _req.post(
+                    f"{url}/api/sendText",
+                    json={"chatId": chat_id, "text": message, "session": session_name},
+                    headers=headers,
+                    timeout=15,
+                )
+                if r.status_code < 300:
+                    print(f"✅ WA sent via {target_name} to {clean_phone or chat_id}")
+                    return True
+                print(
+                    f"❌ {target_name} error {r.status_code}: {r.text[:200]}",
+                    file=sys.stderr,
+                )
+            except Exception as e:
+                print(f"❌ {target_name} failed: {e}", file=sys.stderr)
+        return False
+
+    # Fallback to original behavior
+    for target_name, base_url, headers in _waha_targets():
+        for sess in _waha_sessions(base_url, headers):
+            try:
+                r = _req.post(
+                    f"{base_url}/api/sendText",
+                    json={"chatId": chat_id, "text": message, "session": sess},
+                    headers=headers,
+                    timeout=15,
+                )
+                if r.status_code < 300:
+                    print(
+                        f"✅ WA sent via {target_name} ({sess}) to {clean_phone or chat_id}"
+                    )
+                    return True
+            except Exception:
+                pass
+    return False
 
 
 def send_typing_indicator(session_name: str, chat_id: str, typing: bool = True) -> bool:
