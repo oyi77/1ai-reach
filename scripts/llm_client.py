@@ -116,7 +116,40 @@ def _call_openai(prompt, model="gpt-4o-mini"):
     return None
 
 
+def _call_aitradepulse(prompt, model="auto/free-chat", timeout=15):
+    key = os.getenv("AITRADEPULSE_API_KEY", "sk-f0c1ddf471008e76-501723-c663b4ac")
+    if not key:
+        return None
+    try:
+        import urllib.request
+
+        data = json.dumps(
+            {
+                "model": model,
+                "messages": [{"role": "user", "content": prompt}],
+                "max_tokens": 300,
+                "temperature": 0.7,
+            }
+        ).encode()
+        req = urllib.request.Request(
+            "http://127.0.0.1:20128/v1/chat/completions",
+            data=data,
+            headers={
+                "Content-Type": "application/json",
+                "Authorization": f"Bearer {key}",
+            },
+        )
+        with urllib.request.urlopen(req, timeout=15) as resp:
+            result = json.loads(resp.read())
+            return result["choices"][0]["message"]["content"]
+    except Exception as e:
+        pass
+    return None
+
+
 def generate(prompt, fallback=None):
+    if result := _call_aitradepulse(prompt, timeout=20):
+        return result
     if result := _call_opencode(prompt, timeout=15):
         return result
     if result := _call_ollama(prompt):
