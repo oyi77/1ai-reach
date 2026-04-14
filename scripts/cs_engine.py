@@ -43,6 +43,13 @@ from senders import send_typing_indicator, send_whatsapp_session
 from state_manager import init_db, add_event_log
 import capi_tracker
 
+from n8n_client import (
+    notify_conversation_started,
+    notify_escalation,
+    notify_hot_lead,
+    notify_purchase_signal,
+)
+
 
 def _is_purchase_signal(text: str) -> bool:
     """Return True if message looks like a payment confirmation."""
@@ -425,12 +432,17 @@ def handle_inbound_message(
             "reason": f"Rate limit exceeded ({CS_MAX_REPLIES_PER_MINUTE}/min) for session {session_name}",
         }
 
-    # 3. Get or create conversation
     conv = get_or_create_conversation(wa_number_id, contact_phone, engine_mode="cs")
     conv_id = conv["id"]
 
-    # 4. Record inbound message
+    if conv.get("message_count", 0) <= 1:
+        notify_conversation_started(contact_phone, session_name, wa_number_id)
+
     add_message(conv_id, direction="in", message_text=message_text)
+
+    current_msg_count = conv.get("message_count", 0) + 1
+    if current_msg_count >= 3:
+        notify_hot_lead(contact_phone, current_msg_count, conv_id)
 
     # 4b. Track Meta CAPI - Lead (every new message is a fresh lead interaction)
     capi_tracker.track_lead(contact_phone)
@@ -438,6 +450,7 @@ def handle_inbound_message(
     # 4c. Track Meta CAPI - Purchase (detect payment signals)
     if _is_purchase_signal(message_text):
         capi_tracker.track_purchase(contact_phone)
+        notify_purchase_signal(contact_phone, message_text, conv_id)
 
     # 4d. Track Meta CAPI - AddToCart (detect shipping complaints -> likely shopee redirect)
     if _is_shipping_complaint(message_text):
@@ -450,6 +463,8 @@ def handle_inbound_message(
     if should_escalate(message_text, kb_results, conv):
         reason = "No KB match + repeated unclear turns"
         escalate(conv_id, reason=reason)
+
+        notify_escalation(contact_phone, reason, conv_id)
 
         lang = _detect_language(message_text)
         if lang == "id":
