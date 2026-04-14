@@ -1,0 +1,149 @@
+- generic [ref=e2]:
+  - generic [ref=e11]:
+    - heading "Navigation" [level=2] [ref=e15]
+    - paragraph [ref=e20]: Use the tabs in the main area to navigate.
+  - generic [ref=e3]:
+    - banner [ref=e23]:
+      - button "Main menu" [ref=e28] [cursor=pointer]:
+        - img [ref=e29]
+    - generic [ref=e32]:
+      - heading "1ai-engage Dashboard" [level=1] [ref=e37]:
+        - text: 1ai-engage Dashboard
+        - generic [ref=e38]:
+          - link "Link to heading":
+            - /url: "#1ai-engage-dashboard"
+            - img
+      - generic [ref=e39]:
+        - generic [ref=e40]:
+          - tablist [ref=e42]:
+            - tab "📊 Funnel" [ref=e43] [cursor=pointer]:
+              - paragraph [ref=e45]: 📊 Funnel
+            - tab "🚀 Run Pipeline" [ref=e46] [cursor=pointer]:
+              - paragraph [ref=e48]: 🚀 Run Pipeline
+            - tab "✏️ Draft Editor" [ref=e49] [cursor=pointer]:
+              - paragraph [ref=e51]: ✏️ Draft Editor
+            - tab "⚙️ Settings" [selected] [ref=e52] [cursor=pointer]:
+              - paragraph [ref=e54]: ⚙️ Settings
+            - tab "📱 WA Numbers" [ref=e55] [cursor=pointer]:
+              - paragraph [ref=e57]: 📱 WA Numbers
+            - tab "💬 Conversations" [ref=e58] [cursor=pointer]:
+              - paragraph [ref=e60]: 💬 Conversations
+            - tab "📚 Knowledge Base" [ref=e61] [cursor=pointer]:
+              - paragraph [ref=e63]: 📚 Knowledge Base
+            - tab "💰 Sales Pipeline" [ref=e64] [cursor=pointer]:
+              - paragraph [ref=e66]: 💰 Sales Pipeline
+          - tabpanel "⚙️ Settings" [ref=e231]:
+            - generic [ref=e232]:
+              - heading "⚙️ Settings" [level=2] [ref=e237]:
+                - text: ⚙️ Settings
+                - generic [ref=e238]:
+                  - link "Link to heading":
+                    - /url: "#settings"
+                    - img
+              - generic [ref=e241]:
+                - group [ref=e244]:
+                  - generic "keyboard_arrow_down Google & Sheets" [ref=e245] [cursor=pointer]:
+                    - generic [ref=e246]:
+                      - generic [ref=e248]: keyboard_arrow_down
+                      - paragraph [ref=e251]: Google & Sheets
+                  - generic [ref=e253]:
+                    - generic [ref=e255]:
+                      - paragraph [ref=e259]: SHEET_ID
+                      - textbox "SHEET_ID" [ref=e262]:
+                        - /placeholder: ""
+                        - text: 10tRBCuRl_T6_nmdN1ycHaSRmsK-7jGKLtbJewKAUz_I
+                    - generic [ref=e264]:
+                      - paragraph [ref=e268]: GOOGLE_API_KEY
+                      - generic [ref=e270]:
+                        - textbox "GOOGLE_API_KEY" [ref=e271]:
+                          - /placeholder: ""
+                          - text: AIzaSyAkLEGaElFeE1P4UUnIER_R1qr3Z3BMswA
+                        - button "Show password text" [ref=e272] [cursor=pointer]:
+                          - img "Show password text" [ref=e273]
+                - group [ref=e277]:
+                  - generic "keyboard_arrow_right Email Settings" [ref=e278] [cursor=pointer]:
+                    - generic [ref=e279]:
+                      - generic [ref=e281]: keyboard_arrow_right
+                      - paragraph [ref=e284]: Email Settings
+                - group [ref=e287]:
+                  - generic "keyboard_arrow_down WhatsApp / WAHA" [ref=e348] [cursor=pointer]:
+                    - generic [ref=e289]:
+                      - generic [ref=e350]: keyboard_arrow_down
+                      - paragraph [ref=e294]: WhatsApp / WAHA
+                  - generic [ref=e352]:
+                    - generic [ref=e354]:
+                      - paragraph [ref=e358]: WAHA_URL
+                      - textbox "WAHA_URL" [ref=e361]:
+                        - /placeholder: ""
+                        - text: https://waha.aitradepulse.com
+                    - generic [ref=e363]:
+                      - paragraph [ref=e367]: WAHA_API_KEY
+                      - generic [ref=e369]:
+                        - textbox "WAHA_API_KEY" [ref=e370]:
+                          - /placeholder: ""
+                          - text: 0673158ede14970b922f7e62075bd0f211490ca335111a9e
+                        - button "Show password text" [ref=e371] [cursor=pointer]:
+                          - img "Show password text" [ref=e372]
+                    - generic [ref=e375]:
+                      - paragraph [ref=e379]: WAHA_DIRECT_URL
+                      - textbox "WAHA_DIRECT_URL" [ref=e382]:
+                        - /placeholder: ""
+                        - text: http://5.189.138.144:3000
+                    - generic [ref=e384]:
+                      - paragraph [ref=e388]: WAHA_DIRECT_API_KEY
+                      - generic [ref=e390]:
+                        - textbox "WAHA_DIRECT_API_KEY" [ref=e391]:
+                          - /placeholder: ""
+                          - text: "321"
+                        - button "Show password text" [ref=e392] [cursor=pointer]:
+                          - img "Show password text" [ref=e393]
+                    - generic [ref=e396]:
+                      - paragraph [ref=e400]: WAHA_SESSION
+                      - textbox "WAHA_SESSION" [ref=e403]:
+                        - /placeholder: ""
+                        - text: default
+                    - generic [ref=e405]:
+                      - paragraph [ref=e409]: WAHA_OWN_NUMBER
+                      - textbox "WAHA_OWN_NUMBER" [ref=e412]:
+                        - /placeholder: ""
+                        - text: "6282247006969"
+                - group [ref=e297]:
+                  - generic "keyboard_arrow_down AI Models" [active] [ref=e413] [cursor=pointer]:
+                    - generic [ref=e299]:
+                      - generic [ref=e415]: keyboard_arrow_down
+                      - paragraph [ref=e304]: AI Models
+                  - generic [ref=e419]:
+                    - generic [ref=e423]:
+                      - paragraph [ref=e427]: GENERATOR_MODEL
+                      - generic [ref=e429]:
+                        - generic [ref=e430]:
+                          - generic [ref=e431]: sonnet
+                          - combobox "Selected sonnet. GENERATOR_MODEL" [ref=e433]
+                        - img "open" [ref=e435]
+                    - generic [ref=e440]:
+                      - paragraph [ref=e444]: REVIEWER_MODEL
+                      - generic [ref=e446]:
+                        - generic [ref=e447]:
+                          - generic [ref=e448]: sonnet
+                          - combobox "Selected sonnet. REVIEWER_MODEL" [ref=e450]
+                        - img "open" [ref=e452]
+                - group [ref=e307]:
+                  - generic "keyboard_arrow_right Telegram" [ref=e308] [cursor=pointer]:
+                    - generic [ref=e309]:
+                      - generic [ref=e311]: keyboard_arrow_right
+                      - paragraph [ref=e314]: Telegram
+                - group [ref=e317]:
+                  - generic "keyboard_arrow_right Pipeline Configuration" [ref=e318] [cursor=pointer]:
+                    - generic [ref=e319]:
+                      - generic [ref=e321]: keyboard_arrow_right
+                      - paragraph [ref=e324]: Pipeline Configuration
+                - group [ref=e327]:
+                  - generic "keyboard_arrow_right Hub / Integrations" [ref=e328] [cursor=pointer]:
+                    - generic [ref=e329]:
+                      - generic [ref=e331]: keyboard_arrow_right
+                      - paragraph [ref=e334]: Hub / Integrations
+                - separator [ref=e339]
+                - button "Save Settings" [ref=e343] [cursor=pointer]:
+                  - paragraph [ref=e347]: Save Settings
+        - button "Scroll tabs right" [ref=e227] [cursor=pointer]:
+          - img [ref=e228]

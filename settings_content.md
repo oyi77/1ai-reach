@@ -1,0 +1,97 @@
+- generic [ref=e2]:
+  - generic [ref=e11]:
+    - heading "Navigation" [level=2] [ref=e15]
+    - paragraph [ref=e20]: Use the tabs in the main area to navigate.
+  - generic [ref=e3]:
+    - banner [ref=e23]:
+      - button "Main menu" [ref=e28] [cursor=pointer]:
+        - img [ref=e29]
+    - generic [ref=e32]:
+      - heading "1ai-engage Dashboard" [level=1] [ref=e37]:
+        - text: 1ai-engage Dashboard
+        - generic [ref=e38]:
+          - link "Link to heading":
+            - /url: "#1ai-engage-dashboard"
+            - img
+      - generic [ref=e39]:
+        - generic [ref=e40]:
+          - tablist [ref=e42]:
+            - tab "📊 Funnel" [ref=e43] [cursor=pointer]:
+              - paragraph [ref=e45]: 📊 Funnel
+            - tab "🚀 Run Pipeline" [ref=e46] [cursor=pointer]:
+              - paragraph [ref=e48]: 🚀 Run Pipeline
+            - tab "✏️ Draft Editor" [ref=e49] [cursor=pointer]:
+              - paragraph [ref=e51]: ✏️ Draft Editor
+            - tab "⚙️ Settings" [active] [selected] [ref=e52] [cursor=pointer]:
+              - paragraph [ref=e54]: ⚙️ Settings
+            - tab "📱 WA Numbers" [ref=e55] [cursor=pointer]:
+              - paragraph [ref=e57]: 📱 WA Numbers
+            - tab "💬 Conversations" [ref=e58] [cursor=pointer]:
+              - paragraph [ref=e60]: 💬 Conversations
+            - tab "📚 Knowledge Base" [ref=e61] [cursor=pointer]:
+              - paragraph [ref=e63]: 📚 Knowledge Base
+            - tab "💰 Sales Pipeline" [ref=e64] [cursor=pointer]:
+              - paragraph [ref=e66]: 💰 Sales Pipeline
+          - tabpanel "⚙️ Settings" [ref=e231]:
+            - generic [ref=e232]:
+              - heading "⚙️ Settings" [level=2] [ref=e237]:
+                - text: ⚙️ Settings
+                - generic [ref=e238]:
+                  - link "Link to heading":
+                    - /url: "#settings"
+                    - img
+              - generic [ref=e241]:
+                - group [ref=e244]:
+                  - generic "keyboard_arrow_down Google & Sheets" [ref=e245] [cursor=pointer]:
+                    - generic [ref=e246]:
+                      - generic [ref=e248]: keyboard_arrow_down
+                      - paragraph [ref=e251]: Google & Sheets
+                  - generic [ref=e253]:
+                    - generic [ref=e255]:
+                      - paragraph [ref=e259]: SHEET_ID
+                      - textbox "SHEET_ID" [ref=e262]:
+                        - /placeholder: ""
+                        - text: 10tRBCuRl_T6_nmdN1ycHaSRmsK-7jGKLtbJewKAUz_I
+                    - generic [ref=e264]:
+                      - paragraph [ref=e268]: GOOGLE_API_KEY
+                      - generic [ref=e270]:
+                        - textbox "GOOGLE_API_KEY" [ref=e271]:
+                          - /placeholder: ""
+                          - text: AIzaSyAkLEGaElFeE1P4UUnIER_R1qr3Z3BMswA
+                        - button "Show password text" [ref=e272] [cursor=pointer]:
+                          - img "Show password text" [ref=e273]
+                - group [ref=e277]:
+                  - generic "keyboard_arrow_right Email Settings" [ref=e278] [cursor=pointer]:
+                    - generic [ref=e279]:
+                      - generic [ref=e281]: keyboard_arrow_right
+                      - paragraph [ref=e284]: Email Settings
+                - group [ref=e287]:
+                  - generic "keyboard_arrow_right WhatsApp / WAHA" [ref=e288] [cursor=pointer]:
+                    - generic [ref=e289]:
+                      - generic [ref=e291]: keyboard_arrow_right
+                      - paragraph [ref=e294]: WhatsApp / WAHA
+                - group [ref=e297]:
+                  - generic "keyboard_arrow_right AI Models" [ref=e298] [cursor=pointer]:
+                    - generic [ref=e299]:
+                      - generic [ref=e301]: keyboard_arrow_right
+                      - paragraph [ref=e304]: AI Models
+                - group [ref=e307]:
+                  - generic "keyboard_arrow_right Telegram" [ref=e308] [cursor=pointer]:
+                    - generic [ref=e309]:
+                      - generic [ref=e311]: keyboard_arrow_right
+                      - paragraph [ref=e314]: Telegram
+                - group [ref=e317]:
+                  - generic "keyboard_arrow_right Pipeline Configuration" [ref=e318] [cursor=pointer]:
+                    - generic [ref=e319]:
+                      - generic [ref=e321]: keyboard_arrow_right
+                      - paragraph [ref=e324]: Pipeline Configuration
+                - group [ref=e327]:
+                  - generic "keyboard_arrow_right Hub / Integrations" [ref=e328] [cursor=pointer]:
+                    - generic [ref=e329]:
+                      - generic [ref=e331]: keyboard_arrow_right
+                      - paragraph [ref=e334]: Hub / Integrations
+                - separator [ref=e339]
+                - button "Save Settings" [ref=e343] [cursor=pointer]:
+                  - paragraph [ref=e347]: Save Settings
+        - button "Scroll tabs right" [ref=e227] [cursor=pointer]:
+          - img [ref=e228]

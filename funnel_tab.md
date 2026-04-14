@@ -1,0 +1,114 @@
+- generic [ref=e2]:
+  - generic [ref=e11]:
+    - heading "Navigation" [level=2] [ref=e15]
+    - paragraph [ref=e20]: Use the tabs in the main area to navigate.
+  - generic [ref=e3]:
+    - banner [ref=e23]:
+      - button "Main menu" [ref=e28] [cursor=pointer]:
+        - img [ref=e29]
+    - generic [ref=e32]:
+      - heading "1ai-engage Dashboard" [level=1] [ref=e37]:
+        - text: 1ai-engage Dashboard
+        - generic [ref=e38]:
+          - link "Link to heading":
+            - /url: "#1ai-engage-dashboard"
+            - img
+      - generic [ref=e39]:
+        - generic [ref=e40]:
+          - tablist [ref=e42]:
+            - tab "📊 Funnel" [active] [selected] [ref=e43] [cursor=pointer]:
+              - paragraph [ref=e45]: 📊 Funnel
+            - tab "🚀 Run Pipeline" [ref=e46] [cursor=pointer]:
+              - paragraph [ref=e48]: 🚀 Run Pipeline
+            - tab "✏️ Draft Editor" [ref=e49] [cursor=pointer]:
+              - paragraph [ref=e51]: ✏️ Draft Editor
+            - tab "⚙️ Settings" [ref=e52] [cursor=pointer]:
+              - paragraph [ref=e54]: ⚙️ Settings
+            - tab "📱 WA Numbers" [ref=e55] [cursor=pointer]:
+              - paragraph [ref=e57]: 📱 WA Numbers
+            - tab "💬 Conversations" [ref=e58] [cursor=pointer]:
+              - paragraph [ref=e60]: 💬 Conversations
+            - tab "📚 Knowledge Base" [ref=e61] [cursor=pointer]:
+              - paragraph [ref=e63]: 📚 Knowledge Base
+            - tab "💰 Sales Pipeline" [ref=e64] [cursor=pointer]:
+              - paragraph [ref=e66]: 💰 Sales Pipeline
+          - tabpanel "📊 Funnel" [ref=e69]:
+            - generic [ref=e70]:
+              - heading "📊 Funnel" [level=2] [ref=e75]:
+                - text: 📊 Funnel
+                - generic [ref=e76]:
+                  - link "Link to heading":
+                    - /url: "#funnel"
+                    - img
+              - generic [ref=e78]:
+                - generic [ref=e83]:
+                  - paragraph [ref=e86]: New
+                  - paragraph [ref=e89]: "56"
+                - generic [ref=e94]:
+                  - paragraph [ref=e97]: Enriched
+                  - paragraph [ref=e100]: "14"
+                - generic [ref=e105]:
+                  - paragraph [ref=e108]: Draft Ready
+                  - paragraph [ref=e111]: "0"
+                - generic [ref=e116]:
+                  - paragraph [ref=e119]: Reviewed
+                  - paragraph [ref=e122]: "2"
+                - generic [ref=e127]:
+                  - paragraph [ref=e130]: Contacted
+                  - paragraph [ref=e133]: "59"
+                - generic [ref=e138]:
+                  - paragraph [ref=e141]: Replied
+                  - paragraph [ref=e144]: "0"
+                - generic [ref=e149]:
+                  - paragraph [ref=e152]: Meeting Booked
+                  - paragraph [ref=e155]: "0"
+                - generic [ref=e160]:
+                  - paragraph [ref=e163]: Won
+                  - paragraph [ref=e166]: "0"
+              - heading "All Statuses Overview" [level=3] [ref=e171]:
+                - text: All Statuses Overview
+                - generic [ref=e172]:
+                  - link "Link to heading":
+                    - /url: "#all-statuses-overview"
+                    - img
+              - generic [ref=e175]:
+                - generic [ref=e177]:
+                  - button "Show data" [ref=e180] [cursor=pointer]:
+                    - img [ref=e181]
+                  - button "Fullscreen" [ref=e186] [cursor=pointer]:
+                    - img [ref=e187]
+                - generic [ref=e190]:
+                  - generic "Vega visualization" [ref=e702]:
+                    - img [ref=e703]:
+                      - generic [ref=e708]:
+                        - 'generic "X-axis for a discrete scale with 4 values: contacted, enriched, new, reviewed" [ref=e712]':
+                          - generic [ref=e714]:
+                            - generic:
+                              - generic: contacted
+                              - generic: enriched
+                              - generic: new
+                              - generic: reviewed
+                        - generic "Y-axis for a linear scale with values from 0 to 60" [ref=e715]:
+                          - generic [ref=e717]:
+                            - generic:
+                              - generic: "0"
+                              - generic: "10"
+                              - generic: "20"
+                              - generic: "30"
+                              - generic: "40"
+                              - generic: "50"
+                              - generic: "60"
+                        - generic [ref=e718]:
+                          - 'generic "Status: contacted; Count: 59" [ref=e719]'
+                          - 'generic "Status: new; Count: 56" [ref=e720]'
+                          - 'generic "Status: enriched; Count: 14" [ref=e721]'
+                          - 'generic "Status: reviewed; Count: 2" [ref=e722]'
+                  - group "Click to view actions":
+                    - img [ref=e724] [cursor=pointer]
+              - group [ref=e219]:
+                - generic "keyboard_arrow_right ℹ️ Understanding Funnel Stages" [ref=e220] [cursor=pointer]:
+                  - generic [ref=e221]:
+                    - generic [ref=e223]: keyboard_arrow_right
+                    - paragraph [ref=e226]: ℹ️ Understanding Funnel Stages
+        - button "Scroll tabs right" [ref=e227] [cursor=pointer]:
+          - img [ref=e228]

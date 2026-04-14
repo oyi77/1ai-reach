@@ -1,0 +1,305 @@
+- generic [ref=e2]:
+  - generic [ref=e7]:
+    - button "keyboard_double_arrow_left" [ref=e282] [cursor=pointer]:
+      - generic [ref=e284]: keyboard_double_arrow_left
+    - generic [ref=e11]:
+      - heading "🚀 1ai-engage" [level=3] [ref=e16]
+      - radiogroup "Navigate" [ref=e19] [cursor=pointer]:
+        - generic [ref=e20]:
+          - radio "📊 Funnel"
+          - paragraph [ref=e25]: 📊 Funnel
+        - generic [ref=e26]:
+          - radio "🚀 Run Pipeline"
+          - paragraph [ref=e31]: 🚀 Run Pipeline
+        - generic [ref=e32]:
+          - radio "✏️ Draft Editor"
+          - paragraph [ref=e37]: ✏️ Draft Editor
+        - generic [ref=e38]:
+          - radio "⚙️ Settings"
+          - paragraph [ref=e43]: ⚙️ Settings
+        - generic [ref=e44]:
+          - radio "📱 WA Numbers" [checked] [active]
+          - paragraph [ref=e49]: 📱 WA Numbers
+        - generic [ref=e50]:
+          - radio "💬 Conversations"
+          - paragraph [ref=e55]: 💬 Conversations
+        - generic [ref=e56]:
+          - radio "📚 Knowledge Base"
+          - paragraph [ref=e61]: 📚 Knowledge Base
+        - generic [ref=e62]:
+          - radio "💰 Sales Pipeline"
+          - paragraph [ref=e67]: 💰 Sales Pipeline
+      - separator [ref=e72]
+      - paragraph [ref=e77]:
+        - strong [ref=e78]: Hub Services
+      - paragraph [ref=e83]:
+        - text: •
+        - link "WAHA" [ref=e84] [cursor=pointer]:
+          - /url: https://waha.aitradepulse.com
+      - paragraph [ref=e89]:
+        - text: •
+        - link "n8n" [ref=e90] [cursor=pointer]:
+          - /url: https://n8n.aitradepulse.com
+      - paragraph [ref=e95]:
+        - text: •
+        - link "PaperClip" [ref=e96] [cursor=pointer]:
+          - /url: https://paperclip.aitradepulse.com
+      - separator [ref=e101]
+      - paragraph [ref=e106]: v1.0.0
+  - generic [ref=e3]:
+    - banner [ref=e109]:
+      - button "Main menu" [ref=e114] [cursor=pointer]:
+        - img [ref=e115]
+    - generic [ref=e118]:
+      - heading "📱 WA Numbers" [level=1] [ref=e285]:
+        - text: 📱 WA Numbers
+        - generic [ref=e124]:
+          - link "Link to heading":
+            - /url: "#funnel"
+            - img
+      - heading "📱 WA Numbers" [level=2] [ref=e286]:
+        - text: 📱 WA Numbers
+        - generic [ref=e130]:
+          - link "Link to heading":
+            - /url: "#funnel"
+            - img
+      - heading "Manage WhatsApp Sessions" [level=3] [ref=e292]:
+        - text: Manage WhatsApp Sessions
+        - generic [ref=e293]:
+          - link "Link to heading":
+            - /url: "#manage-whats-app-sessions"
+            - img
+      - group [ref=e296]:
+        - generic "keyboard_arrow_down 🟢 CS_Laundry - Berkah Karya Laundry (6285187514359)" [ref=e297] [cursor=pointer]:
+          - generic [ref=e298]:
+            - generic [ref=e300]: keyboard_arrow_down
+            - paragraph [ref=e303]: 🟢 CS_Laundry - Berkah Karya Laundry (6285187514359)
+        - generic [ref=e307]:
+          - generic [ref=e309]:
+            - paragraph [ref=e314]:
+              - strong [ref=e315]: "Status:"
+              - text: WORKING
+            - paragraph [ref=e320]:
+              - strong [ref=e321]: "Phone:"
+              - text: "6285187514359"
+            - paragraph [ref=e326]:
+              - strong [ref=e327]: "Label:"
+              - text: Berkah Karya Laundry
+          - generic [ref=e331]:
+            - paragraph [ref=e335]: Mode
+            - generic [ref=e337]:
+              - generic [ref=e338]:
+                - generic [ref=e339]: cs
+                - combobox "Selected cs. Mode" [ref=e341]
+              - img "open" [ref=e343]
+          - generic [ref=e346]:
+            - paragraph [ref=e351]:
+              - strong [ref=e352]: Controls
+            - button "Start" [ref=e355] [cursor=pointer]:
+              - paragraph [ref=e359]: Start
+            - button "Stop" [ref=e362] [cursor=pointer]:
+              - paragraph [ref=e366]: Stop
+            - button "Delete" [ref=e369] [cursor=pointer]:
+              - paragraph [ref=e373]: Delete
+      - group [ref=e376]:
+        - generic "keyboard_arrow_down 🔴 WA_CS_2 - ()" [ref=e377] [cursor=pointer]:
+          - generic [ref=e378]:
+            - generic [ref=e380]: keyboard_arrow_down
+            - paragraph [ref=e383]: 🔴 WA_CS_2 - ()
+        - generic [ref=e387]:
+          - generic [ref=e389]:
+            - paragraph [ref=e394]:
+              - strong [ref=e395]: "Status:"
+              - text: STOPPED
+            - paragraph [ref=e400]:
+              - strong [ref=e401]: "Phone:"
+            - paragraph [ref=e406]:
+              - strong [ref=e407]: "Label:"
+          - generic [ref=e411]:
+            - paragraph [ref=e415]: Mode
+            - generic [ref=e417]:
+              - generic [ref=e418]:
+                - generic [ref=e419]: cold
+                - combobox "Selected cold. Mode" [ref=e421]
+              - img "open" [ref=e423]
+          - generic [ref=e426]:
+            - paragraph [ref=e431]:
+              - strong [ref=e432]: Controls
+            - button "Start" [ref=e435] [cursor=pointer]:
+              - paragraph [ref=e439]: Start
+            - button "Stop" [ref=e442] [cursor=pointer]:
+              - paragraph [ref=e446]: Stop
+            - button "Delete" [ref=e449] [cursor=pointer]:
+              - paragraph [ref=e453]: Delete
+      - group [ref=e273]:
+        - generic "keyboard_arrow_down 🔴 cs_1 - ()" [ref=e454] [cursor=pointer]:
+          - generic [ref=e275]:
+            - generic [ref=e456]: keyboard_arrow_down
+            - paragraph [ref=e280]: 🔴 cs_1 - ()
+        - generic [ref=e460]:
+          - generic [ref=e462]:
+            - paragraph [ref=e467]:
+              - strong [ref=e468]: "Status:"
+              - text: STOPPED
+            - paragraph [ref=e473]:
+              - strong [ref=e474]: "Phone:"
+            - paragraph [ref=e479]:
+              - strong [ref=e480]: "Label:"
+          - generic [ref=e484]:
+            - paragraph [ref=e488]: Mode
+            - generic [ref=e490]:
+              - generic [ref=e491]:
+                - generic [ref=e492]: cold
+                - combobox "Selected cold. Mode" [ref=e494]
+              - img "open" [ref=e496]
+          - generic [ref=e499]:
+            - paragraph [ref=e504]:
+              - strong [ref=e505]: Controls
+            - button "Start" [ref=e508] [cursor=pointer]:
+              - paragraph [ref=e512]: Start
+            - button "Stop" [ref=e515] [cursor=pointer]:
+              - paragraph [ref=e519]: Stop
+            - button "Delete" [ref=e522] [cursor=pointer]:
+              - paragraph [ref=e526]: Delete
+      - group [ref=e529]:
+        - generic "keyboard_arrow_down 🔴 warung_kecantikan - Warung Kecantikan (6282112233445)" [ref=e530] [cursor=pointer]:
+          - generic [ref=e531]:
+            - generic [ref=e533]: keyboard_arrow_down
+            - paragraph [ref=e536]: 🔴 warung_kecantikan - Warung Kecantikan (6282112233445)
+        - generic [ref=e540]:
+          - generic [ref=e542]:
+            - paragraph [ref=e547]:
+              - strong [ref=e548]: "Status:"
+              - text: STOPPED
+            - paragraph [ref=e553]:
+              - strong [ref=e554]: "Phone:"
+              - text: "6282112233445"
+            - paragraph [ref=e559]:
+              - strong [ref=e560]: "Label:"
+              - text: Warung Kecantikan
+          - generic [ref=e564]:
+            - paragraph [ref=e568]: Mode
+            - generic [ref=e570]:
+              - generic [ref=e571]:
+                - generic [ref=e572]: warmcall
+                - combobox "Selected warmcall. Mode" [ref=e574]
+              - img "open" [ref=e576]
+          - generic [ref=e579]:
+            - paragraph [ref=e584]:
+              - strong [ref=e585]: Controls
+            - button "Start" [ref=e588] [cursor=pointer]:
+              - paragraph [ref=e592]: Start
+            - button "Stop" [ref=e595] [cursor=pointer]:
+              - paragraph [ref=e599]: Stop
+            - button "Delete" [ref=e602] [cursor=pointer]:
+              - paragraph [ref=e606]: Delete
+      - group [ref=e609]:
+        - generic "keyboard_arrow_down 🔴 default - BerkahKarya Main (6282247006969)" [ref=e610] [cursor=pointer]:
+          - generic [ref=e611]:
+            - generic [ref=e613]: keyboard_arrow_down
+            - paragraph [ref=e616]: 🔴 default - BerkahKarya Main (6282247006969)
+        - generic [ref=e620]:
+          - generic [ref=e622]:
+            - paragraph [ref=e627]:
+              - strong [ref=e628]: "Status:"
+              - text: NOT_IN_WAHA
+            - paragraph [ref=e633]:
+              - strong [ref=e634]: "Phone:"
+              - text: "6282247006969"
+            - paragraph [ref=e639]:
+              - strong [ref=e640]: "Label:"
+              - text: BerkahKarya Main
+          - generic [ref=e644]:
+            - paragraph [ref=e648]: Mode
+            - generic [ref=e650]:
+              - generic [ref=e651]:
+                - generic [ref=e652]: cold
+                - combobox "Selected cold. Mode" [ref=e654]
+              - img "open" [ref=e656]
+          - generic [ref=e659]:
+            - paragraph [ref=e664]:
+              - strong [ref=e665]: Controls
+            - button "Start" [ref=e668] [cursor=pointer]:
+              - paragraph [ref=e672]: Start
+            - button "Stop" [ref=e675] [cursor=pointer]:
+              - paragraph [ref=e679]: Stop
+            - button "Delete" [ref=e682] [cursor=pointer]:
+              - paragraph [ref=e686]: Delete
+      - group [ref=e689]:
+        - generic "keyboard_arrow_down 🔴 test_session_stage_123 - (62123456789)" [ref=e690] [cursor=pointer]:
+          - generic [ref=e691]:
+            - generic [ref=e693]: keyboard_arrow_down
+            - paragraph [ref=e696]: 🔴 test_session_stage_123 - (62123456789)
+        - generic [ref=e700]:
+          - generic [ref=e702]:
+            - paragraph [ref=e707]:
+              - strong [ref=e708]: "Status:"
+              - text: NOT_IN_WAHA
+            - paragraph [ref=e713]:
+              - strong [ref=e714]: "Phone:"
+              - text: "62123456789"
+            - paragraph [ref=e719]:
+              - strong [ref=e720]: "Label:"
+          - generic [ref=e724]:
+            - paragraph [ref=e728]: Mode
+            - generic [ref=e730]:
+              - generic [ref=e731]:
+                - generic [ref=e732]: cs
+                - combobox "Selected cs. Mode" [ref=e734]
+              - img "open" [ref=e736]
+          - generic [ref=e739]:
+            - paragraph [ref=e744]:
+              - strong [ref=e745]: Controls
+            - button "Start" [ref=e748] [cursor=pointer]:
+              - paragraph [ref=e752]: Start
+            - button "Stop" [ref=e755] [cursor=pointer]:
+              - paragraph [ref=e759]: Stop
+            - button "Delete" [ref=e762] [cursor=pointer]:
+              - paragraph [ref=e766]: Delete
+      - button "Refresh Sessions" [ref=e769] [cursor=pointer]:
+        - paragraph [ref=e773]: Refresh Sessions
+      - separator [ref=e778]
+      - heading "Add New WA Number" [level=3] [ref=e784]:
+        - text: Add New WA Number
+        - generic [ref=e785]:
+          - link "Link to heading":
+            - /url: "#add-new-wa-number"
+            - img
+      - generic [ref=e788]:
+        - generic [ref=e790]:
+          - generic [ref=e791]:
+            - paragraph [ref=e794]: Session Name (internal ID)
+            - button "Help for Session Name (internal ID)" [ref=e798] [cursor=pointer]:
+              - img [ref=e799]
+          - textbox "Session Name (internal ID)" [ref=e804]:
+            - /placeholder: ""
+        - generic [ref=e806]:
+          - generic [ref=e807]:
+            - paragraph [ref=e810]: Phone Number
+            - button "Help for Phone Number" [ref=e814] [cursor=pointer]:
+              - img [ref=e815]
+          - textbox "Phone Number" [ref=e820]:
+            - /placeholder: ""
+        - generic [ref=e822]:
+          - generic [ref=e823]:
+            - paragraph [ref=e826]: Label
+            - button "Help for Label" [ref=e830] [cursor=pointer]:
+              - img [ref=e831]
+          - textbox "Label" [ref=e836]:
+            - /placeholder: ""
+        - generic [ref=e838]:
+          - paragraph [ref=e842]: Mode
+          - generic [ref=e844]:
+            - generic [ref=e845]:
+              - generic [ref=e846]: cs
+              - combobox "Selected cs. Mode" [ref=e848]
+            - img "open" [ref=e850]
+        - generic [ref=e853]:
+          - generic [ref=e854]:
+            - paragraph [ref=e857]: Persona
+            - button "Help for Persona" [ref=e861] [cursor=pointer]:
+              - img [ref=e862]
+          - textbox "Persona" [ref=e867]:
+            - /placeholder: ""
+        - button "Create Session" [ref=e871] [cursor=pointer]:
+          - paragraph [ref=e875]: Create Session

@@ -1,0 +1,20 @@
+{
+  "pixel_id": "771021905629860",
+  "access_token": "EAAKA2OT1FroBRGYFy810vL4zMjM8IahTZC3Yvat4l1yqTQsZCjoZCiQGzpj594E87wxTRZCG1snxZBlw6iIXQN90lfcJWXsJJ7EKb0oxMqkPlakGr61LTZCyENHB4n4SOiRCCpo5eyej73V2srx8nKmzh5AmiqSr883we2p3J4F9DeG57swJZCuus2yzc7rkF60kZBZBwVrrFIq0a2gYace9r500FwlyvWaWe2XuI9hG0tQKGsLmvaeZCeVbyu3dUi685oaE1CjqVQvNhwYLhlvwZDZD",
+  "sessions": {
+    "CS_Laundry": {
+      "enabled": true,
+      "event_mapping": {
+        "Lead": "chat_inbound",
+        "ViewContent": "katalog_click",
+        "InitiateCheckout": "ongkir_response",
+        "Purchase": "payment_bca"
+      },
+      "user_identifier": "phone"
+    }
+  },
+  "logging": {
+    "level": "INFO",
+    "path": "logs/capi_events.log"
+  }
+}
