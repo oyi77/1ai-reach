@@ -37,6 +37,9 @@ from state_manager import (  # noqa: E402
 _seen_messages: dict[str, set[str]] = defaultdict(set)
 _SEEN_TTL_SECONDS = 120
 
+# Track running background tasks
+_background_tasks: set = set()
+
 
 def _is_duplicate_message(session: str, waha_message_id: str | None) -> bool:
     """Return True if this WAHA message ID was already processed (echo guard)."""
