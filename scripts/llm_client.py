@@ -3,6 +3,8 @@ import subprocess
 import urllib.request
 import json
 
+from config import AITRADEPULSE_API_KEY
+
 GROQ_AVAILABLE = False
 try:
     from groq import Groq as _Groq
@@ -117,7 +119,7 @@ def _call_openai(prompt, model="gpt-4o-mini"):
 
 
 def _call_aitradepulse(prompt, model="auto/free-chat", timeout=15):
-    key = os.getenv("AITRADEPULSE_API_KEY", "sk-f0c1ddf471008e76-501723-c663b4ac")
+    key = AITRADEPULSE_API_KEY
     if not key:
         return None
     try:

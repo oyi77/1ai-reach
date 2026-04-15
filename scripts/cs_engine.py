@@ -96,8 +96,6 @@ def _detect_user_type(text: str, conversation_id: int) -> str:
             "grosir",
             "reseller",
             "partai",
-            "liter banyak",
-            "jerigen banyak",
         ]
     ):
         return "bulk"

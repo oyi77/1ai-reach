@@ -163,6 +163,13 @@ TELEGRAM_BOT_TOKEN = os.getenv("TELEGRAM_BOT_TOKEN", "")
 TELEGRAM_CHAT_ID = os.getenv("TELEGRAM_CHAT_ID", "")
 
 # ---------------------------------------------------------------------------
+# Local LLM proxy (aitradepulse, port 20128)
+# ---------------------------------------------------------------------------
+AITRADEPULSE_API_KEY = os.getenv(
+    "AITRADEPULSE_API_KEY", "sk-f0c1ddf471008e76-501723-c663b4ac"
+)
+
+# ---------------------------------------------------------------------------
 # PaperClip (AI Company OS)
 # ---------------------------------------------------------------------------
 PAPERCLIP_URL = os.getenv("PAPERCLIP_URL", "http://localhost:3100")
