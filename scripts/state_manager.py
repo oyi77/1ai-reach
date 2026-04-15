@@ -836,7 +836,7 @@ def get_all_conversation_stages(wa_number_id: str | None = None) -> list[dict]:
             rows = conn.execute(
                 """
                 SELECT c.id, c.contact_phone, c.contact_name, c.wa_number_id, c.status,
-                       s.stage, s.entry_trigger, s.updated_at
+                       c.manual_mode, s.stage, s.entry_trigger, s.updated_at
                 FROM conversations c
                 LEFT JOIN sales_stages s ON c.id = s.conversation_id
                 WHERE c.wa_number_id = ? AND c.engine_mode = 'cs'
@@ -846,12 +846,12 @@ def get_all_conversation_stages(wa_number_id: str | None = None) -> list[dict]:
             ).fetchall()
         else:
             rows = conn.execute("""
-                SELECT c.id, c.contact_phone, c.contact_name, c.wa_number_id, c.status,
-                       s.stage, s.entry_trigger, s.updated_at
-                FROM conversations c
-                LEFT JOIN sales_stages s ON c.id = s.conversation_id
-                WHERE c.engine_mode = 'cs'
-                ORDER BY s.updated_at DESC NULLS LAST
+            SELECT c.id, c.contact_phone, c.contact_name, c.wa_number_id, c.status,
+                   c.manual_mode, s.stage, s.entry_trigger, s.updated_at
+            FROM conversations c
+            LEFT JOIN sales_stages s ON c.id = s.conversation_id
+            WHERE c.engine_mode = 'cs'
+            ORDER BY s.updated_at DESC NULLS LAST
             """).fetchall()
         return [dict(r) for r in rows]
     finally:

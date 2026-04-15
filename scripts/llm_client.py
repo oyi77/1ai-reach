@@ -160,7 +160,7 @@ def generate(prompt, fallback=None):
         return result
     if result := _call_openai(prompt):
         return result
-    return fallback or "Maaf, saya sedang tidak bisa menjawab saat ini."
+    return fallback or "Maaf Kak, lagi gangguan sedikit nih. Bisa ulangi pertanyaannya?"
 
 
 def classify(prompt, fallback="UNCLEAR"):

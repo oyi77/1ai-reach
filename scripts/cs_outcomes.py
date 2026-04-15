@@ -536,9 +536,9 @@ def get_conversion_funnel(days: int = 30) -> dict:
         cursor = conn.execute(
             """SELECT final_status, COUNT(*) as count
                 FROM conversation_outcomes
-                WHERE started_at >= datetime('now', '-? days')
+                WHERE started_at >= datetime('now', ? || ' days')
                 GROUP BY final_status""",
-            (days,),
+            (f"-{days}",),
         )
 
         stats = {status: 0 for status in OUTCOME_STATUSES}

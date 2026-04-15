@@ -60,7 +60,7 @@ def webhook_waha():
         data = request.get_json() or {}
         event = data.get("event", "")
         session = data.get("session", "")
-        payload = data.get("payload", {})
+        payload = data.get("payload") or data.get("data", {})
         print(f"[WEBHOOK] Event: {event}, Session: {session}")
 
         if event in ("message", "message.any"):
@@ -80,8 +80,23 @@ def webhook_waha():
 
             if from_me:
                 return jsonify({"status": "ok", "skipped": "from_me"})
-            if msg_type == "image":
-                body_text = "[User mengirim gambar]"
+
+            # Skip group messages
+            if "@g.us" in sender:
+                return jsonify({"status": "ok", "skipped": "group_message"})
+
+            if msg_type not in ("chat", "image", "video", "document", "audio", "ptt"):
+                return jsonify({"status": "ok", "skipped": f"type:{msg_type}"})
+
+            if msg_type in ("image", "video", "document", "audio", "ptt"):
+                media_labels = {
+                    "image": "[Customer mengirim gambar]",
+                    "video": "[Customer mengirim video]",
+                    "document": "[Customer mengirim dokumen]",
+                    "audio": "[Customer mengirim voice note]",
+                    "ptt": "[Customer mengirim voice note]",
+                }
+                body_text = media_labels.get(msg_type, "[Customer mengirim media]")
             if not sender:
                 return jsonify({"status": "ok", "skipped": "no_sender"})
             if not body_text:
@@ -91,7 +106,17 @@ def webhook_waha():
             if not wa_number:
                 return jsonify({"status": "error", "message": "session_not_found"}), 404
 
+            # Skip auto-reply if manual mode is enabled
             wa_number_id = wa_number.get("id", session)
+            if is_manual_mode_active(wa_number_id, sender):
+                add_conversation_message(
+                    conversation_id=_get_or_create_conv_id(wa_number_id, sender),
+                    message_text=body_text,
+                    direction="in",
+                    message_type=msg_type,
+                )
+                return jsonify({"status": "ok", "skipped": "manual_mode"})
+
             result = handle_inbound_message(
                 wa_number_id=wa_number_id,
                 contact_phone=sender,
@@ -275,7 +300,7 @@ def api_conversation_stage(conv_id):
 @app.route("/api/conversations/<int:conv_id>/manual", methods=["PATCH"])
 def api_conversation_manual(conv_id):
     data = request.get_json() or {}
-    enabled = data.get("enabled", True)
+    enabled = data.get("manual_mode", data.get("enabled", True))
     set_manual_mode(conv_id, enabled)
     return jsonify({"ok": True, "manual_mode": enabled})
 
@@ -310,9 +335,9 @@ def api_services():
             "pattern": "autonomous_loop.py",
         },
         {
-            "key": "streamlit",
-            "label": "Streamlit UI",
-            "pattern": "streamlit run",
+            "key": "dashboard",
+            "label": "Dashboard",
+            "pattern": "next start",
             "port": 8502,
         },
         {"key": "tunnel", "label": "Cloudflare Tunnel", "pattern": "cloudflared"},
@@ -482,6 +507,21 @@ def _get_pid(pattern: str) -> int | None:
         return None
     except Exception:
         return None
+
+
+def is_manual_mode_active(wa_number_id: str, contact_phone: str) -> bool:
+    try:
+        convs = get_all_conversation_stages(wa_number_id=wa_number_id)
+        for c in convs:
+            if c.get("contact_phone") == contact_phone and c.get("manual_mode"):
+                return True
+    except Exception:
+        pass
+    return False
+
+
+def _get_or_create_conv_id(wa_number_id: str, contact_phone: str) -> int:
+    return get_or_create_conversation(wa_number_id, contact_phone, engine_mode="cs")
 
 
 if __name__ == "__main__":

@@ -384,14 +384,8 @@ def generate_cs_response(
         return kb_results[0].get("answer", "")
 
     if lang == "id":
-        return (
-            "Terima kasih atas pertanyaannya. Saya akan cek dengan tim kami "
-            "dan segera menghubungi Anda kembali."
-        )
-    return (
-        "Thank you for your question. Let me check with our team "
-        "and I'll get back to you shortly."
-    )
+        return "Oke Kak, makasih pertanyaannya! Saya cek dulu ya, bentar saja 👍"
+    return "Hey, good question! Let me check on that and get back to you real quick."
 
 
 # ---------------------------------------------------------------------------
@@ -478,14 +472,13 @@ def handle_inbound_message(
         lang = _detect_language(message_text)
         if lang == "id":
             esc_msg = (
-                "Terima kasih sudah menunggu. Saya akan menghubungkan Anda "
-                "dengan tim kami untuk membantu lebih lanjut. "
-                "Mohon tunggu sebentar ya."
+                "Bentar ya Kak, saya mau konfirmasi ke tim dulu biar jawabannya "
+                "lebih pas. Tunggu sebentar ya! 😊"
             )
         else:
             esc_msg = (
-                "Thank you for your patience. Let me connect you with our team "
-                "for further assistance. Please hold on."
+                "Hey, let me check with our team to give you the best answer. "
+                "Just a moment!"
             )
 
         # Send escalation message
@@ -534,7 +527,7 @@ def handle_inbound_message(
     )
 
     if not response_text:
-        response_text = "Terima kasih atas pesannya. Saya akan membantu segera."
+        response_text = "Oke Kak, ditunggu ya! Saya bantu sekarang."
 
     # 9. Send reply with typing indicator
     send_typing_indicator(session_name, contact_phone, typing=True)
