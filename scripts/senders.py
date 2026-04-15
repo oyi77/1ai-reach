@@ -513,3 +513,68 @@ def send_email(email: str, subject: str, body: str) -> bool:
             print(f"Method {name} failed: {e}")
     print(f"❌ All email methods failed for {email}")
     return False
+
+
+def send_voice_note(phone: str, audio_bytes: bytes, session_name: str, audio_format: str = "ogg") -> bool:
+    """Send voice note via WAHA API.
+    
+    Args:
+        phone: Phone number (628xxx or 628xxx@c.us)
+        audio_bytes: Raw audio data (OGG/OPUS)
+        session_name: WAHA session name
+        audio_format: Audio format (ogg, wav, mp3)
+    
+    Returns:
+        True if sent successfully
+    """
+    if not _HTTP_OK:
+        return False
+    
+    # Normalize phone to chat_id
+    if "@lid" in phone:
+        chat_id = phone
+        clean = phone.replace("@lid", "")
+    else:
+        chat_id = _phone_to_chat_id(phone)
+        clean = _normalize_phone(phone)
+    
+    # Base64 encode audio
+    import base64
+    audio_b64 = base64.b64encode(audio_bytes).decode()
+    
+    # Try WAHA targets
+    for target_name, base_url, api_key in [
+        ("WAHA", WAHA_URL, WAHA_API_KEY),
+        ("WAHA_DIRECT", WAHA_DIRECT_URL, WAHA_DIRECT_API_KEY),
+    ]:
+        url = str(base_url or "").rstrip("/")
+        key = str(api_key or "")
+        if not url:
+            continue
+        
+        headers = {"X-Api-Key": key, "Content-Type": "application/json"}
+        payload = {
+            "session": session_name,
+            "chatId": chat_id,
+            "file": {
+                "mimetype": "audio/ogg; codecs=opus",
+                "data": audio_b64,
+            },
+        }
+        
+        try:
+            r = _req.post(
+                f"{url}/api/sendVoice",
+                json=payload,
+                headers=headers,
+                timeout=15,
+            )
+            if r.status_code < 300:
+                print(f"✅ Voice note sent via {target_name} to {clean}")
+                return True
+            print(f"❌ {target_name} error {r.status_code}: {r.text[:200]}")
+        except Exception as e:
+            print(f"❌ {target_name} failed: {e}")
+    
+    print(f"❌ All voice send methods failed for {phone}")
+    return False

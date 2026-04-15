@@ -88,6 +88,33 @@ def webhook_waha():
             if msg_type not in ("chat", "image", "video", "document", "audio", "ptt"):
                 return jsonify({"status": "ok", "skipped": f"type:{msg_type}"})
 
+            # Voice note handling
+            if msg_type in ("audio", "ptt"):
+                try:
+                    from voice_config import VOICE_ENABLED
+                    if VOICE_ENABLED:
+                        media_url = payload.get("media", {}).get("url", "")
+                        if media_url:
+                            # Route to voice pipeline
+                            from voice_pipeline import process_inbound_voice
+                            voice_result = process_inbound_voice(
+                                media_url=media_url,
+                                wa_number_id=wa_number.get("id", session),
+                                contact_phone=sender,
+                                session_name=session,
+                                msg_type=msg_type,
+                            )
+                            return jsonify({
+                                "status": "ok",
+                                "action": voice_result.get("action"),
+                                "transcription": voice_result.get("transcription", "")[:100],
+                            })
+                except ImportError:
+                    pass  # Voice modules not available, fall back to text
+                except Exception as e:
+                    print(f"[webhook] Voice processing error: {e}")
+                    # Fall through to text handling
+
             if msg_type in ("image", "video", "document", "audio", "ptt"):
                 media_labels = {
                     "image": "[Customer mengirim gambar]",

@@ -396,6 +396,7 @@ def handle_inbound_message(
     contact_phone: str,
     message_text: str,
     session_name: str = "default",
+    voice_reply: bool = False,
 ) -> dict:
     """Process an inbound WhatsApp message and auto-reply.
 
@@ -530,7 +531,21 @@ def handle_inbound_message(
     # 9. Send reply with typing indicator
     send_typing_indicator(session_name, contact_phone, typing=True)
     time.sleep(CS_REPLY_DELAY_SECONDS)
-    send_whatsapp_session(contact_phone, response_text, session_name)
+    
+    # Voice reply mode
+    if voice_reply:
+        try:
+            from voice_pipeline import generate_voice_reply
+            voice_sent = generate_voice_reply(response_text, session_name, contact_phone)
+            if not voice_sent:
+                # Fallback to text
+                send_whatsapp_session(contact_phone, response_text, session_name)
+        except Exception as e:
+            print(f"Voice reply failed: {e}, falling back to text")
+            send_whatsapp_session(contact_phone, response_text, session_name)
+    else:
+        send_whatsapp_session(contact_phone, response_text, session_name)
+    
     send_typing_indicator(session_name, contact_phone, typing=False)
 
     # 10. Record outbound message
