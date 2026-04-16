@@ -3,10 +3,9 @@
 import { useState } from "react";
 import useSWR from "swr";
 import { fetcher, patchJSON, type Conversation } from "@/lib/api";
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { GripVertical, Loader2 } from "lucide-react";
+import { Loader2 } from "lucide-react";
 import type { WANumber } from "@/lib/api";
 
 const STAGES = ["discovery", "interest", "proposal", "negotiation", "close_won", "close_lost"];
@@ -18,6 +17,7 @@ const STAGE_COLORS: Record<string, string> = {
 export default function PipelinePage() {
   const { data: waData, isLoading: waLoad } = useSWR<{ numbers: WANumber[] }>("/api/wa-numbers", fetcher);
   const [selectedWA, setSelectedWA] = useState<string>("");
+  const [draggedId, setDraggedId] = useState<number | null>(null);
   const waId = selectedWA || waData?.numbers[0]?.id || "";
 
   const { data: convData, mutate } = useSWR<{ conversations: Conversation[] }>(
@@ -30,7 +30,6 @@ export default function PipelinePage() {
   }
 
   const byStage = Object.fromEntries(STAGES.map((s) => [s, conversations.filter((c) => (c.stage || "discovery") === s)]));
-  const [draggedId, setDraggedId] = useState<number | null>(null);
 
   async function changeStage(convId: number, stage: string) {
     await patchJSON(`/api/conversations/${convId}/stage`, { stage });

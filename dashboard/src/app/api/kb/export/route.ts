@@ -41,9 +41,9 @@ export async function GET(request: NextRequest) {
         "Content-Disposition": `attachment; filename="kb_export_${waNumberId}.${format}"`,
       },
     });
-  } catch (error: any) {
+  } catch (error) {
     return NextResponse.json(
-      { error: error.message || "Export failed" },
+      { error: error instanceof Error ? error.message : "Export failed" },
       { status: 500 }
     );
   }

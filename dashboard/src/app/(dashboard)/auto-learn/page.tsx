@@ -10,15 +10,34 @@ import useSWR from "swr";
 
 const fetcher = (url: string) => fetch(url).then((r) => r.json());
 
+interface ReportData {
+  funnel_summary?: Record<string, number>;
+  winning_patterns?: Array<{ pattern: string; text?: string; score?: number; uses: number }>;
+  low_performers?: Array<{ question?: string; suggestion: string; score?: number; uses: number }>;
+  suggested_entries?: Array<{ question: string; frequency: number }>;
+}
+
+interface ImproveData {
+  patterns_added?: number;
+  suggestions_created?: number;
+  errors?: string[];
+}
+
+interface WASession {
+  id: string;
+  session_name: string;
+  mode: string;
+}
+
 export default function AutoLearnPage() {
   const [selectedSession, setSelectedSession] = useState<string>("");
   const [applyChanges, setApplyChanges] = useState(false);
-  const [reportData, setReportData] = useState<any>(null);
-  const [improveData, setImproveData] = useState<any>(null);
+  const [reportData, setReportData] = useState<ReportData | null>(null);
+  const [improveData, setImproveData] = useState<ImproveData | null>(null);
   const [loading, setLoading] = useState(false);
 
-  const { data: sessions } = useSWR("/api/wa-numbers", fetcher);
-  const csSessions = sessions?.filter((s: any) => s.mode === "cs") || [];
+  const { data: sessions } = useSWR<{ numbers: WASession[] }>("/api/wa-numbers", fetcher);
+  const csSessions = sessions?.numbers?.filter((s) => s.mode === "cs") || [];
 
   const generateReport = async () => {
     if (!selectedSession) return;
@@ -77,26 +96,13 @@ export default function AutoLearnPage() {
                 <SelectValue placeholder="Select a CS session" />
               </SelectTrigger>
               <SelectContent>
-                {csSessions.map((s: any) => (
+                {csSessions.map((s) => (
                   <SelectItem key={s.id} value={s.session_name}>
                     {s.session_name}
                   </SelectItem>
                 ))}
               </SelectContent>
             </Select>
-          </div>
-
-          <div className="flex items-center space-x-2">
-            <input 
-              type="checkbox" 
-              id="apply" 
-              checked={applyChanges} 
-              onChange={(e) => setApplyChanges(e.target.checked)}
-              className="h-4 w-4 rounded border-gray-300"
-            />
-            <label htmlFor="apply" className="text-sm font-medium cursor-pointer">
-              Apply changes (not dry-run)
-            </label>
           </div>
 
           <div className="flex items-center space-x-2">
@@ -144,14 +150,14 @@ export default function AutoLearnPage() {
               </div>
             </div>
 
-            {reportData.winning_patterns?.length > 0 && (
+            {reportData.winning_patterns && reportData.winning_patterns.length > 0 && (
               <div>
                 <h3 className="font-semibold mb-2 flex items-center gap-2">
                   <TrendingUp className="h-4 w-4 text-green-600" />
                   Winning Patterns
                 </h3>
                 <div className="space-y-2">
-                  {reportData.winning_patterns.slice(0, 5).map((p: any, i: number) => (
+                  {reportData.winning_patterns.slice(0, 5).map((p, i) => (
                     <div key={i} className="p-3 bg-green-50 border border-green-200 rounded-lg">
                       <div className="flex justify-between items-start">
                         <div className="flex-1">
@@ -169,14 +175,14 @@ export default function AutoLearnPage() {
               </div>
             )}
 
-            {reportData.low_performers?.length > 0 && (
+            {reportData.low_performers && reportData.low_performers.length > 0 && (
               <div>
                 <h3 className="font-semibold mb-2 flex items-center gap-2">
                   <AlertCircle className="h-4 w-4 text-orange-600" />
                   Low Performers
                 </h3>
                 <div className="space-y-2">
-                  {reportData.low_performers.slice(0, 5).map((p: any, i: number) => (
+                  {reportData.low_performers.slice(0, 5).map((p, i) => (
                     <div key={i} className="p-3 bg-orange-50 border border-orange-200 rounded-lg">
                       <div className="flex justify-between items-start">
                         <div className="flex-1">
@@ -194,14 +200,14 @@ export default function AutoLearnPage() {
               </div>
             )}
 
-            {reportData.suggested_entries?.length > 0 && (
+            {reportData.suggested_entries && reportData.suggested_entries.length > 0 && (
               <div>
                 <h3 className="font-semibold mb-2 flex items-center gap-2">
                   <Lightbulb className="h-4 w-4 text-blue-600" />
                   Suggested New KB Entries
                 </h3>
                 <div className="space-y-2">
-                  {reportData.suggested_entries.slice(0, 5).map((s: any, i: number) => (
+                  {reportData.suggested_entries.slice(0, 5).map((s, i) => (
                     <div key={i} className="p-3 bg-blue-50 border border-blue-200 rounded-lg">
                       <p className="text-sm font-medium">{s.question}</p>
                       <p className="text-xs text-muted-foreground mt-1">Asked {s.frequency} times</p>
@@ -230,10 +236,10 @@ export default function AutoLearnPage() {
                 <span>Suggestions Created</span>
                 <Badge>{improveData.suggestions_created || 0}</Badge>
               </div>
-              {improveData.errors?.length > 0 && (
+              {improveData.errors && improveData.errors.length > 0 && (
                 <div className="p-3 bg-red-50 border border-red-200 rounded-lg">
                   <p className="text-sm font-semibold text-red-700 mb-1">Errors:</p>
-                  {improveData.errors.map((e: string, i: number) => (
+                  {improveData.errors.map((e, i) => (
                     <p key={i} className="text-xs text-red-600">{e}</p>
                   ))}
                 </div>

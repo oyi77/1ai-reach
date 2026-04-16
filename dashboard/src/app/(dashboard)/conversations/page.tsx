@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useRef, useEffect } from "react";
+import { useState, useRef, useEffect, useMemo } from "react";
 import useSWR from "swr";
 import { fetcher, postJSON, type WANumber, type Conversation, type Message } from "@/lib/api";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -27,7 +27,13 @@ export default function ConversationsPage() {
   const [submitting, setSubmitting] = useState(false);
   const scrollRef = useRef<HTMLDivElement>(null);
 
-  const waId = selectedWA || waData?.numbers[0]?.id || "";
+  useEffect(() => {
+    if (waData?.numbers && waData.numbers.length > 0 && !selectedWA) {
+      setSelectedWA(waData.numbers[0].id);
+    }
+  }, [waData, selectedWA]);
+
+  const waId = selectedWA || "";
   const { data: convData } = useSWR<{ conversations: Conversation[] }>(
     waId ? `/api/conversations?wa_number_id=${waId}` : null, fetcher, { refreshInterval: 5000 }
   );
@@ -39,7 +45,7 @@ export default function ConversationsPage() {
   );
 
   const conversations = convData?.conversations ?? [];
-  const messages = msgData?.messages ?? [];
+  const messages = useMemo(() => msgData?.messages ?? [], [msgData?.messages]);
   const feedbackMap = new Map((fbData?.feedback ?? []).map((f) => [f.message_id, f]));
 
   const currentConv = conversations.find((c) => c.id === selectedConv);

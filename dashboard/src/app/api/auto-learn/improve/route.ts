@@ -33,10 +33,10 @@ export async function POST(request: NextRequest) {
       suggestions_created: 0,
       errors: [],
     });
-  } catch (error: any) {
+  } catch (error) {
     console.error("Auto-improvement error:", error);
     return NextResponse.json(
-      { error: error.message || "Auto-improvement failed" },
+      { error: error instanceof Error ? error.message : "Auto-improvement failed" },
       { status: 500 }
     );
   }

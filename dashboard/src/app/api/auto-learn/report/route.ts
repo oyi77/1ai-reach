@@ -30,10 +30,10 @@ export async function GET(request: NextRequest) {
       low_performers: [],
       suggested_entries: [],
     });
-  } catch (error: any) {
+  } catch (error) {
     console.error("Report generation error:", error);
     return NextResponse.json(
-      { error: error.message || "Report generation failed" },
+      { error: error instanceof Error ? error.message : "Report generation failed" },
       { status: 500 }
     );
   }

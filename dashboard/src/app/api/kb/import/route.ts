@@ -42,9 +42,9 @@ export async function POST(request: NextRequest) {
       count,
       message: stdout.trim(),
     });
-  } catch (error: any) {
+  } catch (error) {
     return NextResponse.json(
-      { error: error.message || "Import failed" },
+      { error: error instanceof Error ? error.message : "Import failed" },
       { status: 500 }
     );
   }

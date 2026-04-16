@@ -24,7 +24,7 @@ const VOICE_MODES = [
 ];
 
 export default function VoiceSettingsPage() {
-  const { data: waData, mutate: mutateWA } = useSWR<{ numbers: WANumber[] }>("/api/wa-numbers", fetcher);
+  const { data: waData } = useSWR<{ numbers: WANumber[] }>("/api/wa-numbers", fetcher);
   const [selectedSession, setSelectedSession] = useState<string>("");
   const [saving, setSaving] = useState(false);
   const [saved, setSaved] = useState(false);
