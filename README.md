@@ -8,8 +8,33 @@ Cold Calling & Lead Automation System for BerkahKarya.
 3. **Drafting**: AI-generated proposals and WhatsApp messages.
 4. **Blasting**: Automated sending via `wacli` and `himalaya`.
 5. **Voice Support**: Voice note replies with ChatterBox TTS for WhatsApp CS mode.
+6. **Auto-Learn**: Self-improvement system that learns from conversation outcomes.
+
+## Dashboard (Next.js)
+
+The primary UI is a Next.js dashboard running on port 8502.
+
+### Start Dashboard
+```bash
+cd dashboard
+npm install
+npm run dev
+```
+
+Access at: http://localhost:8502
+
+### Dashboard Pages
+- **Home**: System overview and service status
+- **Funnel**: Lead pipeline visualization
+- **Conversations**: WhatsApp conversation management
+- **KB**: Knowledge base editor
+- **Services**: Service control (webhook, autonomous loop)
+- **Auto-Learn**: Self-improvement analytics and controls
+- **Voice Settings**: Configure voice note responses per WA number
+- **Pipeline Control**: Manual pipeline execution
 
 ## Directory Structure
+- `dashboard/`: Next.js frontend (TypeScript + React)
 - `scripts/`: Python modules for each step.
 - `data/`: Lead databases (`leads.csv`).
 - `proposals/`: Generated proposals.
