@@ -11,7 +11,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
 import { Badge } from "@/components/ui/badge";
-import { Plus, Pencil, Trash2, Loader2 } from "lucide-react";
+import { Plus, Pencil, Trash2, Loader2, Upload, Download } from "lucide-react";
 
 export default function KBPage() {
   const { data: waData, isLoading: waLoad } = useSWR<{ numbers: WANumber[] }>("/api/wa-numbers", fetcher);
@@ -19,12 +19,44 @@ export default function KBPage() {
   const [dialogOpen, setDialogOpen] = useState(false);
   const [editId, setEditId] = useState<number | null>(null);
   const [form, setForm] = useState({ question: "", answer: "", category: "faq", tags: "" });
+  const [importing, setImporting] = useState(false);
 
   const waId = selectedWA || waData?.numbers[0]?.id || "";
   const { data: kbData, mutate } = useSWR<{ entries: KBEntry[]; count: number }>(
     waId ? `/api/kb/${waId}` : null, fetcher
   );
   const entries = kbData?.entries ?? [];
+
+  async function handleImport(e: React.ChangeEvent<HTMLInputElement>) {
+    const file = e.target.files?.[0];
+    if (!file || !waId) return;
+    
+    setImporting(true);
+    const formData = new FormData();
+    formData.append("file", file);
+    formData.append("wa_number_id", waId);
+    
+    try {
+      const res = await fetch("/api/kb/import", { method: "POST", body: formData });
+      const data = await res.json();
+      if (data.success) {
+        alert(`✓ Imported ${data.count} entries`);
+        mutate();
+      } else {
+        alert(`✗ Import failed: ${data.error}`);
+      }
+    } catch (error) {
+      alert(`✗ Import error: ${error}`);
+    } finally {
+      setImporting(false);
+      e.target.value = "";
+    }
+  }
+
+  function handleExport(format: string | null) {
+    if (!waId || !format) return;
+    window.open(`/api/kb/export?wa_number_id=${waId}&format=${format}`, "_blank");
+  }
 
   if (waLoad) {
     return <div className="p-6 flex items-center justify-center h-[50vh]"><Loader2 className="h-8 w-8 animate-spin text-orange-500" /></div>;
@@ -73,6 +105,24 @@ export default function KBPage() {
               ))}
             </SelectContent>
           </Select>
+          
+          <input type="file" id="kb-import" accept=".txt,.csv,.json,.md,.markdown,.docx,.pdf" onChange={handleImport} className="hidden" />
+          <Button onClick={() => document.getElementById("kb-import")?.click()} disabled={importing || !waId} variant="outline" className="border-neutral-700">
+            <Upload className="h-4 w-4 mr-1" /> {importing ? "Importing..." : "Import"}
+          </Button>
+          
+          <Select onValueChange={handleExport}>
+            <SelectTrigger className="w-32 bg-neutral-900 border-neutral-800">
+              <SelectValue placeholder="Export" />
+            </SelectTrigger>
+            <SelectContent>
+              <SelectItem value="json">JSON</SelectItem>
+              <SelectItem value="csv">CSV</SelectItem>
+              <SelectItem value="markdown">Markdown</SelectItem>
+              <SelectItem value="text">Text</SelectItem>
+            </SelectContent>
+          </Select>
+          
           <Dialog open={dialogOpen} onOpenChange={setDialogOpen}>
             <DialogTrigger >
               <Button onClick={openAdd} className="bg-orange-600 hover:bg-orange-700"><Plus className="h-4 w-4 mr-1" /> Add</Button>

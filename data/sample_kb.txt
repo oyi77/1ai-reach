@@ -1,0 +1,11 @@
+Q: Apa itu 1ai-reach?
+A: 1ai-reach adalah sistem otomasi cold calling dan lead generation untuk BerkahKarya. Sistem ini membantu scraping leads, enrichment data, drafting proposals, dan automated blasting via WhatsApp.
+
+Q: Bagaimana cara kerja voice note?
+A: Sistem kami mendukung voice note replies. Customer bisa kirim voice note, lalu AI akan transcribe, generate response, dan kirim balik dalam bentuk voice note menggunakan ChatterBox TTS.
+
+Q: Berapa harga layanan?
+A: Untuk informasi harga, silakan hubungi tim sales kami. Kami menyediakan paket custom sesuai kebutuhan bisnis Anda.
+
+Q: Apakah ada trial period?
+A: Ya, kami menyediakan trial period 14 hari untuk Anda mencoba sistem kami secara gratis.

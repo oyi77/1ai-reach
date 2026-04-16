@@ -56,6 +56,7 @@ CREATE TABLE IF NOT EXISTS conversation_outcomes (
 CREATE TABLE IF NOT EXISTS response_outcomes (
     id INTEGER PRIMARY KEY AUTOINCREMENT,
     conversation_id INTEGER NOT NULL,
+    wa_number_id TEXT,
     response_hash TEXT NOT NULL,  -- hash of response text for deduplication
     response_text TEXT NOT NULL,   -- actual response sent
     kb_entry_ids TEXT,             -- JSON array of KB entries used
@@ -170,6 +171,7 @@ def record_response_sent(
     pattern_used: str = None,
     user_type: str = "normal",
     sales_stage: str = "ENTRY",
+    wa_number_id: str = None,
 ) -> int:
     """Record an agent response for effectiveness tracking. Returns response_id."""
     import hashlib
@@ -181,11 +183,12 @@ def record_response_sent(
     try:
         cur = conn.execute(
             """INSERT INTO response_outcomes
-                (conversation_id, response_hash, response_text, kb_entry_ids,
+                (conversation_id, wa_number_id, response_hash, response_text, kb_entry_ids,
                  pattern_used, user_type, sales_stage, sent_at)
-                VALUES (?, ?, ?, ?, ?, ?, ?, datetime('now'))""",
+                VALUES (?, ?, ?, ?, ?, ?, ?, ?, datetime('now'))""",
             (
                 conversation_id,
+                wa_number_id,
                 response_hash,
                 response_text,
                 kb_ids_json,
