@@ -248,10 +248,91 @@ def render_autonomous() -> None:
 
     st.divider()
 
+    st.subheader("🧠 Auto-Learn & Self-Improvement")
+
+    sys.path.insert(0, str(_SCRIPTS_DIR))
+    from state_manager import get_wa_numbers
+
+    wa_numbers = get_wa_numbers()
+    cs_sessions = [s for s in wa_numbers if s.get("mode") == "cs"]
+
+    if not cs_sessions:
+        st.info(
+            "No CS sessions configured. Add a WA number in CS mode to enable auto-learning."
+        )
+    else:
+        session_names = [s["session_name"] for s in cs_sessions]
+        selected_session = st.selectbox(
+            "Select WA Session", session_names, key="autolearn_session"
+        )
+
+        col_report, col_improve = st.columns(2)
+
+        with col_report:
+            if st.button("📊 Generate Learning Report", use_container_width=True):
+                with st.spinner("Generating report..."):
+                    try:
+                        result = subprocess.run(
+                            [
+                                sys.executable,
+                                str(_SCRIPTS_DIR / "cs_learn.py"),
+                                "report",
+                                "--wa-number-id",
+                                selected_session,
+                            ],
+                            capture_output=True,
+                            text=True,
+                            timeout=30,
+                            cwd=str(_ROOT),
+                        )
+                        if result.returncode == 0:
+                            st.success("Report generated successfully!")
+                            st.code(result.stdout, language="text")
+                        else:
+                            st.error(f"Report generation failed: {result.stderr}")
+                    except Exception as e:
+                        st.error(f"Error: {e}")
+
+        with col_improve:
+            apply_changes = st.checkbox(
+                "Apply changes (not dry-run)", key="autolearn_apply"
+            )
+            if st.button("🚀 Run Auto-Improvement", use_container_width=True):
+                with st.spinner("Running auto-improvement..."):
+                    try:
+                        cmd = [
+                            sys.executable,
+                            str(_SCRIPTS_DIR / "cs_learn.py"),
+                            "improve",
+                            "--wa-number-id",
+                            selected_session,
+                        ]
+                        if apply_changes:
+                            cmd.append("--apply")
+
+                        result = subprocess.run(
+                            cmd,
+                            capture_output=True,
+                            text=True,
+                            timeout=30,
+                            cwd=str(_ROOT),
+                        )
+                        if result.returncode == 0:
+                            st.success("Auto-improvement completed!")
+                            st.code(result.stdout, language="text")
+                        else:
+                            st.error(f"Auto-improvement failed: {result.stderr}")
+                    except Exception as e:
+                        st.error(f"Error: {e}")
+
+        st.caption(
+            "💡 Auto-learn analyzes conversation outcomes to identify winning patterns and suggest KB improvements."
+        )
+
+    st.divider()
+
     st.subheader("Webhook Log")
-    webhook_log_lines = st.slider(
-        "Lines to show", 20, 200, 50, key="webhook_log_lines"
-    )
+    webhook_log_lines = st.slider("Lines to show", 20, 200, 50, key="webhook_log_lines")
     webhook_log = _read_log_tail(SERVICES[0]["log_path"], webhook_log_lines)
     st.code(webhook_log, language="log")
 
