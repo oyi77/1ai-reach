@@ -79,7 +79,9 @@ def _fmt_date(iso: str | None) -> str:
 
 def _contact_method(row: pd.Series) -> str:
     has_email = not is_empty(row.get("email"))
-    has_phone = not is_empty(row.get("internationalPhoneNumber") or row.get("phone"))
+    has_phone = not is_empty(
+        row.get("internationalPhoneNumber", "") or row.get("phone", "")
+    )
     if has_email and has_phone:
         return "Email + WhatsApp"
     if has_email:
@@ -90,8 +92,8 @@ def _contact_method(row: pd.Series) -> str:
 
 
 def _contact_value(row: pd.Series) -> str:
-    email = str(row.get("email") or "").strip()
-    phone = str(row.get("internationalPhoneNumber") or row.get("phone") or "").strip()
+    email = str(row.get("email", "")).strip()
+    phone = str(row.get("internationalPhoneNumber", "") or row.get("phone", "")).strip()
     if is_empty(email):
         email = ""
     if is_empty(phone):
@@ -101,8 +103,8 @@ def _contact_value(row: pd.Series) -> str:
 
 
 def _catatan(row: pd.Series) -> str:
-    issues = str(row.get("review_issues") or "").strip()
-    score = str(row.get("review_score") or "").strip()
+    issues = str(row.get("review_issues", "")).strip()
+    score = str(row.get("review_score", "")).strip()
     if is_empty(issues):
         issues = ""
     if is_empty(score):
@@ -121,7 +123,7 @@ def build_rows(df: pd.DataFrame) -> list[list[str]]:
     rows = []
     for i, (_, row) in enumerate(df.iterrows(), start=1):
         name = parse_display_name(row.get("displayName"))
-        status = str(row.get("status") or "new").strip()
+        status = str(row.get("status", "new")).strip()
         if is_empty(status) or status.lower() in ("nan", "none"):
             status = "new"
 
@@ -132,7 +134,7 @@ def build_rows(df: pd.DataFrame) -> list[list[str]]:
                 name,  # C: Perusahaan/Organisasi (same — no separate field)
                 "",  # D: Jabatan/Peran
                 str(
-                    row.get("primaryType") or row.get("type") or "Layanan"
+                    row.get("primaryType", "") or row.get("type", "") or "Layanan"
                 ).strip(),  # E: Kategori Target
                 _contact_value(row),  # F: Nomor Telepon / Email
                 _fmt_date(row.get("contacted_at")),  # G: Tanggal Dihubungi

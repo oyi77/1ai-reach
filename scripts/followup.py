@@ -97,9 +97,9 @@ def send_followups() -> None:
     sent = skipped = cold_marked = 0
 
     for index, row in df.iterrows():
-        status = str(row.get("status") or "")
-        email = str(row.get("email") or "").strip()
-        contacted_at = str(row.get("followup_at") or row.get("contacted_at") or "")
+        status = str(row.get("status", ""))
+        email = str(row.get("email", "")).strip()
+        contacted_at = str(row.get("followup_at", "") or row.get("contacted_at", ""))
 
         if status not in ("contacted", "followed_up"):
             continue
@@ -109,11 +109,13 @@ def send_followups() -> None:
             continue
 
         name = parse_display_name(row.get("displayName"))
-        business_type = str(row.get("type") or row.get("primaryType") or "Business")
+        business_type = str(
+            row.get("type", "") or row.get("primaryType", "") or "Business"
+        )
         days_since_contact = _days_since(contacted_at)
 
         # Mark cold after second follow-up window
-        original_contacted_at = str(row.get("contacted_at") or "")
+        original_contacted_at = str(row.get("contacted_at", ""))
         total_days = (
             _days_since(original_contacted_at)
             if original_contacted_at
