@@ -25,39 +25,11 @@ def test_db():
         db_path = f.name
 
     import config
-    import sqlite3
 
     original_db = config.DB_FILE
     config.DB_FILE = Path(db_path)
 
     init_db()
-
-    conn = sqlite3.connect(db_path)
-    try:
-        conn.executescript("""
-            DROP TABLE IF EXISTS response_outcomes;
-            CREATE TABLE IF NOT EXISTS response_outcomes (
-                id INTEGER PRIMARY KEY AUTOINCREMENT,
-                conversation_id INTEGER NOT NULL,
-                wa_number_id TEXT,
-                response_hash TEXT NOT NULL,
-                response_text TEXT NOT NULL,
-                kb_entry_ids TEXT,
-                pattern_used TEXT,
-                user_type TEXT,
-                sales_stage TEXT,
-                sent_at TIMESTAMP NOT NULL,
-                next_user_action TEXT,
-                reply_time_seconds INTEGER,
-                was_effective BOOLEAN DEFAULT FALSE,
-                outcome_score REAL DEFAULT 0,
-                created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
-            );
-        """)
-        conn.commit()
-    finally:
-        conn.close()
-
     init_outcomes_db()
 
     yield db_path
@@ -85,7 +57,6 @@ class TestAutoLearnE2E:
             pattern_used="greeting",
             user_type="normal",
             sales_stage="ENTRY",
-            wa_number_id=wa_number_id,
         )
 
         record_user_reply(

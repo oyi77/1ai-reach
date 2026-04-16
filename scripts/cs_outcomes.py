@@ -181,22 +181,39 @@ def record_response_sent(
 
     conn = _connect()
     try:
-        cur = conn.execute(
-            """INSERT INTO response_outcomes
-                (conversation_id, wa_number_id, response_hash, response_text, kb_entry_ids,
-                 pattern_used, user_type, sales_stage, sent_at)
-                VALUES (?, ?, ?, ?, ?, ?, ?, ?, datetime('now'))""",
-            (
-                conversation_id,
-                wa_number_id,
-                response_hash,
-                response_text,
-                kb_ids_json,
-                pattern_used,
-                user_type,
-                sales_stage,
-            ),
-        )
+        if wa_number_id:
+            cur = conn.execute(
+                """INSERT INTO response_outcomes
+                    (conversation_id, wa_number_id, response_hash, response_text, kb_entry_ids,
+                     pattern_used, user_type, sales_stage, sent_at)
+                    VALUES (?, ?, ?, ?, ?, ?, ?, ?, datetime('now'))""",
+                (
+                    conversation_id,
+                    wa_number_id,
+                    response_hash,
+                    response_text,
+                    kb_ids_json,
+                    pattern_used,
+                    user_type,
+                    sales_stage,
+                ),
+            )
+        else:
+            cur = conn.execute(
+                """INSERT INTO response_outcomes
+                    (conversation_id, response_hash, response_text, kb_entry_ids,
+                     pattern_used, user_type, sales_stage, sent_at)
+                    VALUES (?, ?, ?, ?, ?, ?, ?, datetime('now'))""",
+                (
+                    conversation_id,
+                    response_hash,
+                    response_text,
+                    kb_ids_json,
+                    pattern_used,
+                    user_type,
+                    sales_stage,
+                ),
+            )
         conn.commit()
         return cur.lastrowid
     finally:
