@@ -1,6 +1,6 @@
 #!/usr/bin/env python3
 """
-Health Monitor for 1ai-engage
+Health Monitor for 1ai-reach
 Checks all critical services and auto-recovers from failures
 """
 

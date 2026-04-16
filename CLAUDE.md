@@ -4,40 +4,40 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 
 ## What This Is
 
-`1ai-engage` is a full cold outreach automation pipeline for **BerkahKarya**. It scrapes real business leads, enriches them with contact info, researches prospect pain points, generates personalized AI proposals (informed by hub brain memory), reviews them for quality, sends them via email + WhatsApp, tracks replies across both channels, converts warm leads to meetings, and runs follow-ups automatically — a complete outreach funnel connected to the BerkahKarya Hub.
+`1ai-reach` is a full cold outreach automation pipeline for **BerkahKarya**. It scrapes real business leads, enriches them with contact info, researches prospect pain points, generates personalized AI proposals (informed by hub brain memory), reviews them for quality, sends them via email + WhatsApp, tracks replies across both channels, converts warm leads to meetings, and runs follow-ups automatically — a complete outreach funnel connected to the BerkahKarya Hub.
 
 ## Running the Pipeline
 
-**Important:** All scripts must be run from the **parent directory** of this repo (one level up from `1ai-engage/`).
+**Important:** All scripts must be run from the **parent directory** of this repo (one level up from `1ai-reach/`).
 
 ```bash
 # Full pipeline (Vibe + Google Places → enrich → research → generate → review → send → track → convert → follow-up → sync)
-python3 1ai-engage/scripts/orchestrator.py "Digital Agency in Jakarta"
+python3 1ai-reach/scripts/orchestrator.py "Digital Agency in Jakarta"
 
 # Dry run (no sending — generate + review only)
-python3 1ai-engage/scripts/orchestrator.py "Coffee Shop in Jakarta" --dry-run
+python3 1ai-reach/scripts/orchestrator.py "Coffee Shop in Jakarta" --dry-run
 
 # Follow-up cycle only (replies → convert → follow-up → sync)
-python3 1ai-engage/scripts/orchestrator.py --followup-only
+python3 1ai-reach/scripts/orchestrator.py --followup-only
 
 # Enrich + research existing leads only
-python3 1ai-engage/scripts/orchestrator.py --enrich-only
+python3 1ai-reach/scripts/orchestrator.py --enrich-only
 
 # Sheet + brain sync only
-python3 1ai-engage/scripts/orchestrator.py --sync-only
+python3 1ai-reach/scripts/orchestrator.py --sync-only
 
 # Individual steps
-python3 1ai-engage/scripts/vibe_scraper.py "Digital Agency" "Jakarta" 20
-python3 1ai-engage/scripts/scraper.py "Coffee Shop in Jakarta"
-python3 1ai-engage/scripts/enricher.py
-python3 1ai-engage/scripts/researcher.py
-python3 1ai-engage/scripts/generator.py
-python3 1ai-engage/scripts/reviewer.py
-python3 1ai-engage/scripts/blaster.py
-python3 1ai-engage/scripts/reply_tracker.py
-python3 1ai-engage/scripts/converter.py
-python3 1ai-engage/scripts/followup.py
-python3 1ai-engage/scripts/sheets_sync.py
+python3 1ai-reach/scripts/vibe_scraper.py "Digital Agency" "Jakarta" 20
+python3 1ai-reach/scripts/scraper.py "Coffee Shop in Jakarta"
+python3 1ai-reach/scripts/enricher.py
+python3 1ai-reach/scripts/researcher.py
+python3 1ai-reach/scripts/generator.py
+python3 1ai-reach/scripts/reviewer.py
+python3 1ai-reach/scripts/blaster.py
+python3 1ai-reach/scripts/reply_tracker.py
+python3 1ai-reach/scripts/converter.py
+python3 1ai-reach/scripts/followup.py
+python3 1ai-reach/scripts/sheets_sync.py
 
 # Funnel status report
 python3 -c "from leads import funnel_summary; funnel_summary()"
@@ -100,7 +100,7 @@ won / lost / cold / unsubscribed
 
 ## Hub Integration (`~/projects/berkahkarya-hub`, port 9099)
 
-| Hub Service | How 1ai-engage Uses It |
+| Hub Service | How 1ai-reach Uses It |
 |---|---|
 | Brain API (`/brain/*`) | Strategy queries before generation; outcome storage after funnel events |
 | WAHA (WhatsApp HTTP API) | Primary WA sender + reply inbox check (`http://5.189.138.144:3000`, key: `321`) |
@@ -165,7 +165,7 @@ All hub config lives in `config.py` — never hardcode URLs or keys in scripts.
 
 **`displayName`** stored as stringified dict `{"text": "Name"}`. Always use `parse_display_name()` from `utils.py`.
 
-**All paths** are absolute via `config.py`. Never hardcode `"1ai-engage/..."` strings in scripts.
+**All paths** are absolute via `config.py`. Never hardcode `"1ai-reach/..."` strings in scripts.
 
 **gog env vars** set automatically: `GOG_KEYRING_PASSWORD=openclaw`, `GOG_ACCOUNT=moliangellina@gmail.com`
 

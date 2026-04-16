@@ -333,7 +333,7 @@ def send_seen(session_name: str, chat_id: str) -> bool:
         return False
 
 
-LOGO_URL = "https://raw.githubusercontent.com/oyi77/1ai-engage/master/assets/logo.svg"
+LOGO_URL = "https://raw.githubusercontent.com/oyi77/1ai-reach/master/assets/logo.svg"
 
 
 def _make_html_body(body: str) -> str:

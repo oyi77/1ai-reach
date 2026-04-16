@@ -120,12 +120,12 @@ def main() -> None:
 
     # ── Full / dry-run pipeline ────────────────────────────────────────────────
     if not query:
-        print("Usage: python3 1ai-engage/scripts/orchestrator.py <query> [--dry-run]")
+        print("Usage: python3 1ai-reach/scripts/orchestrator.py <query> [--dry-run]")
         print(
-            "  e.g. python3 1ai-engage/scripts/orchestrator.py 'Digital Agency in Jakarta'"
+            "  e.g. python3 1ai-reach/scripts/orchestrator.py 'Digital Agency in Jakarta'"
         )
-        print("  e.g. python3 1ai-engage/scripts/orchestrator.py --followup-only")
-        print("  e.g. python3 1ai-engage/scripts/orchestrator.py --sync-only")
+        print("  e.g. python3 1ai-reach/scripts/orchestrator.py --followup-only")
+        print("  e.g. python3 1ai-reach/scripts/orchestrator.py --sync-only")
         return
 
     industry, _, location_part = query.partition(" in ")

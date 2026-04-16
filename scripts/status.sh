@@ -1,5 +1,5 @@
 #!/bin/bash
-echo "📊 1ai-engage Service Status"
+echo "📊 1ai-reach Service Status"
 echo "=============================="
 
 if pgrep -f "mcp_server.py --transport http" > /dev/null; then
@@ -20,4 +20,4 @@ free -h | grep "Mem:" | awk '{print "   Used: " $3 " / " $2}'
 
 echo ""
 echo "📝 Recent Logs:"
-tail -5 /home/openclaw/.openclaw/workspace/1ai-engage/logs/mcp_server.log 2>/dev/null || echo "   No MCP logs"
+tail -5 /home/openclaw/.openclaw/workspace/1ai-reach/logs/mcp_server.log 2>/dev/null || echo "   No MCP logs"

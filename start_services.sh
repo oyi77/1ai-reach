@@ -1,9 +1,9 @@
 #!/bin/bash
 
-LOG_DIR="/home/openclaw/.openclaw/workspace/1ai-engage/logs"
+LOG_DIR="/home/openclaw/.openclaw/workspace/1ai-reach/logs"
 mkdir -p "$LOG_DIR"
 
-echo "🚀 Starting 1ai-engage Services..."
+echo "🚀 Starting 1ai-reach Services..."
 
 # Kill existing
 pkill -f "webhook_server.py" 2>/dev/null
@@ -13,8 +13,8 @@ sleep 2
 # Start webhook server with auto-restart wrapper
 nohup bash -c '
     while true; do
-        python3 /home/openclaw/.openclaw/workspace/1ai-engage/webhook_server.py >> /home/openclaw/.openclaw/workspace/1ai-engage/logs/webhook_server.log 2>&1
-        echo "[$(date)] Webhook crashed, restarting in 5s..." >> /home/openclaw/.openclaw/workspace/1ai-engage/logs/crashes.log
+        python3 /home/openclaw/.openclaw/workspace/1ai-reach/webhook_server.py >> /home/openclaw/.openclaw/workspace/1ai-reach/logs/webhook_server.log 2>&1
+        echo "[$(date)] Webhook crashed, restarting in 5s..." >> /home/openclaw/.openclaw/workspace/1ai-reach/logs/crashes.log
         sleep 5
     done
 ' > /dev/null 2>&1 &
@@ -22,7 +22,7 @@ nohup bash -c '
 echo "✅ Webhook server started (auto-restart enabled)"
 
 # Start Streamlit
-cd /home/openclaw/.openclaw/workspace/1ai-engage
+cd /home/openclaw/.openclaw/workspace/1ai-reach
 nohup streamlit run ui/app.py --server.port 8502 --server.address 0.0.0.0 --server.headless true > logs/streamlit.log 2>&1 &
 
 echo "✅ Streamlit started"

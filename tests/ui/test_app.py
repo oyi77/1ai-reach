@@ -19,7 +19,7 @@ def streamlit_server():
             "8502",
             "--logger.level=error",
         ],
-        cwd="/home/openclaw/.openclaw/workspace/1ai-engage",
+        cwd="/home/openclaw/.openclaw/workspace/1ai-reach",
         stdout=subprocess.PIPE,
         stderr=subprocess.PIPE,
     )
@@ -50,7 +50,7 @@ def streamlit_server():
 
 def test_app_page_title(streamlit_server):
     """
-    Test that the Streamlit app page title contains "1ai-engage".
+    Test that the Streamlit app page title contains "1ai-reach".
     Launches browser, navigates to app, and asserts title.
     """
     with sync_playwright() as p:
@@ -67,13 +67,13 @@ def test_app_page_title(streamlit_server):
             heading.wait_for(state="visible", timeout=10000)
 
             heading_text = heading.text_content()
-            assert "1ai-engage" in heading_text, (
-                f"Expected '1ai-engage' in heading, got: {heading_text}"
+            assert "1ai-reach" in heading_text, (
+                f"Expected '1ai-reach' in heading, got: {heading_text}"
             )
 
             title = page.title()
-            assert "1ai-engage" in title, (
-                f"Expected '1ai-engage' in title, got: {title}"
+            assert "1ai-reach" in title, (
+                f"Expected '1ai-reach' in title, got: {title}"
             )
 
             page.get_by_role("tab", name="📊 Funnel").wait_for(

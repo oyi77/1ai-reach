@@ -1,4 +1,4 @@
-"""MCP server for controlling 1ai-engage.
+"""MCP server for controlling 1ai-reach.
 
 Usage:
   python3 mcp_server.py --transport stdio
@@ -53,9 +53,9 @@ def _is_duplicate_message(session: str, waha_message_id: str | None) -> bool:
 
 
 mcp = FastMCP(
-    "1ai-engage",
+    "1ai-reach",
     instructions=(
-        "Control plane for BerkahKarya 1ai-engage. Use read-only tools to inspect "
+        "Control plane for BerkahKarya 1ai-reach. Use read-only tools to inspect "
         "funnel/lead state first. Prefer dry-run operations before destructive actions. "
         "Use background jobs for long-running stages like autonomous_loop."
     ),
@@ -764,7 +764,7 @@ async def webhook_waha(request: Request) -> JSONResponse:
 
 
 def main() -> None:
-    parser = argparse.ArgumentParser(description="MCP server for 1ai-engage")
+    parser = argparse.ArgumentParser(description="MCP server for 1ai-reach")
     parser.add_argument(
         "--transport", choices=["stdio", "http", "sse"], default="stdio"
     )

@@ -1,6 +1,6 @@
-# 1ai-engage Agent Control Skill
+# 1ai-reach Agent Control Skill
 
-Use this skill when an AI agent needs to operate, inspect, or supervise the `1ai-engage` sales pipeline.
+Use this skill when an AI agent needs to operate, inspect, or supervise the `1ai-reach` sales pipeline.
 
 ## What this skill gives you
 
@@ -46,9 +46,9 @@ Add to `claude_desktop_config.json`:
 ```json
 {
   "mcpServers": {
-    "1ai-engage": {
-      "command": "/home/openclaw/.openclaw/workspace/1ai-engage/.venv/bin/python",
-      "args": ["/home/openclaw/.openclaw/workspace/1ai-engage/mcp_server.py", "--transport", "stdio"]
+    "1ai-reach": {
+      "command": "/home/openclaw/.openclaw/workspace/1ai-reach/.venv/bin/python",
+      "args": ["/home/openclaw/.openclaw/workspace/1ai-reach/mcp_server.py", "--transport", "stdio"]
     }
   }
 }

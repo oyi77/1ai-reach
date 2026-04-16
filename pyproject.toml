@@ -5,7 +5,7 @@ build-backend = "setuptools.build_meta"
 [project]
 name = "oneai-engage"
 version = "0.1.0"
-description = "Agent-controllable outreach backend and MCP server for BerkahKarya 1ai-engage"
+description = "Agent-controllable outreach backend and MCP server for BerkahKarya 1ai-reach"
 requires-python = ">=3.10"
 dependencies = [
   "mcp[cli]>=1.6.0",

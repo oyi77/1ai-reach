@@ -221,7 +221,7 @@ def run_guard_audit() -> dict:
 
 def _cli() -> None:
     parser = argparse.ArgumentParser(
-        description="Cross-contamination guard checker for 1ai-engage."
+        description="Cross-contamination guard checker for 1ai-reach."
     )
     parser.add_argument(
         "--audit",

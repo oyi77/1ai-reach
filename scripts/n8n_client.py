@@ -11,7 +11,7 @@ def trigger_n8n(event_type: str, data: dict) -> bool:
     payload = {
         "event": event_type,
         "timestamp": datetime.now().isoformat(),
-        "source": "1ai-engage",
+        "source": "1ai-reach",
         "data": data,
     }
 

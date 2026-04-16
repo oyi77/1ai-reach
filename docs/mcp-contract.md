@@ -1,4 +1,4 @@
-# 1ai-engage MCP Contract
+# 1ai-reach MCP Contract
 
 ## Server entrypoint
 

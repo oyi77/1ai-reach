@@ -4,10 +4,10 @@ from pathlib import Path
 
 import streamlit as st
 
-_REPO_DIR = Path(__file__).resolve().parent.parent.parent  # 1ai-engage/
+_REPO_DIR = Path(__file__).resolve().parent.parent.parent  # 1ai-reach/
 _PARENT_DIR = _REPO_DIR.parent  # workspace/ — scripts MUST run from here per CLAUDE.md
 _PYTHON = str(_REPO_DIR / ".venv" / "bin" / "python3")
-_SCRIPT_PREFIX = "1ai-engage/scripts"
+_SCRIPT_PREFIX = "1ai-reach/scripts"
 
 PIPELINE_STEPS: list[dict[str, str]] = [
     {"key": "scrape", "label": "Scrape", "script": "scraper.py", "icon": "🔍"},

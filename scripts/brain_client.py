@@ -70,13 +70,13 @@ def search(query: str, limit: int = 3, method: str = "hybrid") -> list[dict]:
     return []
 
 
-def add(content: str, category: str = "outreach", agent_id: str = "1ai-engage") -> Optional[str]:
+def add(content: str, category: str = "outreach", agent_id: str = "1ai-reach") -> Optional[str]:
     """Add a memory to the shared brain. Returns memory ID or None."""
     result = _post("/brain/add", {
         "content": content,
         "category": category,
         "agent_id": agent_id,
-        "metadata": {"source": "1ai-engage", "ts": datetime.now(timezone.utc).isoformat()}
+        "metadata": {"source": "1ai-reach", "ts": datetime.now(timezone.utc).isoformat()}
     })
     if result:
         return result.get("id") or result.get("memory_id")

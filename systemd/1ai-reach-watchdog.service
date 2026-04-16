@@ -1,0 +1,13 @@
+[Unit]
+Description=1ai-reach Watchdog
+After=1ai-reach-mcp.service 1ai-reach-ui.service
+
+[Service]
+Type=simple
+User=openclaw
+ExecStart=/home/openclaw/.openclaw/workspace/1ai-reach/scripts/watchdog.sh
+Restart=always
+RestartSec=60
+
+[Install]
+WantedBy=multi-user.target

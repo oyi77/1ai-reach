@@ -1,5 +1,5 @@
 """
-1ai-engage Streamlit WebUI Dashboard
+1ai-reach Streamlit WebUI Dashboard
 
 Main entrypoint. Uses sidebar radio buttons as primary navigation.
 """
@@ -22,7 +22,7 @@ from ui.components.event_log import render_event_log
 from ui.components.autonomous import render_autonomous
 
 st.set_page_config(
-    page_title="1ai-engage Dashboard",
+    page_title="1ai-reach Dashboard",
     layout="wide",
     initial_sidebar_state="expanded",
 )
@@ -44,7 +44,7 @@ if "current_page" not in st.session_state:
     st.session_state["current_page"] = PAGES[0]
 
 with st.sidebar:
-    st.markdown("### 🚀 1ai-engage")
+    st.markdown("### 🚀 1ai-reach")
     selected = st.radio(
         "Navigate",
         PAGES,

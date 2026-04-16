@@ -1,4 +1,4 @@
-# 1ai-engage
+# 1ai-reach
 
 Cold Calling & Lead Automation System for BerkahKarya.
 
@@ -53,7 +53,7 @@ Tell Vilona:
 
 ## Agent Control (MCP)
 
-`1ai-engage` now exposes an MCP control plane so other AI agents can inspect and operate the backend safely.
+`1ai-reach` now exposes an MCP control plane so other AI agents can inspect and operate the backend safely.
 
 ### Install MCP dependencies
 ```bash
@@ -95,7 +95,7 @@ python3 scripts/orchestrator.py "Coffee Shop in Jakarta"
 ```
 
 ## Admin Control
-Admin can monitor progress by asking Vilona for a "status update on 1ai-engage".
+Admin can monitor progress by asking Vilona for a "status update on 1ai-reach".
 Vilona will report:
 - Total leads found
 - Leads enriched

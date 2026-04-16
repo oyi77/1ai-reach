@@ -1,4 +1,4 @@
-"""Agent-facing control plane for 1ai-engage.
+"""Agent-facing control plane for 1ai-reach.
 
 Provides structured operations for:
 - querying funnel/lead state

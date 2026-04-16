@@ -1,0 +1,16 @@
+[Unit]
+Description=1ai-reach Autonomous Outreach Loop
+After=network.target 1ai-reach-mcp.service
+
+[Service]
+Type=simple
+User=openclaw
+WorkingDirectory=/home/openclaw/.openclaw/workspace/1ai-reach
+ExecStart=/home/linuxbrew/.linuxbrew/bin/python3 /home/openclaw/.openclaw/workspace/1ai-reach/scripts/autonomous_loop.py
+Restart=always
+RestartSec=10
+StandardOutput=append:/home/openclaw/.openclaw/workspace/1ai-reach/logs/autonomous.log
+StandardError=append:/home/openclaw/.openclaw/workspace/1ai-reach/logs/autonomous.log
+
+[Install]
+WantedBy=multi-user.target

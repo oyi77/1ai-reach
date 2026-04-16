@@ -84,7 +84,7 @@ def _n8n_trigger(lead_name: str, email: str, vertical: str) -> bool:
                 "email": email,
                 "vertical": vertical,
                 "calendly": CALENDLY_LINK,
-                "source": "1ai-engage",
+                "source": "1ai-reach",
             },
             timeout=10,
         )
@@ -103,7 +103,7 @@ def _notify_team(lead_name: str, email: str, vertical: str, phone: str) -> None:
         return
     now = datetime.now().strftime("%d %b %Y %H:%M WIB")
     tg_msg = (
-        f"🔥 *HOT LEAD — 1ai-engage*\n\n"
+        f"🔥 *HOT LEAD — 1ai-reach*\n\n"
         f"👤 *{lead_name}*\n"
         f"💼 {vertical}\n"
         f"📧 {email}\n"
@@ -179,7 +179,7 @@ def _paperclip_create_issue(
             f"**Phone:** {phone or 'N/A'}\n"
             f"**Status:** Replied to BerkahKarya cold outreach\n"
             f"**Next step:** Schedule discovery call via {CALENDLY_LINK}\n"
-            f"**Source:** 1ai-engage pipeline\n"
+            f"**Source:** 1ai-reach pipeline\n"
             f"**Date:** {datetime.now(timezone.utc).strftime('%Y-%m-%d %H:%M UTC')}"
         ),
         "priority": "high",

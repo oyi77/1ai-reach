@@ -1,7 +1,7 @@
 #!/bin/bash
-# 1ai-engage Auto-Start Script
+# 1ai-reach Auto-Start Script
 # Usage: ./start_all.sh
-# This script starts all required services for 1ai-engage
+# This script starts all required services for 1ai-reach
 
 set -e
 
@@ -10,7 +10,7 @@ PROJECT_DIR="$(dirname "$SCRIPT_DIR")"
 LOG_DIR="$PROJECT_DIR/logs"
 mkdir -p "$LOG_DIR"
 
-echo "🚀 Starting 1ai-engage Services..."
+echo "🚀 Starting 1ai-reach Services..."
 echo "=================================="
 echo ""
 

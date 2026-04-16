@@ -6,7 +6,7 @@ from pathlib import Path
 # Base paths (absolute, relative to this file's location)
 # ---------------------------------------------------------------------------
 _SCRIPTS_DIR = Path(__file__).parent
-_ROOT = _SCRIPTS_DIR.parent  # 1ai-engage/
+_ROOT = _SCRIPTS_DIR.parent  # 1ai-reach/
 _HUB_DIR = Path("/home/openclaw/projects/berkahkarya-hub")
 _HUB_SERVICES_JSON = _HUB_DIR / "config" / "services.json"
 

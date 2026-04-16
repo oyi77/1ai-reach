@@ -1,0 +1,16 @@
+[Unit]
+Description=1ai-reach Webhook Server
+After=network.target
+
+[Service]
+Type=simple
+User=openclaw
+WorkingDirectory=/home/openclaw/.openclaw/workspace/1ai-reach
+ExecStart=/home/linuxbrew/.linuxbrew/Cellar/python@3.14/3.14.3_1/bin/python3.14 /home/openclaw/.openclaw/workspace/1ai-reach/webhook_server.py
+Restart=always
+RestartSec=10
+StandardOutput=append:/home/openclaw/.openclaw/workspace/1ai-reach/logs/webhook.log
+StandardError=append:/home/openclaw/.openclaw/workspace/1ai-reach/logs/webhook.log
+
+[Install]
+WantedBy=multi-user.target

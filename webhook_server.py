@@ -179,7 +179,7 @@ def webhook_waha():
 
 @app.route("/health", methods=["GET"])
 def health():
-    return jsonify({"status": "ok", "service": "1ai-engage-api", "version": "2.0.0"})
+    return jsonify({"status": "ok", "service": "1ai-reach-api", "version": "2.0.0"})
 
 
 # ── Funnel / Leads ───────────────────────────────────────────────────────
@@ -473,7 +473,7 @@ def api_webhook_restart():
     return jsonify(
         {
             "ok": False,
-            "message": "Cannot restart self — use systemd: sudo systemctl restart 1ai-engage-mcp",
+            "message": "Cannot restart self — use systemd: sudo systemctl restart 1ai-reach-mcp",
         }
     )
 
@@ -590,5 +590,5 @@ def _get_or_create_conv_id(wa_number_id: str, contact_phone: str) -> int:
 
 
 if __name__ == "__main__":
-    print("Starting 1ai-engage API Server on port 8766...")
+    print("Starting 1ai-reach API Server on port 8766...")
     app.run(host="0.0.0.0", port=8766, debug=False, threaded=True)

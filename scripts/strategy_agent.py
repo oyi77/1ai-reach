@@ -7,10 +7,10 @@ vertical converts best, then invokes the scraper for that vertical.
 Falls back to a simple rotation through DEFAULT_VERTICALS when the brain
 is offline or returns no actionable data.
 
-Usage (from parent dir of 1ai-engage):
-    python3 1ai-engage/scripts/strategy_agent.py --dry-run
-    python3 1ai-engage/scripts/strategy_agent.py --vertical "Coffee Shop"
-    python3 1ai-engage/scripts/strategy_agent.py --location Bandung --count 30
+Usage (from parent dir of 1ai-reach):
+    python3 1ai-reach/scripts/strategy_agent.py --dry-run
+    python3 1ai-reach/scripts/strategy_agent.py --vertical "Coffee Shop"
+    python3 1ai-reach/scripts/strategy_agent.py --location Bandung --count 30
 """
 
 import argparse

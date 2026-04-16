@@ -36,7 +36,7 @@ function NavContent({ onNavigate }: { onNavigate?: () => void }) {
   return (
     <div className="flex flex-col h-full">
       <div className="px-4 py-5">
-        <h1 className="text-lg font-bold text-orange-500">1ai-engage</h1>
+        <h1 className="text-lg font-bold text-orange-500">1ai-reach</h1>
         <p className="text-xs text-neutral-500 mt-0.5">Outreach Automation</p>
       </div>
       <Separator />
@@ -110,7 +110,7 @@ export function TopBar() {
   return (
     <header className="sticky top-0 z-40 flex items-center h-14 px-4 border-b border-neutral-800 bg-neutral-950/80 backdrop-blur-sm md:hidden">
       <MobileNav />
-      <span className="ml-3 text-sm font-bold text-orange-500">1ai-engage</span>
+      <span className="ml-3 text-sm font-bold text-orange-500">1ai-reach</span>
     </header>
   );
 }

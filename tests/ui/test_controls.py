@@ -220,7 +220,7 @@ class TestCwdIsParentDirectory:
 
         cwd_used = mock_popen.call_args.kwargs["cwd"]
         assert cwd_used == str(_PARENT_DIR)
-        assert "1ai-engage" not in cwd_used.split("/")[-1]
+        assert "1ai-reach" not in cwd_used.split("/")[-1]
 
 
 class TestPipelineStepsCompleteness:
