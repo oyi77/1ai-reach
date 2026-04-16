@@ -99,6 +99,19 @@ export default function AutoLearnPage() {
             </label>
           </div>
 
+          <div className="flex items-center space-x-2">
+            <input 
+              type="checkbox" 
+              id="apply" 
+              checked={applyChanges} 
+              onChange={(e) => setApplyChanges(e.target.checked)}
+              className="h-4 w-4 rounded border-gray-300"
+            />
+            <label htmlFor="apply" className="text-sm font-medium cursor-pointer">
+              Apply changes (not dry-run)
+            </label>
+          </div>
+
           <div className="flex gap-3">
             <Button onClick={generateReport} disabled={!selectedSession || loading} className="flex-1">
               <TrendingUp className="mr-2 h-4 w-4" />
