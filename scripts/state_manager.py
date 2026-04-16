@@ -547,6 +547,7 @@ def delete_wa_number(session_name: str) -> None:
 
 # --- voice_config CRUD ---
 
+
 def get_voice_config(session_name: str) -> dict | None:
     """Get voice configuration for a WA number."""
     conn = _connect()
@@ -561,12 +562,21 @@ def get_voice_config(session_name: str) -> dict | None:
                 "voice_reply_mode": row[1] or "auto",
                 "voice_language": row[2] or "ms",
             }
-        return {"voice_enabled": False, "voice_reply_mode": "auto", "voice_language": "ms"}
+        return {
+            "voice_enabled": False,
+            "voice_reply_mode": "auto",
+            "voice_language": "ms",
+        }
     finally:
         conn.close()
 
 
-def update_voice_config(session_name: str, voice_enabled: bool = None, voice_reply_mode: str = None, voice_language: str = None) -> bool:
+def update_voice_config(
+    session_name: str,
+    voice_enabled: bool = None,
+    voice_reply_mode: str = None,
+    voice_language: str = None,
+) -> bool:
     """Update voice configuration for a WA number."""
     conn = _connect()
     try:
@@ -582,12 +592,14 @@ def update_voice_config(session_name: str, voice_enabled: bool = None, voice_rep
         if voice_language is not None:
             sets.append("voice_language = ?")
             params.append(voice_language)
-        
+
         if not sets:
             return False
-        
+
         params.append(session_name)
-        conn.execute(f"UPDATE wa_numbers SET {', '.join(sets)} WHERE session_name = ?", params)
+        conn.execute(
+            f"UPDATE wa_numbers SET {', '.join(sets)} WHERE session_name = ?", params
+        )
         conn.commit()
         return True
     except Exception as e:
@@ -595,7 +607,6 @@ def update_voice_config(session_name: str, voice_enabled: bool = None, voice_rep
         return False
     finally:
         conn.close()
-
 
 
 # --- knowledge_base CRUD ---
@@ -891,9 +902,13 @@ def get_all_conversation_stages(wa_number_id: str | None = None) -> list[dict]:
                 SELECT c.id, c.contact_phone, c.contact_name, c.wa_number_id, c.status,
                        c.manual_mode, s.stage, s.entry_trigger, s.updated_at
                 FROM conversations c
-                LEFT JOIN sales_stages s ON c.id = s.conversation_id
+                LEFT JOIN (
+                    SELECT conversation_id, stage, entry_trigger, updated_at,
+                           ROW_NUMBER() OVER (PARTITION BY conversation_id ORDER BY updated_at DESC) as rn
+                    FROM sales_stages
+                ) s ON c.id = s.conversation_id AND s.rn = 1
                 WHERE c.wa_number_id = ? AND c.engine_mode = 'cs'
-                ORDER BY s.updated_at DESC NULLS LAST
+                ORDER BY COALESCE(s.updated_at, c.updated_at) DESC
             """,
                 (wa_number_id,),
             ).fetchall()
@@ -902,9 +917,13 @@ def get_all_conversation_stages(wa_number_id: str | None = None) -> list[dict]:
             SELECT c.id, c.contact_phone, c.contact_name, c.wa_number_id, c.status,
                    c.manual_mode, s.stage, s.entry_trigger, s.updated_at
             FROM conversations c
-            LEFT JOIN sales_stages s ON c.id = s.conversation_id
+            LEFT JOIN (
+                SELECT conversation_id, stage, entry_trigger, updated_at,
+                       ROW_NUMBER() OVER (PARTITION BY conversation_id ORDER BY updated_at DESC) as rn
+                FROM sales_stages
+            ) s ON c.id = s.conversation_id AND s.rn = 1
             WHERE c.engine_mode = 'cs'
-            ORDER BY s.updated_at DESC NULLS LAST
+            ORDER BY COALESCE(s.updated_at, c.updated_at) DESC
             """).fetchall()
         return [dict(r) for r in rows]
     finally:

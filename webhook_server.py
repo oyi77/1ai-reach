@@ -38,6 +38,7 @@ from state_manager import (
     add_conversation_message,
     get_voice_config,
     update_voice_config,
+    _connect,
 )
 from kb_manager import (
     add_entry as kb_add_entry,
