@@ -25,4 +25,4 @@ dev = [
 engage-mcp = "mcp_server:main"
 
 [tool.setuptools]
-py-modules = ["agent_control", "mcp_server"]
+packages = [{include = "oneai_reach", from = "src"}]
