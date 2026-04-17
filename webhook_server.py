@@ -1,4 +1,20 @@
 #!/usr/bin/env python3
+"""Backward compatibility wrapper for webhook_server.py.
+
+DEPRECATED: This Flask server is maintained for backward compatibility only.
+New deployments should use the FastAPI application in src/oneai_reach/api/main.py
+
+To migrate:
+    uvicorn oneai_reach.api.main:create_app --host 0.0.0.0 --port 8766 --factory
+
+Webhook endpoints have been migrated to:
+    - /api/v1/webhooks/waha/message (WAHA messages)
+    - /api/v1/webhooks/waha/status (WAHA status)
+    - /api/v1/webhooks/capi/lead (CAPI lead tracking)
+
+This wrapper redirects /webhook/waha to the new FastAPI endpoints.
+"""
+
 import os
 import subprocess
 import sys
