@@ -8,8 +8,10 @@ import sys
 from pathlib import Path
 from typing import Any, Dict, List, Optional, Union
 
-from fastapi import APIRouter, HTTPException, Request
+from fastapi import APIRouter, Depends, HTTPException, Request
 from pydantic import BaseModel, Field
+
+from oneai_reach.api.dependencies import verify_api_key
 
 # Add scripts/ to path for agent_control imports
 SCRIPTS_DIR = Path(__file__).resolve().parent.parent.parent.parent.parent / "scripts"
@@ -18,7 +20,11 @@ if str(SCRIPTS_DIR) not in sys.path:
 
 import agent_control as control
 
-router = APIRouter(prefix="/api/v1/mcp", tags=["mcp"])
+router = APIRouter(
+    prefix="/api/v1/mcp",
+    tags=["mcp"],
+    dependencies=[Depends(verify_api_key)],
+)
 
 
 # ============================================================================

@@ -12,10 +12,16 @@ import sys
 from pathlib import Path
 from typing import Any, Dict, List, Optional
 
-from fastapi import APIRouter, HTTPException
+from fastapi import APIRouter, Depends, HTTPException
 from pydantic import BaseModel, Field
 
-router = APIRouter(prefix="/api/v1/agents", tags=["agents"])
+from oneai_reach.api.dependencies import verify_api_key
+
+router = APIRouter(
+    prefix="/api/v1/agents",
+    tags=["agents"],
+    dependencies=[Depends(verify_api_key)],
+)
 
 # Import agent_control module
 _root = Path(__file__).resolve().parent.parent.parent.parent

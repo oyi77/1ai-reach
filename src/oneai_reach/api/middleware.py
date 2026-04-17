@@ -4,7 +4,9 @@ Includes CORS, request logging, correlation IDs, and global exception handling.
 """
 
 import logging
+import time
 import uuid
+from collections import defaultdict
 from typing import Callable
 
 from fastapi import FastAPI, Request
@@ -12,6 +14,7 @@ from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import JSONResponse
 from starlette.middleware.base import BaseHTTPMiddleware
 
+from oneai_reach.config.settings import get_settings
 from oneai_reach.domain.exceptions import OneAIReachException
 
 logger = logging.getLogger(__name__)
@@ -50,8 +53,59 @@ class RequestLoggingMiddleware(BaseHTTPMiddleware):
         return response
 
 
+class RateLimitMiddleware(BaseHTTPMiddleware):
+    """Rate limiting middleware using sliding window per IP."""
+
+    def __init__(self, app, requests_per_minute: int = 100):
+        super().__init__(app)
+        self.requests_per_minute = requests_per_minute
+        self.request_times = defaultdict(list)
+
+    def _get_client_ip(self, request: Request) -> str:
+        forwarded = request.headers.get("X-Forwarded-For")
+        if forwarded:
+            return forwarded.split(",")[0].strip()
+        return request.client.host if request.client else "unknown"
+
+    def _is_rate_limited(self, client_ip: str) -> bool:
+        now = time.time()
+        window_start = now - 60
+
+        self.request_times[client_ip] = [
+            req_time
+            for req_time in self.request_times[client_ip]
+            if req_time > window_start
+        ]
+
+        if len(self.request_times[client_ip]) >= self.requests_per_minute:
+            return True
+
+        self.request_times[client_ip].append(now)
+        return False
+
+    async def dispatch(self, request: Request, call_next: Callable) -> JSONResponse:
+        if request.url.path in ["/health", "/api/v1/health"]:
+            return await call_next(request)
+
+        client_ip = self._get_client_ip(request)
+
+        if self._is_rate_limited(client_ip):
+            return JSONResponse(
+                status_code=429,
+                content={
+                    "error_code": "RATE_LIMIT_EXCEEDED",
+                    "message": f"Rate limit exceeded. Maximum {self.requests_per_minute} requests per minute.",
+                    "retry_after": 60,
+                },
+                headers={"Retry-After": "60"},
+            )
+
+        return await call_next(request)
+
+
 def setup_middleware(app: FastAPI) -> None:
     """Configure all middleware for the FastAPI app."""
+    settings = get_settings()
 
     app.add_middleware(
         CORSMiddleware,
@@ -63,6 +117,12 @@ def setup_middleware(app: FastAPI) -> None:
 
     app.add_middleware(RequestLoggingMiddleware)
     app.add_middleware(CorrelationIDMiddleware)
+
+    if settings.api.rate_limit_enabled:
+        app.add_middleware(
+            RateLimitMiddleware,
+            requests_per_minute=settings.api.rate_limit_per_minute,
+        )
 
 
 def setup_exception_handlers(app: FastAPI) -> None:

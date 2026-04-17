@@ -285,6 +285,28 @@ class ScraperSettings(BaseSettings):
         env_prefix = "SCRAPER_"
 
 
+class APISettings(BaseSettings):
+    """API authentication and rate limiting configuration."""
+
+    api_keys: str = Field(
+        default="",
+        description="Comma-separated list of valid API keys for authentication",
+    )
+    rate_limit_per_minute: int = Field(
+        default=100, description="Max requests per minute per IP"
+    )
+    rate_limit_enabled: bool = Field(default=True, description="Enable rate limiting")
+
+    class Config:
+        env_prefix = "API_"
+
+    def get_valid_keys(self) -> Set[str]:
+        """Parse comma-separated API keys into a set."""
+        if not self.api_keys:
+            return set()
+        return {key.strip() for key in self.api_keys.split(",") if key.strip()}
+
+
 class Settings(BaseSettings):
     """Root settings class combining all configuration groups."""
 
@@ -302,6 +324,7 @@ class Settings(BaseSettings):
     external_api: ExternalAPISettings = Field(default_factory=ExternalAPISettings)
     paperclip: PaperClipSettings = Field(default_factory=PaperClipSettings)
     scraper: ScraperSettings = Field(default_factory=ScraperSettings)
+    api: APISettings = Field(default_factory=APISettings)
 
     class Config:
         env_file = ".env"

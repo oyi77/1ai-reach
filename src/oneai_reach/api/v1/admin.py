@@ -6,10 +6,16 @@ active conversation state. Part of the infinite loop prevention system.
 
 from typing import Any, Dict, List, Optional
 
-from fastapi import APIRouter, HTTPException
+from fastapi import APIRouter, Depends, HTTPException
 from pydantic import BaseModel, Field
 
-router = APIRouter(prefix="/api/v1/admin", tags=["admin"])
+from oneai_reach.api.dependencies import verify_api_key
+
+router = APIRouter(
+    prefix="/api/v1/admin",
+    tags=["admin"],
+    dependencies=[Depends(verify_api_key)],
+)
 
 # Global pause flag for CS engine
 _PAUSE_CS_ENGINE = False
