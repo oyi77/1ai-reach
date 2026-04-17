@@ -69,14 +69,14 @@ def handle_get_funnel_summary(params: Dict[str, Any] = None) -> Dict[str, Any]:
     return control.get_funnel_summary()
 
 
-def handle_list_leads(params: Dict[str, Any]) -> Dict[str, Any]:
+def handle_list_leads(params: Dict[str, Any] = None) -> Dict[str, Any]:
     """List current leads from SQLite state."""
     status = params.get("status")
     limit = params.get("limit", 100)
     return control.list_leads(status=status, limit=limit)
 
 
-def handle_get_lead(params: Dict[str, Any]) -> Dict[str, Any]:
+def handle_get_lead(params: Dict[str, Any] = None) -> Dict[str, Any]:
     """Get one lead plus recent event log entries."""
     lead_id = params.get("lead_id")
     if not lead_id:
@@ -84,13 +84,13 @@ def handle_get_lead(params: Dict[str, Any]) -> Dict[str, Any]:
     return control.get_lead(lead_id)
 
 
-def handle_get_recent_events(params: Dict[str, Any]) -> Dict[str, Any]:
+def handle_get_recent_events(params: Dict[str, Any] = None) -> Dict[str, Any]:
     """Return recent event log entries from the pipeline database."""
     limit = params.get("limit", 100)
     return control.get_recent_events(limit=limit)
 
 
-def handle_get_tool_audit(params: Dict[str, Any]) -> Dict[str, Any]:
+def handle_get_tool_audit(params: Dict[str, Any] = None) -> Dict[str, Any]:
     """Return control-plane tool audit history."""
     limit = params.get("limit", 100)
     return control.get_tool_audit(limit=limit)
@@ -106,7 +106,7 @@ def handle_preview_autonomous_decision(params: Dict[str, Any] = None) -> Dict[st
     return control.preview_autonomous_decision()
 
 
-def handle_run_stage(params: Dict[str, Any]) -> Dict[str, Any]:
+def handle_run_stage(params: Dict[str, Any] = None) -> Dict[str, Any]:
     """Run a stage synchronously and return stdout/stderr/result."""
     stage = params.get("stage")
     if not stage:
@@ -130,7 +130,7 @@ def handle_run_stage(params: Dict[str, Any]) -> Dict[str, Any]:
     )
 
 
-def handle_start_background_stage(params: Dict[str, Any]) -> Dict[str, Any]:
+def handle_start_background_stage(params: Dict[str, Any] = None) -> Dict[str, Any]:
     """Start a background job and return a job id plus log path."""
     stage = params.get("stage")
     if not stage:
@@ -145,7 +145,7 @@ def handle_list_jobs(params: Dict[str, Any] = None) -> Dict[str, Any]:
     return control.list_jobs()
 
 
-def handle_get_job(params: Dict[str, Any]) -> Dict[str, Any]:
+def handle_get_job(params: Dict[str, Any] = None) -> Dict[str, Any]:
     """Get one background job status plus tail of its log."""
     job_id = params.get("job_id")
     if not job_id:
@@ -155,7 +155,7 @@ def handle_get_job(params: Dict[str, Any]) -> Dict[str, Any]:
     return control.get_job(job_id, tail_lines=tail_lines)
 
 
-def handle_stop_job(params: Dict[str, Any]) -> Dict[str, Any]:
+def handle_stop_job(params: Dict[str, Any] = None) -> Dict[str, Any]:
     """Stop a background job started by the control plane."""
     job_id = params.get("job_id")
     if not job_id:
@@ -164,7 +164,7 @@ def handle_stop_job(params: Dict[str, Any]) -> Dict[str, Any]:
     return control.stop_job(job_id)
 
 
-def handle_send_test_email(params: Dict[str, Any]) -> Dict[str, Any]:
+def handle_send_test_email(params: Dict[str, Any] = None) -> Dict[str, Any]:
     """Send a real email using the repo's outbound chain."""
     to = params.get("to")
     subject = params.get("subject")
@@ -176,7 +176,7 @@ def handle_send_test_email(params: Dict[str, Any]) -> Dict[str, Any]:
     return control.send_test_email(to=to, subject=subject, body=body)
 
 
-def handle_send_test_whatsapp(params: Dict[str, Any]) -> Dict[str, Any]:
+def handle_send_test_whatsapp(params: Dict[str, Any] = None) -> Dict[str, Any]:
     """Send a real WhatsApp message using WAHA/wacli fallback."""
     phone = params.get("phone")
     message = params.get("message")
@@ -187,7 +187,7 @@ def handle_send_test_whatsapp(params: Dict[str, Any]) -> Dict[str, Any]:
     return control.send_test_whatsapp(phone=phone, message=message)
 
 
-def handle_set_lead_status(params: Dict[str, Any]) -> Dict[str, Any]:
+def handle_set_lead_status(params: Dict[str, Any] = None) -> Dict[str, Any]:
     """Update one lead's funnel status directly."""
     lead_id = params.get("lead_id")
     status = params.get("status")
@@ -199,7 +199,7 @@ def handle_set_lead_status(params: Dict[str, Any]) -> Dict[str, Any]:
     return control.set_lead_status(lead_id=lead_id, status=status, note=note)
 
 
-def handle_update_lead_fields(params: Dict[str, Any]) -> Dict[str, Any]:
+def handle_update_lead_fields(params: Dict[str, Any] = None) -> Dict[str, Any]:
     """Update arbitrary lead fields from a JSON payload."""
     lead_id = params.get("lead_id")
     fields = params.get("fields")
@@ -210,7 +210,7 @@ def handle_update_lead_fields(params: Dict[str, Any]) -> Dict[str, Any]:
     return control.update_lead_fields(lead_id=lead_id, fields=fields)
 
 
-def handle_load_dataframe_snapshot(params: Dict[str, Any]) -> Dict[str, Any]:
+def handle_load_dataframe_snapshot(params: Dict[str, Any] = None) -> Dict[str, Any]:
     """Return a tabular snapshot of current leads for agents that prefer dataframe-like data."""
     limit = params.get("limit", 100)
     return control.load_dataframe_snapshot(limit=limit)
@@ -221,7 +221,7 @@ def handle_list_wa_sessions(params: Dict[str, Any] = None) -> Dict[str, Any]:
     return control.list_wa_sessions()
 
 
-def handle_create_wa_session(params: Dict[str, Any]) -> Dict[str, Any]:
+def handle_create_wa_session(params: Dict[str, Any] = None) -> Dict[str, Any]:
     """Create a new WhatsApp session in WAHA + register in local DB + configure webhooks."""
     session_name = params.get("session_name")
     if not session_name:
@@ -237,7 +237,7 @@ def handle_create_wa_session(params: Dict[str, Any]) -> Dict[str, Any]:
     )
 
 
-def handle_delete_wa_session(params: Dict[str, Any]) -> Dict[str, Any]:
+def handle_delete_wa_session(params: Dict[str, Any] = None) -> Dict[str, Any]:
     """Delete a WhatsApp session from WAHA and local DB."""
     session_name = params.get("session_name")
     if not session_name:
@@ -246,7 +246,7 @@ def handle_delete_wa_session(params: Dict[str, Any]) -> Dict[str, Any]:
     return control.delete_wa_session(session_name)
 
 
-def handle_get_wa_session_status(params: Dict[str, Any]) -> Dict[str, Any]:
+def handle_get_wa_session_status(params: Dict[str, Any] = None) -> Dict[str, Any]:
     """Get WAHA status for a specific WhatsApp session."""
     session_name = params.get("session_name")
     if not session_name:
@@ -255,7 +255,7 @@ def handle_get_wa_session_status(params: Dict[str, Any]) -> Dict[str, Any]:
     return control.get_wa_session_status(session_name)
 
 
-def handle_get_wa_qr_code(params: Dict[str, Any]) -> Dict[str, Any]:
+def handle_get_wa_qr_code(params: Dict[str, Any] = None) -> Dict[str, Any]:
     """Get QR code for a WhatsApp session as base64 image."""
     session_name = params.get("session_name")
     if not session_name:
@@ -264,7 +264,7 @@ def handle_get_wa_qr_code(params: Dict[str, Any]) -> Dict[str, Any]:
     return control.get_wa_qr_code(session_name)
 
 
-def handle_list_kb_entries(params: Dict[str, Any]) -> Dict[str, Any]:
+def handle_list_kb_entries(params: Dict[str, Any] = None) -> Dict[str, Any]:
     """List knowledge base entries for a WA number."""
     wa_number_id = params.get("wa_number_id")
     if not wa_number_id:
@@ -274,7 +274,7 @@ def handle_list_kb_entries(params: Dict[str, Any]) -> Dict[str, Any]:
     return control.list_kb_entries(wa_number_id, category=category)
 
 
-def handle_add_kb_entry(params: Dict[str, Any]) -> Dict[str, Any]:
+def handle_add_kb_entry(params: Dict[str, Any] = None) -> Dict[str, Any]:
     """Add a new knowledge base entry."""
     wa_number_id = params.get("wa_number_id")
     category = params.get("category")
@@ -288,7 +288,7 @@ def handle_add_kb_entry(params: Dict[str, Any]) -> Dict[str, Any]:
     return control.add_kb_entry(wa_number_id, category, question, answer, tags=tags)
 
 
-def handle_search_kb(params: Dict[str, Any]) -> Dict[str, Any]:
+def handle_search_kb(params: Dict[str, Any] = None) -> Dict[str, Any]:
     """Search knowledge base using full-text search."""
     wa_number_id = params.get("wa_number_id")
     query = params.get("query")
@@ -299,7 +299,7 @@ def handle_search_kb(params: Dict[str, Any]) -> Dict[str, Any]:
     return control.search_kb(wa_number_id, query)
 
 
-def handle_delete_kb_entry(params: Dict[str, Any]) -> Dict[str, Any]:
+def handle_delete_kb_entry(params: Dict[str, Any] = None) -> Dict[str, Any]:
     """Delete a knowledge base entry by ID."""
     entry_id = params.get("entry_id")
     if entry_id is None:
@@ -308,7 +308,7 @@ def handle_delete_kb_entry(params: Dict[str, Any]) -> Dict[str, Any]:
     return control.delete_kb_entry(entry_id)
 
 
-def handle_seed_kb(params: Dict[str, Any]) -> Dict[str, Any]:
+def handle_seed_kb(params: Dict[str, Any] = None) -> Dict[str, Any]:
     """Seed default BerkahKarya FAQ entries for a WA number (skips duplicates)."""
     wa_number_id = params.get("wa_number_id")
     if not wa_number_id:
@@ -317,13 +317,13 @@ def handle_seed_kb(params: Dict[str, Any]) -> Dict[str, Any]:
     return control.seed_kb(wa_number_id)
 
 
-def handle_list_active_conversations(params: Dict[str, Any]) -> Dict[str, Any]:
+def handle_list_active_conversations(params: Dict[str, Any] = None) -> Dict[str, Any]:
     """List active conversations, optionally filtered by WA number."""
     wa_number_id = params.get("wa_number_id")
     return control.list_active_conversations(wa_number_id=wa_number_id)
 
 
-def handle_get_conversation_history(params: Dict[str, Any]) -> Dict[str, Any]:
+def handle_get_conversation_history(params: Dict[str, Any] = None) -> Dict[str, Any]:
     """Get message history for a conversation."""
     conversation_id = params.get("conversation_id")
     if conversation_id is None:
@@ -333,7 +333,7 @@ def handle_get_conversation_history(params: Dict[str, Any]) -> Dict[str, Any]:
     return control.get_conversation_history(conversation_id, limit=limit)
 
 
-def handle_resolve_conversation(params: Dict[str, Any]) -> Dict[str, Any]:
+def handle_resolve_conversation(params: Dict[str, Any] = None) -> Dict[str, Any]:
     """Mark a conversation as resolved."""
     conversation_id = params.get("conversation_id")
     if conversation_id is None:
@@ -342,7 +342,7 @@ def handle_resolve_conversation(params: Dict[str, Any]) -> Dict[str, Any]:
     return control.resolve_conversation(conversation_id)
 
 
-def handle_escalate_conversation(params: Dict[str, Any]) -> Dict[str, Any]:
+def handle_escalate_conversation(params: Dict[str, Any] = None) -> Dict[str, Any]:
     """Escalate a conversation to human support (triggers Telegram alert)."""
     conversation_id = params.get("conversation_id")
     reason = params.get("reason")
@@ -353,7 +353,7 @@ def handle_escalate_conversation(params: Dict[str, Any]) -> Dict[str, Any]:
     return control.escalate_conversation(conversation_id, reason)
 
 
-def handle_start_warmcall(params: Dict[str, Any]) -> Dict[str, Any]:
+def handle_start_warmcall(params: Dict[str, Any] = None) -> Dict[str, Any]:
     """Start a warm-call outreach sequence for a contact."""
     phone = params.get("phone")
     name = params.get("name")
