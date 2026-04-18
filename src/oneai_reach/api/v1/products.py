@@ -1,13 +1,16 @@
 """Product CRUD API endpoints for multi-tenant product management."""
 
 from typing import List, Optional
+import uuid
 
-from fastapi import APIRouter, Depends, HTTPException, Query
+from fastapi import APIRouter, Depends, HTTPException, Query, UploadFile, File
 from pydantic import BaseModel, Field
 
 from oneai_reach.api.dependencies import verify_api_key
+from oneai_reach.application.product.image_service import ImageService
 from oneai_reach.config.settings import get_settings
 from oneai_reach.domain.models.product import Product, ProductStatus, VisibilityStatus, ProductVariant, Inventory
+from oneai_reach.domain.exceptions import ValidationError
 from oneai_reach.infrastructure.database.sqlite_product_repository import (
     SQLiteProductRepository,
     NotFoundError,
@@ -112,6 +115,11 @@ def get_inventory_repository() -> SQLiteInventoryRepository:
     """Dependency injection for inventory repository."""
     settings = get_settings()
     return SQLiteInventoryRepository(db_path=settings.database.db_file)
+
+
+def get_image_service() -> ImageService:
+    """Dependency injection for image service."""
+    return ImageService(storage_base_path="data/products")
 
 
 @router.get("", response_model=List[ProductResponse])
@@ -555,6 +563,74 @@ async def adjust_inventory(
         raise HTTPException(status_code=404, detail=str(e))
     except ValueError as e:
         raise HTTPException(status_code=400, detail=f"Validation error: {str(e)}")
+    except RepositoryError as e:
+        raise HTTPException(status_code=500, detail=f"Database error: {str(e)}")
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=f"Internal error: {str(e)}")
+
+
+class ImageUploadResponse(BaseModel):
+    """Response schema for image upload."""
+
+    image_id: str
+    product_id: str
+    image_url: str
+    thumbnail_url: str
+    alt_text: Optional[str]
+    is_primary: bool
+
+
+@router.post("/{product_id}/images", response_model=ImageUploadResponse, status_code=201)
+async def upload_product_image(
+    product_id: str,
+    file: UploadFile = File(...),
+    alt_text: Optional[str] = None,
+    is_primary: bool = False,
+    product_repo: SQLiteProductRepository = Depends(get_product_repository),
+    image_service: ImageService = Depends(get_image_service),
+) -> ImageUploadResponse:
+    """Upload and optimize product image with thumbnail generation."""
+    try:
+        product = product_repo.get_by_id(product_id=product_id)
+        if not product:
+            raise HTTPException(status_code=404, detail=f"Product {product_id} not found")
+
+        file_bytes = await file.read()
+
+        image_service.validate_image_magic(file_bytes)
+
+        optimized_bytes = image_service.optimize_image(file_bytes)
+        thumbnail_bytes = image_service.create_thumbnail(file_bytes)
+
+        image_filename = f"{uuid.uuid4()}.jpg"
+        thumbnail_filename = f"{uuid.uuid4()}_thumb.jpg"
+
+        image_service.save_image(optimized_bytes, product_id, image_filename)
+        image_service.save_image(thumbnail_bytes, product_id, thumbnail_filename)
+
+        image_url = f"/data/products/{product_id}/images/{image_filename}"
+        thumbnail_url = f"/data/products/{product_id}/images/{thumbnail_filename}"
+
+        image_id = product_repo.add_image(
+            product_id=product_id,
+            image_url=image_url,
+            alt_text=alt_text,
+            is_primary=is_primary,
+        )
+
+        return ImageUploadResponse(
+            image_id=image_id,
+            product_id=product_id,
+            image_url=image_url,
+            thumbnail_url=thumbnail_url,
+            alt_text=alt_text,
+            is_primary=is_primary,
+        )
+
+    except HTTPException:
+        raise
+    except ValidationError as e:
+        raise HTTPException(status_code=400, detail=f"Validation error: {e.reason}")
     except RepositoryError as e:
         raise HTTPException(status_code=500, detail=f"Database error: {str(e)}")
     except Exception as e:

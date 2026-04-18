@@ -312,3 +312,73 @@ class SQLiteProductRepository(ProductRepository):
             raise RepositoryError(f"Failed to get effective product: {e}")
         finally:
             conn.close()
+
+    def add_image(
+        self,
+        product_id: str,
+        image_url: str,
+        alt_text: Optional[str] = None,
+        is_primary: bool = False,
+    ) -> str:
+        """Add image metadata to product_images table.
+
+        Args:
+            product_id: Product identifier
+            image_url: URL/path to the image file
+            alt_text: Optional alt text for accessibility
+            is_primary: Whether this is the primary product image
+
+        Returns:
+            Image ID
+
+        Raises:
+            RepositoryError: If image cannot be saved
+        """
+        conn = self._connect()
+        try:
+            conn.execute("BEGIN IMMEDIATE")
+
+            # Generate UUID for image ID
+            import uuid
+            image_id = str(uuid.uuid4())
+
+            # Get next display order
+            cursor = conn.execute(
+                "SELECT COALESCE(MAX(display_order), -1) + 1 FROM product_images WHERE product_id = ?",
+                (product_id,),
+            )
+            display_order = cursor.fetchone()[0]
+
+            # If this is primary, unset other primary images
+            if is_primary:
+                conn.execute(
+                    "UPDATE product_images SET is_primary = 0 WHERE product_id = ?",
+                    (product_id,),
+                )
+
+            # Insert image metadata
+            conn.execute(
+                """
+                INSERT INTO product_images (
+                    id, product_id, image_url, alt_text, display_order, is_primary, created_at
+                ) VALUES (?, ?, ?, ?, ?, ?, ?)
+            """,
+                (
+                    image_id,
+                    product_id,
+                    image_url,
+                    alt_text,
+                    display_order,
+                    1 if is_primary else 0,
+                    datetime.now().isoformat(),
+                ),
+            )
+
+            conn.commit()
+            return image_id
+
+        except sqlite3.Error as e:
+            conn.rollback()
+            raise RepositoryError(f"Failed to add image: {e}")
+        finally:
+            conn.close()
