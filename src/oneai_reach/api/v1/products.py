@@ -159,6 +159,188 @@ async def list_products(
         raise HTTPException(status_code=500, detail=f"Internal error: {str(e)}")
 
 
+@router.get("/search", response_model=List[ProductResponse])
+async def search_products(
+    q: str = Query(..., min_length=1, description="Search query for product name, description, category, or SKU"),
+    wa_number_id: Optional[str] = Query(None, description="WhatsApp number ID for effective values with overrides"),
+    category: Optional[str] = Query(None, description="Filter by category"),
+    stock_status: Optional[str] = Query(None, description="Filter by stock status (in_stock/out_of_stock)"),
+    min_price: Optional[int] = Query(None, ge=0, description="Minimum price in cents"),
+    max_price: Optional[int] = Query(None, ge=0, description="Maximum price in cents"),
+    limit: int = Query(10, ge=1, le=100, description="Maximum number of results"),
+    offset: int = Query(0, ge=0, description="Number of results to skip"),
+    repo: SQLiteProductRepository = Depends(get_product_repository),
+    variant_repo: SQLiteProductVariantRepository = Depends(get_variant_repository),
+    inventory_repo: SQLiteInventoryRepository = Depends(get_inventory_repository),
+) -> List[ProductResponse]:
+    """Search products with full-text search and filters.
+    
+    Searches across product name, description, category, and SKU using LIKE pattern matching.
+    Supports filtering by category, stock status, and price range.
+    Returns effective values (with overrides) when wa_number_id is provided.
+    
+    Args:
+        q: Search query string
+        wa_number_id: Optional WA number ID to apply overrides
+        category: Optional category filter
+        stock_status: Optional stock status filter (in_stock/out_of_stock)
+        min_price: Optional minimum price filter in cents
+        max_price: Optional maximum price filter in cents
+        limit: Maximum number of results (default: 10, max: 100)
+        offset: Number of results to skip for pagination
+        repo: Product repository dependency
+        variant_repo: Variant repository dependency
+        inventory_repo: Inventory repository dependency
+    
+    Returns:
+        List of products matching search criteria with filters applied
+    """
+    try:
+        # If wa_number_id provided, search within that tenant's products
+        # Otherwise, search across all products
+        if wa_number_id:
+            # Use repository search with tenant context
+            products = repo.search(wa_number_id=wa_number_id, query=q, limit=1000)
+        else:
+            # Search across all products (no tenant filter)
+            # Get all products and filter by search query
+            conn = repo._connect()
+            try:
+                search_pattern = f"%{q}%"
+                cursor = conn.execute(
+                    """
+                    SELECT * FROM products
+                    WHERE name LIKE ? OR description LIKE ? OR category LIKE ? OR sku LIKE ?
+                    ORDER BY 
+                        CASE 
+                            WHEN name LIKE ? THEN 1
+                            WHEN sku LIKE ? THEN 2
+                            WHEN category LIKE ? THEN 3
+                            ELSE 4
+                        END,
+                        created_at DESC
+                    LIMIT 1000
+                """,
+                    (search_pattern, search_pattern, search_pattern, search_pattern,
+                     search_pattern, search_pattern, search_pattern),
+                )
+                rows = cursor.fetchall()
+                products = [repo._row_to_product(row) for row in rows]
+            finally:
+                conn.close()
+        
+        # Apply category filter
+        if category:
+            products = [p for p in products if p.category == category]
+        
+        # Apply price filters
+        if min_price is not None:
+            products = [p for p in products if p.base_price_cents >= min_price]
+        if max_price is not None:
+            products = [p for p in products if p.base_price_cents <= max_price]
+        
+        # Apply stock status filter
+        if stock_status:
+            filtered_products = []
+            for product in products:
+                # Get variants for this product
+                variants = variant_repo.get_all(product_id=product.id)
+                
+                if not variants:
+                    # Product without variants - always consider in_stock
+                    if stock_status == "in_stock":
+                        filtered_products.append(product)
+                else:
+                    # Check if any variant has stock
+                    has_stock = False
+                    for variant in variants:
+                        if variant.id:
+                            inventory = inventory_repo.get_by_variant(variant_id=variant.id)
+                            if inventory and inventory.is_in_stock:
+                                has_stock = True
+                                break
+                    
+                    if (stock_status == "in_stock" and has_stock) or \
+                       (stock_status == "out_of_stock" and not has_stock):
+                        filtered_products.append(product)
+            
+            products = filtered_products
+        
+        # Apply effective values if wa_number_id provided
+        if wa_number_id:
+            effective_products = []
+            for product in products:
+                effective = repo.get_effective_product(
+                    wa_number_id=wa_number_id,
+                    product_id=product.id
+                )
+                if effective:
+                    effective_products.append(effective)
+            products = effective_products
+        
+        # Apply pagination
+        products = products[offset:offset + limit]
+        
+        return [ProductResponse.from_product(p) for p in products]
+    
+    except RepositoryError as e:
+        raise HTTPException(status_code=500, detail=f"Database error: {str(e)}")
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=f"Internal error: {str(e)}")
+
+
+@router.get("/export")
+async def export_products_csv(
+    wa_number_id: str = Query(..., description="WhatsApp number ID to filter products"),
+    category: Optional[str] = Query(None, description="Filter by category"),
+    visibility: Optional[str] = Query(None, description="Filter by visibility (public/hidden/private)"),
+    product_repo: SQLiteProductRepository = Depends(get_product_repository),
+    variant_repo: SQLiteProductVariantRepository = Depends(get_variant_repository),
+    inventory_repo: SQLiteInventoryRepository = Depends(get_inventory_repository),
+) -> StreamingResponse:
+    """Export products to CSV in Shopify format.
+    
+    Returns one row per variant with effective values (including overrides) when wa_number_id is provided.
+    Supports filtering by category and visibility.
+    
+    Args:
+        wa_number_id: WhatsApp number ID to filter products and apply overrides
+        category: Optional category filter
+        visibility: Optional visibility filter (public/hidden/private)
+        product_repo: Product repository dependency
+        variant_repo: Variant repository dependency
+        inventory_repo: Inventory repository dependency
+    
+    Returns:
+        CSV file with products and variants
+    """
+    try:
+        # Generate filename with timestamp
+        from datetime import datetime
+        timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
+        filename = f"products_export_{timestamp}.csv"
+        
+        # Create streaming response
+        return StreamingResponse(
+            _generate_csv_rows(
+                wa_number_id=wa_number_id,
+                category=category,
+                visibility=visibility,
+                product_repo=product_repo,
+                variant_repo=variant_repo,
+                inventory_repo=inventory_repo,
+            ),
+            media_type="text/csv",
+            headers={
+                "Content-Disposition": f'attachment; filename="{filename}"'
+            }
+        )
+    
+    except RepositoryError as e:
+        raise HTTPException(status_code=500, detail=f"Database error: {str(e)}")
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=f"Export error: {str(e)}")
+
 @router.get("/{product_id}", response_model=ProductResponse)
 async def get_product(
     product_id: str,
@@ -988,184 +1170,3 @@ def _generate_csv_rows(
                 output.truncate(0)
 
 
-@router.get("/search", response_model=List[ProductResponse])
-async def search_products(
-    q: str = Query(..., min_length=1, description="Search query for product name, description, category, or SKU"),
-    wa_number_id: Optional[str] = Query(None, description="WhatsApp number ID for effective values with overrides"),
-    category: Optional[str] = Query(None, description="Filter by category"),
-    stock_status: Optional[str] = Query(None, description="Filter by stock status (in_stock/out_of_stock)"),
-    min_price: Optional[int] = Query(None, ge=0, description="Minimum price in cents"),
-    max_price: Optional[int] = Query(None, ge=0, description="Maximum price in cents"),
-    limit: int = Query(10, ge=1, le=100, description="Maximum number of results"),
-    offset: int = Query(0, ge=0, description="Number of results to skip"),
-    repo: SQLiteProductRepository = Depends(get_product_repository),
-    variant_repo: SQLiteProductVariantRepository = Depends(get_variant_repository),
-    inventory_repo: SQLiteInventoryRepository = Depends(get_inventory_repository),
-) -> List[ProductResponse]:
-    """Search products with full-text search and filters.
-    
-    Searches across product name, description, category, and SKU using LIKE pattern matching.
-    Supports filtering by category, stock status, and price range.
-    Returns effective values (with overrides) when wa_number_id is provided.
-    
-    Args:
-        q: Search query string
-        wa_number_id: Optional WA number ID to apply overrides
-        category: Optional category filter
-        stock_status: Optional stock status filter (in_stock/out_of_stock)
-        min_price: Optional minimum price filter in cents
-        max_price: Optional maximum price filter in cents
-        limit: Maximum number of results (default: 10, max: 100)
-        offset: Number of results to skip for pagination
-        repo: Product repository dependency
-        variant_repo: Variant repository dependency
-        inventory_repo: Inventory repository dependency
-    
-    Returns:
-        List of products matching search criteria with filters applied
-    """
-    try:
-        # If wa_number_id provided, search within that tenant's products
-        # Otherwise, search across all products
-        if wa_number_id:
-            # Use repository search with tenant context
-            products = repo.search(wa_number_id=wa_number_id, query=q, limit=1000)
-        else:
-            # Search across all products (no tenant filter)
-            # Get all products and filter by search query
-            conn = repo._connect()
-            try:
-                search_pattern = f"%{q}%"
-                cursor = conn.execute(
-                    """
-                    SELECT * FROM products
-                    WHERE name LIKE ? OR description LIKE ? OR category LIKE ? OR sku LIKE ?
-                    ORDER BY 
-                        CASE 
-                            WHEN name LIKE ? THEN 1
-                            WHEN sku LIKE ? THEN 2
-                            WHEN category LIKE ? THEN 3
-                            ELSE 4
-                        END,
-                        created_at DESC
-                    LIMIT 1000
-                """,
-                    (search_pattern, search_pattern, search_pattern, search_pattern,
-                     search_pattern, search_pattern, search_pattern),
-                )
-                rows = cursor.fetchall()
-                products = [repo._row_to_product(row) for row in rows]
-            finally:
-                conn.close()
-        
-        # Apply category filter
-        if category:
-            products = [p for p in products if p.category == category]
-        
-        # Apply price filters
-        if min_price is not None:
-            products = [p for p in products if p.base_price_cents >= min_price]
-        if max_price is not None:
-            products = [p for p in products if p.base_price_cents <= max_price]
-        
-        # Apply stock status filter
-        if stock_status:
-            filtered_products = []
-            for product in products:
-                # Get variants for this product
-                variants = variant_repo.get_all(product_id=product.id)
-                
-                if not variants:
-                    # Product without variants - always consider in_stock
-                    if stock_status == "in_stock":
-                        filtered_products.append(product)
-                else:
-                    # Check if any variant has stock
-                    has_stock = False
-                    for variant in variants:
-                        if variant.id:
-                            inventory = inventory_repo.get_by_variant(variant_id=variant.id)
-                            if inventory and inventory.is_in_stock:
-                                has_stock = True
-                                break
-                    
-                    if (stock_status == "in_stock" and has_stock) or \
-                       (stock_status == "out_of_stock" and not has_stock):
-                        filtered_products.append(product)
-            
-            products = filtered_products
-        
-        # Apply effective values if wa_number_id provided
-        if wa_number_id:
-            effective_products = []
-            for product in products:
-                effective = repo.get_effective_product(
-                    wa_number_id=wa_number_id,
-                    product_id=product.id
-                )
-                if effective:
-                    effective_products.append(effective)
-            products = effective_products
-        
-        # Apply pagination
-        products = products[offset:offset + limit]
-        
-        return [ProductResponse.from_product(p) for p in products]
-    
-    except RepositoryError as e:
-        raise HTTPException(status_code=500, detail=f"Database error: {str(e)}")
-    except Exception as e:
-        raise HTTPException(status_code=500, detail=f"Internal error: {str(e)}")
-
-
-@router.get("/export")
-async def export_products_csv(
-    wa_number_id: str = Query(..., description="WhatsApp number ID to filter products"),
-    category: Optional[str] = Query(None, description="Filter by category"),
-    visibility: Optional[str] = Query(None, description="Filter by visibility (public/hidden/private)"),
-    product_repo: SQLiteProductRepository = Depends(get_product_repository),
-    variant_repo: SQLiteProductVariantRepository = Depends(get_variant_repository),
-    inventory_repo: SQLiteInventoryRepository = Depends(get_inventory_repository),
-) -> StreamingResponse:
-    """Export products to CSV in Shopify format.
-    
-    Returns one row per variant with effective values (including overrides) when wa_number_id is provided.
-    Supports filtering by category and visibility.
-    
-    Args:
-        wa_number_id: WhatsApp number ID to filter products and apply overrides
-        category: Optional category filter
-        visibility: Optional visibility filter (public/hidden/private)
-        product_repo: Product repository dependency
-        variant_repo: Variant repository dependency
-        inventory_repo: Inventory repository dependency
-    
-    Returns:
-        CSV file with products and variants
-    """
-    try:
-        # Generate filename with timestamp
-        from datetime import datetime
-        timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
-        filename = f"products_export_{timestamp}.csv"
-        
-        # Create streaming response
-        return StreamingResponse(
-            _generate_csv_rows(
-                wa_number_id=wa_number_id,
-                category=category,
-                visibility=visibility,
-                product_repo=product_repo,
-                variant_repo=variant_repo,
-                inventory_repo=inventory_repo,
-            ),
-            media_type="text/csv",
-            headers={
-                "Content-Disposition": f'attachment; filename="{filename}"'
-            }
-        )
-    
-    except RepositoryError as e:
-        raise HTTPException(status_code=500, detail=f"Database error: {str(e)}")
-    except Exception as e:
-        raise HTTPException(status_code=500, detail=f"Export error: {str(e)}")
