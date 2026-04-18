@@ -13,6 +13,7 @@ class KnowledgeCategory(str, Enum):
     FAQ = "faq"
     DOC = "doc"
     SNIPPET = "snippet"
+    PRODUCT = "product"
 
 
 class KnowledgeEntry(BaseModel):
@@ -33,6 +34,13 @@ class KnowledgeEntry(BaseModel):
     # Metadata
     tags: Optional[str] = None  # Comma-separated tags
     priority: int = Field(default=0, ge=0, le=10)
+
+    # Product fields (optional, for PRODUCT category)
+    product_id: Optional[str] = None
+    sku: Optional[str] = None
+    price: Optional[float] = None
+    currency: Optional[str] = None  # e.g., "USD", "IDR"
+    stock_quantity: Optional[int] = None
 
     # Timestamps
     created_at: Optional[datetime] = None
@@ -65,6 +73,11 @@ class KnowledgeEntry(BaseModel):
     def is_snippet(self) -> bool:
         """Check if entry is snippet."""
         return self.category == KnowledgeCategory.SNIPPET
+
+    @property
+    def is_product(self) -> bool:
+        """Check if entry is product."""
+        return self.category == KnowledgeCategory.PRODUCT
 
     @property
     def is_high_priority(self) -> bool:
