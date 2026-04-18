@@ -6,6 +6,7 @@ from typing import List, Optional
 import uuid
 
 from fastapi import APIRouter, Depends, HTTPException, Query, UploadFile, File
+from fastapi.responses import StreamingResponse
 from pydantic import BaseModel, Field
 
 from oneai_reach.api.dependencies import verify_api_key
@@ -805,3 +806,236 @@ def _import_image_row(row: dict, repo: SQLiteProductRepository) -> None:
         alt_text=alt_text,
         is_primary=is_primary,
     )
+
+
+def _generate_csv_rows(
+    wa_number_id: Optional[str],
+    category: Optional[str],
+    visibility: Optional[str],
+    product_repo: SQLiteProductRepository,
+    variant_repo: SQLiteProductVariantRepository,
+    inventory_repo: SQLiteInventoryRepository,
+):
+    """Generator function to stream CSV rows for export.
+    
+    Yields CSV rows in Shopify format (one row per variant).
+    Includes effective values when wa_number_id is provided.
+    """
+    import io
+    
+    # CSV Header (Shopify-inspired format)
+    header = [
+        "Handle", "Title", "Body (HTML)", "Vendor", "Type", "Tags",
+        "Published", "Option1 Name", "Option1 Value", "Variant SKU",
+        "Variant Grams", "Variant Inventory Tracker", "Variant Inventory Qty",
+        "Variant Inventory Policy", "Variant Fulfillment Service",
+        "Variant Price", "Variant Compare At Price", "Variant Requires Shipping",
+        "Variant Taxable", "Variant Barcode", "Image Src", "Image Position",
+        "Image Alt Text", "Gift Card", "SEO Title", "SEO Description",
+        "Google Shopping / Google Product Category", "Google Shopping / Gender",
+        "Google Shopping / Age Group", "Google Shopping / MPN",
+        "Google Shopping / AdWords Grouping", "Google Shopping / AdWords Labels",
+        "Google Shopping / Condition", "Google Shopping / Custom Product",
+        "Google Shopping / Custom Label 0", "Google Shopping / Custom Label 1",
+        "Google Shopping / Custom Label 2", "Google Shopping / Custom Label 3",
+        "Google Shopping / Custom Label 4", "Variant Image", "Variant Weight Unit",
+        "Variant Tax Code", "Cost per item", "Status"
+    ]
+    
+    output = io.StringIO()
+    writer = csv.writer(output)
+    writer.writerow(header)
+    yield output.getvalue()
+    output.seek(0)
+    output.truncate(0)
+    
+    # Get products based on filters
+    if wa_number_id:
+        products = product_repo.get_all(wa_number_id=wa_number_id)
+    else:
+        # If no wa_number_id, we can't filter properly, so return empty
+        return
+    
+    # Apply category filter
+    if category:
+        products = [p for p in products if p.category == category]
+    
+    # Apply visibility filter
+    if visibility:
+        visibility_enum = VisibilityStatus(visibility.lower())
+        products = [p for p in products if p.visibility == visibility_enum]
+    
+    for product in products:
+        # Get effective product if wa_number_id provided
+        if wa_number_id:
+            effective_product = product_repo.get_effective_product(
+                wa_number_id=wa_number_id,
+                product_id=product.id
+            )
+            if effective_product:
+                product = effective_product
+        
+        # Get variants for this product
+        variants = variant_repo.get_all(product_id=product.id)
+        
+        if not variants:
+            # Product without variants - export as single row
+            row = [
+                product.sku,  # Handle
+                product.name,  # Title
+                product.description or "",  # Body (HTML)
+                "",  # Vendor
+                product.category,  # Type
+                "",  # Tags
+                "TRUE" if product.is_visible else "FALSE",  # Published
+                "",  # Option1 Name
+                "",  # Option1 Value
+                product.sku,  # Variant SKU
+                "",  # Variant Grams
+                "",  # Variant Inventory Tracker
+                "",  # Variant Inventory Qty
+                "deny",  # Variant Inventory Policy
+                "manual",  # Variant Fulfillment Service
+                f"{product.display_price:.2f}",  # Variant Price
+                "",  # Variant Compare At Price
+                "TRUE",  # Variant Requires Shipping
+                "TRUE",  # Variant Taxable
+                "",  # Variant Barcode
+                "",  # Image Src
+                "",  # Image Position
+                "",  # Image Alt Text
+                "FALSE",  # Gift Card
+                "",  # SEO Title
+                "",  # SEO Description
+                "",  # Google Shopping / Google Product Category
+                "",  # Google Shopping / Gender
+                "",  # Google Shopping / Age Group
+                "",  # Google Shopping / MPN
+                "",  # Google Shopping / AdWords Grouping
+                "",  # Google Shopping / AdWords Labels
+                "new",  # Google Shopping / Condition
+                "FALSE",  # Google Shopping / Custom Product
+                "",  # Google Shopping / Custom Label 0
+                "",  # Google Shopping / Custom Label 1
+                "",  # Google Shopping / Custom Label 2
+                "",  # Google Shopping / Custom Label 3
+                "",  # Google Shopping / Custom Label 4
+                "",  # Variant Image
+                "g",  # Variant Weight Unit
+                "",  # Variant Tax Code
+                "",  # Cost per item
+                product.status.value,  # Status
+            ]
+            writer.writerow(row)
+            yield output.getvalue()
+            output.seek(0)
+            output.truncate(0)
+        else:
+            # Product with variants - one row per variant
+            for idx, variant in enumerate(variants):
+                # Get inventory for this variant
+                inventory = inventory_repo.get_by_variant(variant_id=variant.id)
+                
+                row = [
+                    product.sku,  # Handle (same for all variants)
+                    product.name if idx == 0 else "",  # Title (only first row)
+                    product.description if idx == 0 else "",  # Body (HTML)
+                    "",  # Vendor
+                    product.category if idx == 0 else "",  # Type
+                    "",  # Tags
+                    "TRUE" if product.is_visible else "FALSE" if idx == 0 else "",  # Published
+                    "Variant" if idx == 0 else "",  # Option1 Name
+                    variant.variant_name,  # Option1 Value
+                    variant.sku,  # Variant SKU
+                    str(variant.weight_grams) if variant.weight_grams else "",  # Variant Grams
+                    "shopify",  # Variant Inventory Tracker
+                    str(inventory.on_hand) if inventory else "0",  # Variant Inventory Qty
+                    "deny",  # Variant Inventory Policy
+                    "manual",  # Variant Fulfillment Service
+                    f"{variant.display_price:.2f}",  # Variant Price
+                    "",  # Variant Compare At Price
+                    "TRUE",  # Variant Requires Shipping
+                    "TRUE",  # Variant Taxable
+                    "",  # Variant Barcode
+                    "",  # Image Src
+                    "",  # Image Position
+                    "",  # Image Alt Text
+                    "FALSE",  # Gift Card
+                    "",  # SEO Title
+                    "",  # SEO Description
+                    "",  # Google Shopping / Google Product Category
+                    "",  # Google Shopping / Gender
+                    "",  # Google Shopping / Age Group
+                    "",  # Google Shopping / MPN
+                    "",  # Google Shopping / AdWords Grouping
+                    "",  # Google Shopping / AdWords Labels
+                    "new",  # Google Shopping / Condition
+                    "FALSE",  # Google Shopping / Custom Product
+                    "",  # Google Shopping / Custom Label 0
+                    "",  # Google Shopping / Custom Label 1
+                    "",  # Google Shopping / Custom Label 2
+                    "",  # Google Shopping / Custom Label 3
+                    "",  # Google Shopping / Custom Label 4
+                    "",  # Variant Image
+                    "g",  # Variant Weight Unit
+                    "",  # Variant Tax Code
+                    "",  # Cost per item
+                    variant.status.value,  # Status
+                ]
+                writer.writerow(row)
+                yield output.getvalue()
+                output.seek(0)
+                output.truncate(0)
+
+
+@router.get("/export")
+async def export_products_csv(
+    wa_number_id: str = Query(..., description="WhatsApp number ID to filter products"),
+    category: Optional[str] = Query(None, description="Filter by category"),
+    visibility: Optional[str] = Query(None, description="Filter by visibility (public/hidden/private)"),
+    product_repo: SQLiteProductRepository = Depends(get_product_repository),
+    variant_repo: SQLiteProductVariantRepository = Depends(get_variant_repository),
+    inventory_repo: SQLiteInventoryRepository = Depends(get_inventory_repository),
+) -> StreamingResponse:
+    """Export products to CSV in Shopify format.
+    
+    Returns one row per variant with effective values (including overrides) when wa_number_id is provided.
+    Supports filtering by category and visibility.
+    
+    Args:
+        wa_number_id: WhatsApp number ID to filter products and apply overrides
+        category: Optional category filter
+        visibility: Optional visibility filter (public/hidden/private)
+        product_repo: Product repository dependency
+        variant_repo: Variant repository dependency
+        inventory_repo: Inventory repository dependency
+    
+    Returns:
+        CSV file with products and variants
+    """
+    try:
+        # Generate filename with timestamp
+        from datetime import datetime
+        timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
+        filename = f"products_export_{timestamp}.csv"
+        
+        # Create streaming response
+        return StreamingResponse(
+            _generate_csv_rows(
+                wa_number_id=wa_number_id,
+                category=category,
+                visibility=visibility,
+                product_repo=product_repo,
+                variant_repo=variant_repo,
+                inventory_repo=inventory_repo,
+            ),
+            media_type="text/csv",
+            headers={
+                "Content-Disposition": f'attachment; filename="{filename}"'
+            }
+        )
+    
+    except RepositoryError as e:
+        raise HTTPException(status_code=500, detail=f"Database error: {str(e)}")
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=f"Export error: {str(e)}")
