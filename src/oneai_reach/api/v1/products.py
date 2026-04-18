@@ -1,0 +1,561 @@
+"""Product CRUD API endpoints for multi-tenant product management."""
+
+from typing import List, Optional
+
+from fastapi import APIRouter, Depends, HTTPException, Query
+from pydantic import BaseModel, Field
+
+from oneai_reach.api.dependencies import verify_api_key
+from oneai_reach.config.settings import get_settings
+from oneai_reach.domain.models.product import Product, ProductStatus, VisibilityStatus, ProductVariant, Inventory
+from oneai_reach.infrastructure.database.sqlite_product_repository import (
+    SQLiteProductRepository,
+    NotFoundError,
+    RepositoryError,
+)
+from oneai_reach.infrastructure.database.sqlite_product_variant_repository import (
+    SQLiteProductVariantRepository,
+)
+from oneai_reach.infrastructure.database.sqlite_inventory_repository import (
+    SQLiteInventoryRepository,
+)
+
+router = APIRouter(
+    prefix="/api/v1/products",
+    tags=["products"],
+    dependencies=[Depends(verify_api_key)],
+)
+
+
+# Request/Response Schemas
+class ProductCreate(BaseModel):
+    """Request schema for creating a product."""
+
+    wa_number_id: str = Field(..., min_length=1, description="WhatsApp number ID")
+    name: str = Field(..., min_length=1, max_length=255, description="Product name")
+    description: Optional[str] = Field(None, description="Product description")
+    category: str = Field(default="general", max_length=100, description="Product category")
+    base_price_cents: int = Field(..., gt=0, description="Base price in cents")
+    currency: str = Field(default="IDR", max_length=3, description="Currency code")
+    sku: str = Field(..., min_length=1, max_length=100, description="Stock keeping unit")
+    status: ProductStatus = Field(default=ProductStatus.ACTIVE, description="Product status")
+    visibility: VisibilityStatus = Field(default=VisibilityStatus.PUBLIC, description="Visibility status")
+
+
+class ProductUpdate(BaseModel):
+    """Request schema for updating a product."""
+
+    name: Optional[str] = Field(None, min_length=1, max_length=255, description="Product name")
+    description: Optional[str] = Field(None, description="Product description")
+    category: Optional[str] = Field(None, max_length=100, description="Product category")
+    base_price_cents: Optional[int] = Field(None, gt=0, description="Base price in cents")
+    currency: Optional[str] = Field(None, max_length=3, description="Currency code")
+    sku: Optional[str] = Field(None, min_length=1, max_length=100, description="Stock keeping unit")
+    status: Optional[ProductStatus] = Field(None, description="Product status")
+    visibility: Optional[VisibilityStatus] = Field(None, description="Visibility status")
+
+
+class ProductResponse(BaseModel):
+    """Response schema for product data."""
+
+    id: str
+    wa_number_id: str
+    name: str
+    description: Optional[str]
+    category: str
+    base_price_cents: int
+    currency: str
+    sku: str
+    status: str
+    visibility: str
+    display_price: float
+    is_active: bool
+    is_visible: bool
+    created_at: Optional[str]
+    updated_at: Optional[str]
+
+    @classmethod
+    def from_product(cls, product: Product) -> "ProductResponse":
+        """Convert Product domain model to response schema."""
+        return cls(
+            id=product.id or "",
+            wa_number_id=product.wa_number_id,
+            name=product.name,
+            description=product.description,
+            category=product.category,
+            base_price_cents=product.base_price_cents,
+            currency=product.currency,
+            sku=product.sku,
+            status=product.status.value,
+            visibility=product.visibility.value,
+            display_price=product.display_price,
+            is_active=product.is_active,
+            is_visible=product.is_visible,
+            created_at=product.created_at.isoformat() if product.created_at else None,
+            updated_at=product.updated_at.isoformat() if product.updated_at else None,
+        )
+
+
+def get_product_repository() -> SQLiteProductRepository:
+    """Dependency injection for product repository."""
+    settings = get_settings()
+    return SQLiteProductRepository(db_path=settings.database.db_file)
+
+
+def get_variant_repository() -> SQLiteProductVariantRepository:
+    """Dependency injection for variant repository."""
+    settings = get_settings()
+    return SQLiteProductVariantRepository(db_path=settings.database.db_file)
+
+
+def get_inventory_repository() -> SQLiteInventoryRepository:
+    """Dependency injection for inventory repository."""
+    settings = get_settings()
+    return SQLiteInventoryRepository(db_path=settings.database.db_file)
+
+
+@router.get("", response_model=List[ProductResponse])
+async def list_products(
+    wa_number_id: str = Query(..., description="WhatsApp number ID to filter products"),
+    query: Optional[str] = Query(None, description="Search query for product name/SKU"),
+    limit: int = Query(10, ge=1, le=100, description="Maximum number of results"),
+    repo: SQLiteProductRepository = Depends(get_product_repository),
+) -> List[ProductResponse]:
+    """List all products for a WA number with optional search.
+
+    Args:
+        wa_number_id: WhatsApp number ID to filter products
+        query: Optional search query for product name/SKU
+        limit: Maximum number of results (default: 10, max: 100)
+        repo: Product repository dependency
+
+    Returns:
+        List of products matching the criteria
+    """
+    try:
+        if query:
+            products = repo.search(wa_number_id=wa_number_id, query=query, limit=limit)
+        else:
+            products = repo.get_all(wa_number_id=wa_number_id)
+            products = products[:limit]  # Apply limit to get_all results
+
+        return [ProductResponse.from_product(p) for p in products]
+
+    except RepositoryError as e:
+        raise HTTPException(status_code=500, detail=f"Database error: {str(e)}")
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=f"Internal error: {str(e)}")
+
+
+@router.get("/{product_id}", response_model=ProductResponse)
+async def get_product(
+    product_id: str,
+    wa_number_id: Optional[str] = Query(None, description="WA number ID for effective product with overrides"),
+    repo: SQLiteProductRepository = Depends(get_product_repository),
+) -> ProductResponse:
+    """Get a single product by ID.
+
+    If wa_number_id is provided, returns the effective product with tenant-specific
+    overrides applied (pricing, visibility).
+
+    Args:
+        product_id: Unique product identifier
+        wa_number_id: Optional WA number ID to apply overrides
+        repo: Product repository dependency
+
+    Returns:
+        Product details with overrides applied if wa_number_id provided
+    """
+    try:
+        if wa_number_id:
+            product = repo.get_effective_product(wa_number_id=wa_number_id, product_id=product_id)
+        else:
+            product = repo.get_by_id(product_id=product_id)
+
+        if not product:
+            raise HTTPException(status_code=404, detail=f"Product {product_id} not found")
+
+        return ProductResponse.from_product(product)
+
+    except HTTPException:
+        raise
+    except RepositoryError as e:
+        raise HTTPException(status_code=500, detail=f"Database error: {str(e)}")
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=f"Internal error: {str(e)}")
+
+
+@router.post("", response_model=ProductResponse, status_code=201)
+async def create_product(
+    product_data: ProductCreate,
+    repo: SQLiteProductRepository = Depends(get_product_repository),
+) -> ProductResponse:
+    """Create a new product.
+
+    Args:
+        product_data: Product creation data
+        repo: Product repository dependency
+
+    Returns:
+        Created product with assigned ID
+    """
+    try:
+        # Convert request schema to domain model
+        product = Product(
+            wa_number_id=product_data.wa_number_id,
+            name=product_data.name,
+            description=product_data.description,
+            category=product_data.category,
+            base_price_cents=product_data.base_price_cents,
+            currency=product_data.currency,
+            sku=product_data.sku,
+            status=product_data.status,
+            visibility=product_data.visibility,
+        )
+
+        # Save to database
+        saved_product = repo.save(product)
+
+        return ProductResponse.from_product(saved_product)
+
+    except ValueError as e:
+        raise HTTPException(status_code=400, detail=f"Validation error: {str(e)}")
+    except RepositoryError as e:
+        raise HTTPException(status_code=500, detail=f"Database error: {str(e)}")
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=f"Internal error: {str(e)}")
+
+
+@router.patch("/{product_id}", response_model=ProductResponse)
+async def update_product(
+    product_id: str,
+    product_data: ProductUpdate,
+    repo: SQLiteProductRepository = Depends(get_product_repository),
+) -> ProductResponse:
+    """Update an existing product.
+
+    Only provided fields will be updated. Omitted fields remain unchanged.
+
+    Args:
+        product_id: Unique product identifier
+        product_data: Product update data (partial)
+        repo: Product repository dependency
+
+    Returns:
+        Updated product
+    """
+    try:
+        # Get existing product
+        existing_product = repo.get_by_id(product_id=product_id)
+        if not existing_product:
+            raise HTTPException(status_code=404, detail=f"Product {product_id} not found")
+
+        # Apply updates (only non-None fields)
+        update_dict = product_data.model_dump(exclude_unset=True)
+        for field, value in update_dict.items():
+            setattr(existing_product, field, value)
+
+        # Save updated product
+        updated_product = repo.update(existing_product)
+
+        return ProductResponse.from_product(updated_product)
+
+    except HTTPException:
+        raise
+    except NotFoundError:
+        raise HTTPException(status_code=404, detail=f"Product {product_id} not found")
+    except ValueError as e:
+        raise HTTPException(status_code=400, detail=f"Validation error: {str(e)}")
+    except RepositoryError as e:
+        raise HTTPException(status_code=500, detail=f"Database error: {str(e)}")
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=f"Internal error: {str(e)}")
+
+
+@router.delete("/{product_id}", status_code=204)
+async def delete_product(
+    product_id: str,
+    repo: SQLiteProductRepository = Depends(get_product_repository),
+) -> None:
+    """Delete a product by ID.
+
+    Cascades to related variants, inventory, and overrides.
+
+    Args:
+        product_id: Unique product identifier
+        repo: Product repository dependency
+
+    Returns:
+        No content on success
+    """
+    try:
+        deleted = repo.delete(product_id=product_id)
+
+        if not deleted:
+            raise HTTPException(status_code=404, detail=f"Product {product_id} not found")
+
+    except HTTPException:
+        raise
+    except RepositoryError as e:
+        raise HTTPException(status_code=500, detail=f"Database error: {str(e)}")
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=f"Internal error: {str(e)}")
+
+
+# Variant Schemas
+class VariantCreate(BaseModel):
+    """Request schema for creating a variant."""
+
+    sku: str = Field(..., min_length=1, max_length=100, description="Variant SKU")
+    variant_name: str = Field(..., min_length=1, max_length=255, description="Variant name")
+    price_cents: int = Field(..., gt=0, description="Variant price in cents")
+    weight_grams: Optional[int] = Field(None, ge=0, description="Weight in grams")
+    dimensions_json: Optional[str] = Field(None, description="Dimensions as JSON string")
+    status: ProductStatus = Field(default=ProductStatus.ACTIVE, description="Variant status")
+
+
+class VariantUpdate(BaseModel):
+    """Request schema for updating a variant."""
+
+    sku: Optional[str] = Field(None, min_length=1, max_length=100, description="Variant SKU")
+    variant_name: Optional[str] = Field(None, min_length=1, max_length=255, description="Variant name")
+    price_cents: Optional[int] = Field(None, gt=0, description="Variant price in cents")
+    weight_grams: Optional[int] = Field(None, ge=0, description="Weight in grams")
+    dimensions_json: Optional[str] = Field(None, description="Dimensions as JSON string")
+    status: Optional[ProductStatus] = Field(None, description="Variant status")
+
+
+class InventoryData(BaseModel):
+    """Inventory data for variant response."""
+
+    on_hand: int
+    reserved: int
+    available: int
+    sold: int
+    reorder_level: int
+    is_in_stock: bool
+    is_low_stock: bool
+    stock_status: str
+
+
+class VariantResponse(BaseModel):
+    """Response schema for variant data with inventory."""
+
+    id: str
+    product_id: str
+    sku: str
+    variant_name: str
+    price_cents: int
+    display_price: float
+    weight_grams: Optional[int]
+    dimensions_json: Optional[str]
+    status: str
+    is_active: bool
+    created_at: Optional[str]
+    updated_at: Optional[str]
+    inventory: Optional[InventoryData]
+
+    @classmethod
+    def from_variant(cls, variant: ProductVariant, inventory: Optional[Inventory] = None) -> "VariantResponse":
+        """Convert ProductVariant domain model to response schema."""
+        inventory_data = None
+        if inventory:
+            inventory_data = InventoryData(
+                on_hand=inventory.on_hand,
+                reserved=inventory.reserved,
+                available=inventory.available,
+                sold=inventory.sold,
+                reorder_level=inventory.reorder_level,
+                is_in_stock=inventory.is_in_stock,
+                is_low_stock=inventory.is_low_stock,
+                stock_status=inventory.stock_status,
+            )
+
+        return cls(
+            id=variant.id or "",
+            product_id=variant.product_id,
+            sku=variant.sku,
+            variant_name=variant.variant_name,
+            price_cents=variant.price_cents,
+            display_price=variant.display_price,
+            weight_grams=variant.weight_grams,
+            dimensions_json=variant.dimensions_json,
+            status=variant.status.value,
+            is_active=variant.is_active,
+            created_at=variant.created_at.isoformat() if variant.created_at else None,
+            updated_at=variant.updated_at.isoformat() if variant.updated_at else None,
+            inventory=inventory_data,
+        )
+
+
+class InventoryAdjustRequest(BaseModel):
+    """Request schema for inventory adjustment."""
+
+    delta: int = Field(..., description="Change in stock quantity (positive or negative)")
+    reason: str = Field(..., min_length=1, description="Reason for adjustment")
+
+
+# Variant Endpoints
+@router.get("/{product_id}/variants", response_model=List[VariantResponse])
+async def list_variants(
+    product_id: str,
+    variant_repo: SQLiteProductVariantRepository = Depends(get_variant_repository),
+    inventory_repo: SQLiteInventoryRepository = Depends(get_inventory_repository),
+) -> List[VariantResponse]:
+    """List all variants for a product with inventory data."""
+    try:
+        variants = variant_repo.get_all(product_id=product_id)
+        
+        responses = []
+        for variant in variants:
+            inventory = None
+            if variant.id:
+                inventory = inventory_repo.get_by_variant(variant_id=variant.id)
+            responses.append(VariantResponse.from_variant(variant, inventory))
+        
+        return responses
+
+    except RepositoryError as e:
+        raise HTTPException(status_code=500, detail=f"Database error: {str(e)}")
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=f"Internal error: {str(e)}")
+
+
+@router.post("/{product_id}/variants", response_model=VariantResponse, status_code=201)
+async def create_variant(
+    product_id: str,
+    variant_data: VariantCreate,
+    product_repo: SQLiteProductRepository = Depends(get_product_repository),
+    variant_repo: SQLiteProductVariantRepository = Depends(get_variant_repository),
+    inventory_repo: SQLiteInventoryRepository = Depends(get_inventory_repository),
+) -> VariantResponse:
+    """Create a new variant for a product."""
+    try:
+        product = product_repo.get_by_id(product_id=product_id)
+        if not product:
+            raise HTTPException(status_code=404, detail=f"Product {product_id} not found")
+
+        variant = ProductVariant(
+            product_id=product_id,
+            sku=variant_data.sku,
+            variant_name=variant_data.variant_name,
+            price_cents=variant_data.price_cents,
+            weight_grams=variant_data.weight_grams,
+            dimensions_json=variant_data.dimensions_json,
+            status=variant_data.status,
+        )
+
+        saved_variant = variant_repo.save(variant)
+
+        inventory = Inventory(
+            variant_id=saved_variant.id,
+            on_hand=0,
+            reserved=0,
+            sold=0,
+            reorder_level=10,
+        )
+        saved_inventory = inventory_repo.save(inventory)
+
+        return VariantResponse.from_variant(saved_variant, saved_inventory)
+
+    except HTTPException:
+        raise
+    except ValueError as e:
+        raise HTTPException(status_code=400, detail=f"Validation error: {str(e)}")
+    except RepositoryError as e:
+        raise HTTPException(status_code=500, detail=f"Database error: {str(e)}")
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=f"Internal error: {str(e)}")
+
+
+@router.patch("/variants/{variant_id}", response_model=VariantResponse)
+async def update_variant(
+    variant_id: str,
+    variant_data: VariantUpdate,
+    variant_repo: SQLiteProductVariantRepository = Depends(get_variant_repository),
+    inventory_repo: SQLiteInventoryRepository = Depends(get_inventory_repository),
+) -> VariantResponse:
+    """Update an existing variant."""
+    try:
+        existing_variant = variant_repo.get_by_id(variant_id=variant_id)
+        if not existing_variant:
+            raise HTTPException(status_code=404, detail=f"Variant {variant_id} not found")
+
+        update_dict = variant_data.model_dump(exclude_unset=True)
+        for field, value in update_dict.items():
+            setattr(existing_variant, field, value)
+
+        updated_variant = variant_repo.update(existing_variant)
+
+        inventory = inventory_repo.get_by_variant(variant_id=variant_id)
+
+        return VariantResponse.from_variant(updated_variant, inventory)
+
+    except HTTPException:
+        raise
+    except NotFoundError:
+        raise HTTPException(status_code=404, detail=f"Variant {variant_id} not found")
+    except ValueError as e:
+        raise HTTPException(status_code=400, detail=f"Validation error: {str(e)}")
+    except RepositoryError as e:
+        raise HTTPException(status_code=500, detail=f"Database error: {str(e)}")
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=f"Internal error: {str(e)}")
+
+
+@router.delete("/variants/{variant_id}", status_code=204)
+async def delete_variant(
+    variant_id: str,
+    variant_repo: SQLiteProductVariantRepository = Depends(get_variant_repository),
+    inventory_repo: SQLiteInventoryRepository = Depends(get_inventory_repository),
+) -> None:
+    """Delete a variant by ID."""
+    try:
+        inventory = inventory_repo.get_by_variant(variant_id=variant_id)
+        if inventory and inventory.id:
+            inventory_repo.delete(inventory_id=inventory.id)
+
+        deleted = variant_repo.delete(variant_id=variant_id)
+
+        if not deleted:
+            raise HTTPException(status_code=404, detail=f"Variant {variant_id} not found")
+
+    except HTTPException:
+        raise
+    except RepositoryError as e:
+        raise HTTPException(status_code=500, detail=f"Database error: {str(e)}")
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=f"Internal error: {str(e)}")
+
+
+@router.post("/variants/{variant_id}/inventory/adjust", response_model=VariantResponse)
+async def adjust_inventory(
+    variant_id: str,
+    adjust_data: InventoryAdjustRequest,
+    variant_repo: SQLiteProductVariantRepository = Depends(get_variant_repository),
+    inventory_repo: SQLiteInventoryRepository = Depends(get_inventory_repository),
+) -> VariantResponse:
+    """Adjust inventory stock for a variant."""
+    try:
+        variant = variant_repo.get_by_id(variant_id=variant_id)
+        if not variant:
+            raise HTTPException(status_code=404, detail=f"Variant {variant_id} not found")
+
+        updated_inventory = inventory_repo.adjust_stock(
+            variant_id=variant_id,
+            delta=adjust_data.delta,
+            reason=adjust_data.reason,
+        )
+
+        return VariantResponse.from_variant(variant, updated_inventory)
+
+    except HTTPException:
+        raise
+    except NotFoundError as e:
+        raise HTTPException(status_code=404, detail=str(e))
+    except ValueError as e:
+        raise HTTPException(status_code=400, detail=f"Validation error: {str(e)}")
+    except RepositoryError as e:
+        raise HTTPException(status_code=500, detail=f"Database error: {str(e)}")
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=f"Internal error: {str(e)}")
