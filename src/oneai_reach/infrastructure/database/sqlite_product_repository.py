@@ -1,0 +1,314 @@
+"""SQLite implementation of ProductRepository."""
+
+import sqlite3
+from datetime import datetime
+from typing import List, Optional
+
+from oneai_reach.domain.models.product import Product, ProductStatus, VisibilityStatus
+from oneai_reach.domain.repositories.product_repository import ProductRepository
+
+
+class RepositoryError(Exception):
+    """Base exception for repository errors."""
+
+    pass
+
+
+class NotFoundError(RepositoryError):
+    """Exception raised when entity not found."""
+
+    pass
+
+
+class SQLiteProductRepository(ProductRepository):
+    """SQLite implementation of ProductRepository.
+
+    Provides data access for Product entities using SQLite database.
+    Supports FTS5 full-text search for product catalog queries.
+    Implements multi-tenant product management with override support.
+    """
+
+    def __init__(self, db_path: str):
+        """Initialize repository with database path.
+
+        Args:
+            db_path: Path to SQLite database file
+        """
+        self.db_path = db_path
+
+    def _connect(self) -> sqlite3.Connection:
+        """Create database connection with row factory."""
+        conn = sqlite3.connect(self.db_path, check_same_thread=False)
+        conn.row_factory = sqlite3.Row
+        conn.execute("PRAGMA journal_mode=WAL")
+        conn.execute("PRAGMA foreign_keys=ON")
+        return conn
+
+    def _row_to_product(self, row: sqlite3.Row) -> Product:
+        """Convert database row to Product domain model."""
+        data = dict(row)
+
+        # Convert timestamps
+        for field in ["created_at", "updated_at"]:
+            if data.get(field):
+                try:
+                    data[field] = datetime.fromisoformat(data[field])
+                except (ValueError, TypeError):
+                    data[field] = None
+
+        # Convert enums
+        if data.get("status"):
+            data["status"] = ProductStatus(data["status"])
+        if data.get("visibility"):
+            data["visibility"] = VisibilityStatus(data["visibility"])
+
+        return Product(**data)
+
+    def get_by_id(self, product_id: str) -> Optional[Product]:
+        """Get product by ID."""
+        conn = self._connect()
+        try:
+            cursor = conn.execute(
+                "SELECT * FROM products WHERE id = ?", (product_id,)
+            )
+            row = cursor.fetchone()
+            return self._row_to_product(row) if row else None
+        except sqlite3.Error as e:
+            raise RepositoryError(f"Failed to get product by id: {e}")
+        finally:
+            conn.close()
+
+    def get_all(self, wa_number_id: str) -> List[Product]:
+        """Get all products for a WA number."""
+        conn = self._connect()
+        try:
+            cursor = conn.execute(
+                """
+                SELECT * FROM products 
+                WHERE wa_number_id = ?
+                ORDER BY created_at DESC
+            """,
+                (wa_number_id,),
+            )
+            rows = cursor.fetchall()
+            return [self._row_to_product(row) for row in rows]
+        except sqlite3.Error as e:
+            raise RepositoryError(f"Failed to get all products: {e}")
+        finally:
+            conn.close()
+
+    def save(self, product: Product) -> Product:
+        """Save new product."""
+        if product.id is not None:
+            raise ValueError("Product already has an ID, use update() instead")
+
+        conn = self._connect()
+        try:
+            conn.execute("BEGIN IMMEDIATE")
+
+            now = datetime.now()
+            product.created_at = now
+            product.updated_at = now
+
+            # Generate UUID for product ID
+            import uuid
+            product.id = str(uuid.uuid4())
+
+            conn.execute(
+                """
+                INSERT INTO products (
+                    id, wa_number_id, name, description, category,
+                    base_price_cents, currency, sku, status, visibility,
+                    created_at, updated_at
+                ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+            """,
+                (
+                    product.id,
+                    product.wa_number_id,
+                    product.name,
+                    product.description,
+                    product.category,
+                    product.base_price_cents,
+                    product.currency,
+                    product.sku,
+                    product.status.value,
+                    product.visibility.value,
+                    product.created_at.isoformat(),
+                    product.updated_at.isoformat(),
+                ),
+            )
+
+            conn.commit()
+            return product
+        except sqlite3.IntegrityError as e:
+            conn.rollback()
+            if "UNIQUE constraint failed" in str(e):
+                raise ValueError(f"Product with SKU {product.sku} already exists")
+            raise RepositoryError(f"Failed to save product: {e}")
+        except sqlite3.Error as e:
+            conn.rollback()
+            raise RepositoryError(f"Failed to save product: {e}")
+        finally:
+            conn.close()
+
+    def update(self, product: Product) -> Product:
+        """Update existing product."""
+        if product.id is None:
+            raise ValueError("Product must have an ID to update")
+
+        conn = self._connect()
+        try:
+            conn.execute("BEGIN IMMEDIATE")
+
+            product.updated_at = datetime.now()
+
+            cursor = conn.execute(
+                """
+                UPDATE products SET
+                    wa_number_id = ?, name = ?, description = ?,
+                    category = ?, base_price_cents = ?, currency = ?,
+                    sku = ?, status = ?, visibility = ?,
+                    updated_at = ?
+                WHERE id = ?
+            """,
+                (
+                    product.wa_number_id,
+                    product.name,
+                    product.description,
+                    product.category,
+                    product.base_price_cents,
+                    product.currency,
+                    product.sku,
+                    product.status.value,
+                    product.visibility.value,
+                    product.updated_at.isoformat(),
+                    product.id,
+                ),
+            )
+
+            if cursor.rowcount == 0:
+                conn.rollback()
+                raise NotFoundError(f"Product not found: {product.id}")
+
+            conn.commit()
+            return product
+        except sqlite3.IntegrityError as e:
+            conn.rollback()
+            if "UNIQUE constraint failed" in str(e):
+                raise ValueError(f"Product with SKU {product.sku} already exists")
+            raise RepositoryError(f"Failed to update product: {e}")
+        except sqlite3.Error as e:
+            conn.rollback()
+            raise RepositoryError(f"Failed to update product: {e}")
+        finally:
+            conn.close()
+
+    def delete(self, product_id: str) -> bool:
+        """Delete product by ID."""
+        conn = self._connect()
+        try:
+            conn.execute("BEGIN IMMEDIATE")
+
+            cursor = conn.execute("DELETE FROM products WHERE id = ?", (product_id,))
+            
+            if cursor.rowcount == 0:
+                conn.rollback()
+                return False
+
+            conn.commit()
+            return True
+        except sqlite3.Error as e:
+            conn.rollback()
+            raise RepositoryError(f"Failed to delete product: {e}")
+        finally:
+            conn.close()
+
+    def search(
+        self, wa_number_id: str, query: str, limit: int = 10
+    ) -> List[Product]:
+        """Search products by name, description, category, or SKU using LIKE."""
+        conn = self._connect()
+        try:
+            search_pattern = f"%{query}%"
+            cursor = conn.execute(
+                """
+                SELECT * FROM products
+                WHERE wa_number_id = ? 
+                AND (
+                    name LIKE ? OR 
+                    description LIKE ? OR 
+                    category LIKE ? OR 
+                    sku LIKE ?
+                )
+                ORDER BY 
+                    CASE 
+                        WHEN name LIKE ? THEN 1
+                        WHEN sku LIKE ? THEN 2
+                        WHEN category LIKE ? THEN 3
+                        ELSE 4
+                    END,
+                    created_at DESC
+                LIMIT ?
+            """,
+                (
+                    wa_number_id,
+                    search_pattern,
+                    search_pattern,
+                    search_pattern,
+                    search_pattern,
+                    search_pattern,
+                    search_pattern,
+                    search_pattern,
+                    limit,
+                ),
+            )
+            rows = cursor.fetchall()
+            return [self._row_to_product(row) for row in rows]
+        except sqlite3.Error as e:
+            raise RepositoryError(f"Failed to search products: {e}")
+        finally:
+            conn.close()
+
+    def get_effective_product(
+        self, wa_number_id: str, product_id: str
+    ) -> Optional[Product]:
+        """Get product with overrides merged for multi-tenancy.
+
+        Retrieves the base product and applies any ProductOverride
+        entries for the given WA number, returning the merged result.
+        """
+        conn = self._connect()
+        try:
+            cursor = conn.execute(
+                """
+                SELECT 
+                    p.*,
+                    COALESCE(po.override_price_cents, p.base_price_cents) as effective_price_cents,
+                    COALESCE(po.is_hidden, 0) as is_hidden
+                FROM products p
+                LEFT JOIN product_overrides po 
+                    ON p.id = po.product_id AND po.wa_number_id = ?
+                WHERE p.id = ?
+            """,
+                (wa_number_id, product_id),
+            )
+            row = cursor.fetchone()
+            if not row:
+                return None
+
+            # Convert row to product
+            product = self._row_to_product(row)
+
+            # Apply override price if present
+            if row["effective_price_cents"] != product.base_price_cents:
+                product.base_price_cents = row["effective_price_cents"]
+
+            # Apply visibility override if hidden
+            if row["is_hidden"] == 1:
+                product.visibility = VisibilityStatus.HIDDEN
+
+            return product
+        except sqlite3.Error as e:
+            raise RepositoryError(f"Failed to get effective product: {e}")
+        finally:
+            conn.close()
