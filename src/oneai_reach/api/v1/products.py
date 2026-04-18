@@ -1,5 +1,7 @@
 """Product CRUD API endpoints for multi-tenant product management."""
 
+import csv
+from io import StringIO
 from typing import List, Optional
 import uuid
 
@@ -7,6 +9,7 @@ from fastapi import APIRouter, Depends, HTTPException, Query, UploadFile, File
 from pydantic import BaseModel, Field
 
 from oneai_reach.api.dependencies import verify_api_key
+from oneai_reach.application.product.csv_validator import validate_product_csv, CSVValidationResult
 from oneai_reach.application.product.image_service import ImageService
 from oneai_reach.config.settings import get_settings
 from oneai_reach.domain.models.product import Product, ProductStatus, VisibilityStatus, ProductVariant, Inventory
@@ -635,3 +638,170 @@ async def upload_product_image(
         raise HTTPException(status_code=500, detail=f"Database error: {str(e)}")
     except Exception as e:
         raise HTTPException(status_code=500, detail=f"Internal error: {str(e)}")
+
+
+class CSVImportResponse(BaseModel):
+    """Response schema for CSV import."""
+
+    status: str
+    message: str
+    total_rows: int
+    valid_rows: int
+    imported_rows: int
+    errors: List[dict]
+
+
+@router.post("/import", response_model=CSVImportResponse, status_code=202)
+async def import_products_csv(
+    file: UploadFile = File(...),
+    product_repo: SQLiteProductRepository = Depends(get_product_repository),
+    variant_repo: SQLiteProductVariantRepository = Depends(get_variant_repository),
+    inventory_repo: SQLiteInventoryRepository = Depends(get_inventory_repository),
+) -> CSVImportResponse:
+    try:
+        if not file.filename or not file.filename.endswith('.csv'):
+            raise HTTPException(status_code=400, detail="File must be a CSV")
+
+        content = await file.read()
+        
+        try:
+            csv_content = content.decode('utf-8')
+        except UnicodeDecodeError:
+            raise HTTPException(status_code=400, detail="CSV file must be UTF-8 encoded")
+
+        csv_file = StringIO(csv_content)
+        reader = csv.DictReader(csv_file)
+        validation_result: CSVValidationResult = validate_product_csv(reader, chunk_size=50000)
+
+        if not validation_result["valid"]:
+            return CSVImportResponse(
+                status="validation_failed",
+                message=f"CSV validation failed with {len(validation_result['errors'])} errors",
+                total_rows=validation_result["total_rows"],
+                valid_rows=validation_result["valid_rows"],
+                imported_rows=0,
+                errors=validation_result["errors"],
+            )
+
+        csv_file.seek(0)
+        reader = csv.DictReader(csv_file)
+
+        imported_count = 0
+        import_errors = []
+
+        for line_number, row in enumerate(reader, start=2):
+            row_type = row.get("type", "").lower().strip()
+
+            try:
+                if row_type == "product":
+                    _import_product_row(row, product_repo)
+                    imported_count += 1
+                elif row_type == "variant":
+                    _import_variant_row(row, variant_repo, inventory_repo)
+                    imported_count += 1
+                elif row_type == "inventory":
+                    _import_inventory_row(row, inventory_repo)
+                    imported_count += 1
+                elif row_type == "override":
+                    pass
+                elif row_type == "image":
+                    _import_image_row(row, product_repo)
+                    imported_count += 1
+            except Exception as e:
+                import_errors.append({
+                    "line_number": line_number,
+                    "field": "row",
+                    "value": str(row),
+                    "error": f"Import failed: {str(e)}",
+                })
+
+        return CSVImportResponse(
+            status="accepted",
+            message=f"CSV import completed. {imported_count} rows imported successfully.",
+            total_rows=validation_result["total_rows"],
+            valid_rows=validation_result["valid_rows"],
+            imported_rows=imported_count,
+            errors=import_errors,
+        )
+
+    except HTTPException:
+        raise
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=f"Import error: {str(e)}")
+
+
+def _import_product_row(row: dict, repo: SQLiteProductRepository) -> None:
+    product = Product(
+        wa_number_id=row.get("wa_number_id", "").strip(),
+        name=row.get("name", "").strip(),
+        description=row.get("description", "").strip() or None,
+        category=row.get("category", "general").strip(),
+        base_price_cents=int(row.get("base_price_cents", "0").strip()),
+        currency=row.get("currency", "IDR").strip(),
+        sku=row.get("sku", "").strip().upper(),
+        status=ProductStatus(row.get("status", "active").strip().lower()),
+        visibility=VisibilityStatus(row.get("visibility", "public").strip().lower()),
+    )
+    repo.save(product)
+
+
+def _import_variant_row(
+    row: dict,
+    variant_repo: SQLiteProductVariantRepository,
+    inventory_repo: SQLiteInventoryRepository,
+) -> None:
+    variant = ProductVariant(
+        product_id=row.get("product_id", "").strip(),
+        sku=row.get("sku", "").strip().upper(),
+        variant_name=row.get("variant_name", "").strip(),
+        price_cents=int(row.get("price_cents", "0").strip()),
+        weight_grams=int(row.get("weight_grams", "0").strip()) if row.get("weight_grams", "").strip() else None,
+        dimensions_json=row.get("dimensions_json", "").strip() or None,
+        status=ProductStatus(row.get("status", "active").strip().lower()),
+    )
+    saved_variant = variant_repo.save(variant)
+
+    inventory = Inventory(
+        variant_id=saved_variant.id,
+        on_hand=0,
+        reserved=0,
+        sold=0,
+        reorder_level=10,
+    )
+    inventory_repo.save(inventory)
+
+
+def _import_inventory_row(row: dict, repo: SQLiteInventoryRepository) -> None:
+    variant_id = row.get("variant_id", "").strip()
+    existing = repo.get_by_variant(variant_id=variant_id)
+    
+    if existing and existing.id:
+        existing.on_hand = int(row.get("on_hand", "0").strip())
+        existing.reserved = int(row.get("reserved", "0").strip())
+        existing.sold = int(row.get("sold", "0").strip())
+        existing.reorder_level = int(row.get("reorder_level", "10").strip())
+        repo.update(existing)
+    else:
+        inventory = Inventory(
+            variant_id=variant_id,
+            on_hand=int(row.get("on_hand", "0").strip()),
+            reserved=int(row.get("reserved", "0").strip()),
+            sold=int(row.get("sold", "0").strip()),
+            reorder_level=int(row.get("reorder_level", "10").strip()),
+        )
+        repo.save(inventory)
+
+
+def _import_image_row(row: dict, repo: SQLiteProductRepository) -> None:
+    product_id = row.get("product_id", "").strip()
+    image_url = row.get("image_url", "").strip()
+    alt_text = row.get("alt_text", "").strip() or None
+    is_primary_str = row.get("is_primary", "0").strip().lower()
+    is_primary = is_primary_str in ["1", "true"]
+
+    repo.add_image(
+        product_id=product_id,
+        image_url=image_url,
+        alt_text=alt_text,
+        is_primary=is_primary,
+    )
