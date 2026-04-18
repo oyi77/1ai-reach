@@ -22,6 +22,7 @@ import time
 from datetime import datetime
 from pathlib import Path
 
+import requests
 from flask import Flask, request, jsonify
 from flask_cors import CORS
 
@@ -728,6 +729,46 @@ def is_manual_mode_active(wa_number_id: str, contact_phone: str) -> bool:
 
 def _get_or_create_conv_id(wa_number_id: str, contact_phone: str) -> int:
     return get_or_create_conversation(wa_number_id, contact_phone, engine_mode="cs")
+
+
+# ── Products (Backward Compatibility Proxy) ──────────────────────────────────
+
+
+@app.route("/api/products", methods=["GET"])
+def api_products_list():
+    """Proxy GET /api/products to FastAPI backend."""
+    try:
+        params = request.args.to_dict()
+        resp = requests.get("http://localhost:8000/api/v1/products", params=params, timeout=10)
+        return jsonify(resp.json()), resp.status_code
+    except Exception as e:
+        return jsonify({"error": str(e)}), 500
+
+
+@app.route("/api/products", methods=["POST"])
+def api_products_create():
+    """Proxy POST /api/products to FastAPI backend."""
+    try:
+        data = request.get_json() or {}
+        resp = requests.post("http://localhost:8000/api/v1/products", json=data, timeout=10)
+        return jsonify(resp.json()), resp.status_code
+    except Exception as e:
+        return jsonify({"error": str(e)}), 500
+
+
+@app.route("/api/products/<product_id>/variants", methods=["GET"])
+def api_product_variants(product_id):
+    """Proxy GET /api/products/{id}/variants to FastAPI backend."""
+    try:
+        params = request.args.to_dict()
+        resp = requests.get(
+            f"http://localhost:8000/api/v1/products/{product_id}/variants",
+            params=params,
+            timeout=10
+        )
+        return jsonify(resp.json()), resp.status_code
+    except Exception as e:
+        return jsonify({"error": str(e)}), 500
 
 
 if __name__ == "__main__":
