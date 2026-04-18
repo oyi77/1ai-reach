@@ -94,11 +94,13 @@ class CSEngineService:
         conversation_service,
         outcomes_service,
         playbook_service,
+        product_search_service=None,
     ):
         self.config = config
         self.conversation_service = conversation_service
         self.outcomes_service = outcomes_service
         self.playbook_service = playbook_service
+        self.product_search_service = product_search_service
         self._rate_log: dict[str, list[float]] = defaultdict(list)
 
     def _sanitize_fts_query(self, text: str) -> str:
@@ -233,6 +235,7 @@ class CSEngineService:
         message: str,
         stage_context: str = "",
         user_type: str = "normal",
+        product_results: list = None,
     ) -> str:
         lang = self._detect_language(message)
         lang_instruction = (
@@ -258,6 +261,12 @@ class CSEngineService:
                 a = r.get("answer", "")
                 kb_parts.append(f"[{i}] Q: {q}\n    A: {a}")
             kb_context = "\n".join(kb_parts)
+
+        product_context = ""
+        if product_results and self.product_search_service:
+            product_context = self.product_search_service.format_products_for_llm(
+                product_results
+            )
 
         prompt_parts = [
             f"[SYSTEM]\n{persona}\n",
@@ -291,6 +300,11 @@ class CSEngineService:
                 "No knowledge base results found for this question. "
                 "If you cannot answer confidently, say you will check with the team "
                 "and get back to them shortly.\n"
+            )
+
+        if product_context:
+            prompt_parts.append(
+                f"Available products (mention these naturally if relevant):\n{product_context}\n"
             )
 
         if conversation_context:
@@ -414,6 +428,12 @@ class CSEngineService:
 
         kb_results = self.kb_search(wa_number_id, message_text, limit=5)
 
+        product_results = []
+        if self.product_search_service and self.product_search_service.detect_product_inquiry(message_text):
+            product_results = self.product_search_service.search_products(
+                wa_number_id, message_text, limit=5
+            )
+
         if self.should_escalate(message_text, kb_results, conv):
             reason = "No KB match + repeated unclear turns"
             self.conversation_service.escalate(conv_id, reason=reason)
@@ -473,6 +493,7 @@ class CSEngineService:
             message_text,
             stage_context,
             user_type,
+            product_results,
         )
 
         if not response_text:
