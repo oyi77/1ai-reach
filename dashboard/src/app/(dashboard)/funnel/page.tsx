@@ -15,8 +15,8 @@ const STAGE_COLORS: Record<string, string> = {
 };
 
 export default function FunnelPage() {
-  const { data: funnel, isLoading: fLoad } = useSWR<FunnelData>("/api/funnel", fetcher, { refreshInterval: 5000 });
-  const { data: leadsData, isLoading: lLoad } = useSWR<{ leads: Lead[] }>("/api/leads", fetcher, { refreshInterval: 10000 });
+  const { data: funnel, isLoading: fLoad } = useSWR<FunnelData>("/api/v1/agents/funnel", fetcher, { refreshInterval: 5000 });
+  const { data: leadsData, isLoading: lLoad } = useSWR<{ leads: Lead[] }>("/api/v1/agents/leads", fetcher, { refreshInterval: 10000 });
   const leads = leadsData?.leads ?? [];
 
   if (fLoad && lLoad) {

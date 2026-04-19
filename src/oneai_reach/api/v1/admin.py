@@ -171,34 +171,115 @@ async def resume_cs_engine() -> AdminResponse:
     )
 
 
-@router.get("/status", response_model=AdminResponse)
-async def get_status() -> AdminResponse:
-    """Get current admin control status.
+class ServiceStatus(BaseModel):
+    """Service status information."""
 
-    Returns the current pause flag state and active conversation count.
+    key: str
+    label: str
+    running: bool
+    pid: Optional[int] = None
+    port: Optional[int] = None
+
+
+@router.get("/status")
+async def get_status() -> Dict[str, Any]:
+    """Get service status list.
+
+    Returns status of webhook, autonomous loop, and dashboard services.
     """
     try:
+        import subprocess
         import sys
         from pathlib import Path
 
-        scripts_dir = (
-            Path(__file__).resolve().parent.parent.parent.parent.parent / "scripts"
-        )
-        if str(scripts_dir) not in sys.path:
-            sys.path.insert(0, str(scripts_dir))
+        root = Path(__file__).resolve().parent.parent.parent.parent.parent
+        sys.path.insert(0, str(root))
+        
+        import agent_control
 
-        import conversation_tracker
+        services = []
+        
+        webhook_running = False
+        webhook_pid = None
+        try:
+            result = subprocess.run(
+                ["systemctl", "is-active", "1ai-reach-mcp"],
+                capture_output=True,
+                text=True,
+                timeout=5,
+            )
+            webhook_running = result.returncode == 0 and result.stdout.strip() == "active"
+            
+            if webhook_running:
+                pid_result = subprocess.run(
+                    ["systemctl", "show", "1ai-reach-mcp", "--property=MainPID"],
+                    capture_output=True,
+                    text=True,
+                    timeout=5,
+                )
+                if pid_result.returncode == 0:
+                    pid_str = pid_result.stdout.strip().split("=")[-1]
+                    webhook_pid = int(pid_str) if pid_str.isdigit() else None
+        except Exception:
+            pass
+        
+        services.append(ServiceStatus(
+            key="webhook",
+            label="Webhook/MCP Server",
+            running=webhook_running,
+            pid=webhook_pid,
+            port=8501,
+        ))
+        
+        jobs_result = agent_control.list_jobs()
+        autonomous_job = None
+        for job in jobs_result.get("items", []):
+            if job.get("stage") == "autonomous_loop" and job.get("running"):
+                autonomous_job = job
+                break
+        
+        services.append(ServiceStatus(
+            key="autonomous",
+            label="Autonomous Loop",
+            running=autonomous_job is not None,
+            pid=autonomous_job.get("pid") if autonomous_job else None,
+        ))
+        
+        dashboard_running = False
+        dashboard_pid = None
+        try:
+            result = subprocess.run(
+                ["systemctl", "is-active", "1ai-reach-dashboard"],
+                capture_output=True,
+                text=True,
+                timeout=5,
+            )
+            dashboard_running = result.returncode == 0 and result.stdout.strip() == "active"
+            
+            if dashboard_running:
+                pid_result = subprocess.run(
+                    ["systemctl", "show", "1ai-reach-dashboard", "--property=MainPID"],
+                    capture_output=True,
+                    text=True,
+                    timeout=5,
+                )
+                if pid_result.returncode == 0:
+                    pid_str = pid_result.stdout.strip().split("=")[-1]
+                    dashboard_pid = int(pid_str) if pid_str.isdigit() else None
+        except Exception:
+            pass
+        
+        services.append(ServiceStatus(
+            key="dashboard",
+            label="Dashboard (Next.js)",
+            running=dashboard_running,
+            pid=dashboard_pid,
+            port=8502,
+        ))
 
-        convs = conversation_tracker.get_active_conversations()
-
-        return AdminResponse(
-            status="success",
-            message="Admin status retrieved",
-            data={
-                "paused": _PAUSE_CS_ENGINE,
-                "active_conversations": len(convs),
-            },
-        )
+        return {
+            "services": [s.model_dump() for s in services],
+        }
 
     except Exception as e:
         raise HTTPException(status_code=500, detail=f"Failed to get status: {str(e)}")

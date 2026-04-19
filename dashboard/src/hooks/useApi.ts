@@ -2,7 +2,7 @@ import useSWR from "swr";
 import { fetcher, type FunnelData, type WANumber, type ServiceStatus, type PipelineScript } from "@/lib/api";
 
 export function useFunnel(refreshInterval = 5000) {
-  return useSWR<FunnelData>("/api/funnel", fetcher, { refreshInterval });
+  return useSWR<FunnelData>("/api/v1/agents/funnel", fetcher, { refreshInterval });
 }
 
 export function useWANumbers() {
@@ -10,7 +10,7 @@ export function useWANumbers() {
 }
 
 export function useServices(refreshInterval = 3000) {
-  return useSWR<{ services: ServiceStatus[] }>("/api/services", fetcher, { refreshInterval });
+  return useSWR<{ services: ServiceStatus[] }>("/api/v1/admin/status", fetcher, { refreshInterval });
 }
 
 export function usePipelineScripts() {

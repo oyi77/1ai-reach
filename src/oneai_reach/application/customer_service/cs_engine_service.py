@@ -111,9 +111,17 @@ class CSEngineService:
         if not clean:
             return []
         try:
-            from kb_manager import search as _kb_search_raw
+            import sys
+            from pathlib import Path
+            
+            # Add scripts directory to path for state_manager import
+            scripts_dir = Path(__file__).resolve().parent.parent.parent.parent.parent / "scripts"
+            if str(scripts_dir) not in sys.path:
+                sys.path.insert(0, str(scripts_dir))
+            
+            from state_manager import search_kb
 
-            return _kb_search_raw(wa_number_id, clean, limit)
+            return search_kb(wa_number_id, clean, limit)
         except Exception as e:
             logger.error(f"KB search failed: {e}")
             return []
@@ -429,9 +437,10 @@ class CSEngineService:
         kb_results = self.kb_search(wa_number_id, message_text, limit=5)
 
         product_results = []
-        if self.product_search_service and self.product_search_service.detect_product_inquiry(message_text):
+        is_product_inquiry = self.product_search_service and self.product_search_service.detect_product_inquiry(message_text)
+        if is_product_inquiry:
             product_results = self.product_search_service.search_products(
-                wa_number_id, message_text, limit=5
+                wa_number_id, message_text, limit=5, is_product_inquiry=True
             )
 
         if self.should_escalate(message_text, kb_results, conv):

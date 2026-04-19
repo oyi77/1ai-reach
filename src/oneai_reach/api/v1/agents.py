@@ -486,3 +486,133 @@ async def get_audit(limit: int = 100) -> AgentResponse:
         )
     except Exception as e:
         raise HTTPException(status_code=500, detail=str(e))
+
+
+class AutonomousStartRequest(BaseModel):
+    """Request to start autonomous loop."""
+
+    dry_run: bool = False
+    run_once: bool = False
+
+
+@router.post("/autonomous/start", response_model=AgentResponse)
+async def start_autonomous(request: AutonomousStartRequest) -> AgentResponse:
+    """Start autonomous loop with optional dry_run/run_once modes."""
+    try:
+        args = []
+        if request.dry_run:
+            args.append("--dry-run")
+        if request.run_once:
+            args.append("--run-once")
+        
+        result = agent_control.start_background_stage("autonomous_loop", args=args)
+        return AgentResponse(
+            status="success",
+            message="Autonomous loop started",
+            data=result,
+        )
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))
+
+
+@router.post("/autonomous/stop", response_model=AgentResponse)
+async def stop_autonomous() -> AgentResponse:
+    """Stop autonomous loop."""
+    try:
+        # Find running autonomous_loop job
+        jobs_result = agent_control.list_jobs()
+        autonomous_job = None
+        for job in jobs_result.get("items", []):
+            if job.get("stage") == "autonomous_loop" and job.get("running"):
+                autonomous_job = job
+                break
+        
+        if not autonomous_job:
+            return AgentResponse(
+                status="success",
+                message="No autonomous loop running",
+                data={"was_running": False},
+            )
+        
+        result = agent_control.stop_job(autonomous_job["job_id"])
+        return AgentResponse(
+            status="success",
+            message="Autonomous loop stopped",
+            data=result,
+        )
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))
+
+
+@router.post("/services/{key}/restart", response_model=AgentResponse)
+async def restart_service(key: str) -> AgentResponse:
+    """Restart a service (webhook, dashboard, etc)."""
+    try:
+        import subprocess
+        
+        service_commands = {
+            "webhook": ["sudo", "systemctl", "restart", "1ai-reach-mcp"],
+            "dashboard": ["sudo", "systemctl", "restart", "1ai-reach-dashboard"],
+        }
+        
+        if key not in service_commands:
+            raise HTTPException(
+                status_code=400,
+                detail=f"Unknown service: {key}. Valid services: {list(service_commands.keys())}",
+            )
+        
+        cmd = service_commands[key]
+        proc = subprocess.run(cmd, capture_output=True, text=True, timeout=10)
+        
+        if proc.returncode != 0:
+            raise HTTPException(
+                status_code=500,
+                detail=f"Failed to restart {key}: {proc.stderr}",
+            )
+        
+        return AgentResponse(
+            status="success",
+            message=f"Service '{key}' restarted",
+            data={"service": key, "command": " ".join(cmd)},
+        )
+    except subprocess.TimeoutExpired:
+        raise HTTPException(status_code=500, detail=f"Restart command timed out for {key}")
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))
+
+
+@router.post("/services/{key}/stop", response_model=AgentResponse)
+async def stop_service(key: str) -> AgentResponse:
+    """Stop a service."""
+    try:
+        import subprocess
+        
+        service_commands = {
+            "webhook": ["sudo", "systemctl", "stop", "1ai-reach-mcp"],
+            "dashboard": ["sudo", "systemctl", "stop", "1ai-reach-dashboard"],
+        }
+        
+        if key not in service_commands:
+            raise HTTPException(
+                status_code=400,
+                detail=f"Unknown service: {key}. Valid services: {list(service_commands.keys())}",
+            )
+        
+        cmd = service_commands[key]
+        proc = subprocess.run(cmd, capture_output=True, text=True, timeout=10)
+        
+        if proc.returncode != 0:
+            raise HTTPException(
+                status_code=500,
+                detail=f"Failed to stop {key}: {proc.stderr}",
+            )
+        
+        return AgentResponse(
+            status="success",
+            message=f"Service '{key}' stopped",
+            data={"service": key, "command": " ".join(cmd)},
+        )
+    except subprocess.TimeoutExpired:
+        raise HTTPException(status_code=500, detail=f"Stop command timed out for {key}")
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))

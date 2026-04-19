@@ -24,5 +24,21 @@ if str(_src) not in sys.path:
 # Import and call new CLI
 from oneai_reach.cli.main import cli
 
+# Backward compatibility functions
+def track_lead(phone: str) -> None:
+    """Track a new lead conversion (stub for backward compatibility)."""
+    pass
+
+
+def track_purchase(phone: str) -> None:
+    """Track a purchase conversion (stub for backward compatibility)."""
+    pass
+
+
+def track_atc(phone: str) -> None:
+    """Track Add to Cart event (stub for backward compatibility)."""
+    pass
+
+
 if __name__ == "__main__":
     sys.exit(cli())

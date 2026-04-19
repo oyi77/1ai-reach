@@ -22,7 +22,7 @@ def temp_db() -> Generator[Path, None, None]:
     with tempfile.NamedTemporaryFile(suffix=".db", delete=False) as f:
         db_path = Path(f.name)
     
-    # Initialize database schema
+# Initialize database schema
     conn = sqlite3.connect(str(db_path))
     conn.execute("PRAGMA foreign_keys=ON")
     
@@ -41,7 +41,7 @@ def temp_db() -> Generator[Path, None, None]:
             created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
             updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
         )
-    """    )
+    """)
     
     conn.execute("""
         CREATE TABLE IF NOT EXISTS product_variants (
@@ -57,21 +57,22 @@ def temp_db() -> Generator[Path, None, None]:
             updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
             FOREIGN KEY (product_id) REFERENCES products(id) ON DELETE CASCADE
         )
-    """    )
+    """)
     
     conn.execute("""
         CREATE TABLE IF NOT EXISTS inventory (
             id TEXT PRIMARY KEY,
             variant_id TEXT NOT NULL UNIQUE,
-            on_hand INTEGER DEFAULT 0,
-            reserved INTEGER DEFAULT 0,
-            sold INTEGER DEFAULT 0,
+            quantity_available INTEGER DEFAULT 0,
+            quantity_reserved INTEGER DEFAULT 0,
+            quantity_sold INTEGER DEFAULT 0,
             reorder_level INTEGER DEFAULT 10,
+            last_restocked_at TEXT,
             created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
             updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
             FOREIGN KEY (variant_id) REFERENCES product_variants(id) ON DELETE CASCADE
         )
-    """    )
+    """)
     
     conn.execute("""
         CREATE TABLE IF NOT EXISTS product_overrides (
@@ -86,7 +87,7 @@ def temp_db() -> Generator[Path, None, None]:
             UNIQUE(wa_number_id, product_id),
             FOREIGN KEY (product_id) REFERENCES products(id) ON DELETE CASCADE
         )
-    """    )
+    """)
     
     conn.execute("""
         CREATE TABLE IF NOT EXISTS product_images (
@@ -113,11 +114,18 @@ def temp_db() -> Generator[Path, None, None]:
 @pytest.fixture
 def client(temp_db: Path, monkeypatch):
     """Create test client with temporary database."""
-    monkeypatch.setenv("DB_FILE", str(temp_db))
-    monkeypatch.setenv("API_KEY", "test_api_key")
+    # Must use DB_ prefix to override nested settings
+    monkeypatch.setenv("DB_DB_FILE", str(temp_db))
+    monkeypatch.setenv("DB_API_KEYS", "test_api_key")
     
+    # Force reload settings
     from oneai_reach.config.settings import get_settings
     get_settings.cache_clear()
+    
+    # Import AFTER monkeypatch to ensure correct db is used
+    import importlib
+    import oneai_reach.api.v1.products
+    importlib.reload(oneai_reach.api.v1.products)
     
     return httpx.AsyncClient(transport=httpx.ASGITransport(app=app), base_url="http://test")
 

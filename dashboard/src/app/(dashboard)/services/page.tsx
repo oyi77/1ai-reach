@@ -21,7 +21,7 @@ const LOG_FILES = [
 ];
 
 export default function ServicesPage() {
-  const { data: svcData, mutate: mutateSvc, isLoading } = useSWR<{ services: ServiceStatus[] }>("/api/services", fetcher, { refreshInterval: 3000 });
+  const { data: svcData, mutate: mutateSvc, isLoading } = useSWR<{ services: ServiceStatus[] }>("/api/v1/admin/status", fetcher, { refreshInterval: 3000 });
   const [selectedLog, setSelectedLog] = useState("webhook");
   const [mode, setMode] = useState<"normal" | "dry_run" | "run_once">("dry_run");
   const [acting, setActing] = useState<string | null>(null);
@@ -39,25 +39,25 @@ export default function ServicesPage() {
 
   async function startLoop() {
     setActing("autonomous-start");
-    await postJSON("/api/services/autonomous/start", { dry_run: mode === "dry_run", run_once: mode === "run_once" });
+    await postJSON("/api/v1/agents/autonomous/start", { dry_run: mode === "dry_run", run_once: mode === "run_once" });
     setTimeout(() => { mutateSvc(); setActing(null); }, 1500);
   }
 
   async function stopLoop() {
     setActing("autonomous-stop");
-    await postJSON("/api/services/autonomous/stop", {});
+    await postJSON("/api/v1/agents/autonomous/stop", {});
     setTimeout(() => { mutateSvc(); setActing(null); }, 1500);
   }
 
   async function restartService(key: string) {
     setActing(`${key}-restart`);
-    await postJSON(`/api/services/${key}/restart`, {});
+    await postJSON(`/api/v1/agents/services/${key}/restart`, {});
     setTimeout(() => { mutateSvc(); setActing(null); }, 2000);
   }
 
   async function stopService(key: string) {
     setActing(`${key}-stop`);
-    await postJSON(`/api/services/${key}/stop`, {});
+    await postJSON(`/api/v1/agents/services/${key}/stop`, {});
     setTimeout(() => { mutateSvc(); setActing(null); }, 1500);
   }
 

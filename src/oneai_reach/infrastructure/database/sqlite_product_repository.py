@@ -35,6 +35,122 @@ class SQLiteProductRepository(ProductRepository):
             db_path: Path to SQLite database file
         """
         self.db_path = db_path
+        self._init_schema()
+
+    def _init_schema(self):
+        """Initialize database schema if tables don't exist."""
+        conn = self._connect()
+        try:
+            # wa_numbers table
+            conn.execute("""
+                CREATE TABLE IF NOT EXISTS wa_numbers (
+                    id TEXT PRIMARY KEY,
+                    session_name TEXT UNIQUE NOT NULL,
+                    phone TEXT,
+                    label TEXT,
+                    mode TEXT DEFAULT 'cs',
+                    kb_enabled INTEGER DEFAULT 1,
+                    auto_reply INTEGER DEFAULT 1,
+                    persona TEXT,
+                    status TEXT DEFAULT 'inactive',
+                    webhook_url TEXT,
+                    created_at TEXT DEFAULT (datetime('now')),
+                    updated_at TEXT DEFAULT (datetime('now'))
+                )
+            """)
+            
+            # products table
+            conn.execute("""
+                CREATE TABLE IF NOT EXISTS products (
+                    id TEXT PRIMARY KEY,
+                    wa_number_id TEXT,
+                    name TEXT NOT NULL,
+                    description TEXT,
+                    category TEXT,
+                    base_price_cents INTEGER NOT NULL,
+                    currency TEXT DEFAULT 'IDR',
+                    sku TEXT UNIQUE,
+                    status TEXT DEFAULT 'active',
+                    visibility TEXT DEFAULT 'public',
+                    created_at TEXT DEFAULT (datetime('now')),
+                    updated_at TEXT DEFAULT (datetime('now'))
+                )
+            """)
+            
+            # product_variants table
+            conn.execute("""
+                CREATE TABLE IF NOT EXISTS product_variants (
+                    id TEXT PRIMARY KEY,
+                    product_id TEXT NOT NULL,
+                    sku TEXT UNIQUE,
+                    variant_name TEXT NOT NULL,
+                    price_cents INTEGER NOT NULL,
+                    weight_grams INTEGER,
+                    dimensions_json TEXT,
+                    status TEXT DEFAULT 'active',
+                    created_at TEXT DEFAULT (datetime('now')),
+                    updated_at TEXT DEFAULT (datetime('now')),
+                    FOREIGN KEY (product_id) REFERENCES products(id) ON DELETE CASCADE
+                )
+            """)
+            
+            # inventory table
+            conn.execute("""
+                CREATE TABLE IF NOT EXISTS inventory (
+                    id TEXT PRIMARY KEY,
+                    variant_id TEXT NOT NULL UNIQUE,
+                    quantity_available INTEGER DEFAULT 0,
+                    quantity_reserved INTEGER DEFAULT 0,
+                    quantity_sold INTEGER DEFAULT 0,
+                    reorder_level INTEGER DEFAULT 10,
+                    last_restocked_at TEXT,
+                    created_at TEXT DEFAULT (datetime('now')),
+                    updated_at TEXT DEFAULT (datetime('now')),
+                    FOREIGN KEY (variant_id) REFERENCES product_variants(id) ON DELETE CASCADE
+                )
+            """)
+            
+            # product_overrides table
+            conn.execute("""
+                CREATE TABLE IF NOT EXISTS product_overrides (
+                    id TEXT PRIMARY KEY,
+                    wa_number_id TEXT NOT NULL,
+                    product_id TEXT NOT NULL,
+                    override_price_cents INTEGER,
+                    override_stock_quantity INTEGER,
+                    is_hidden INTEGER DEFAULT 0,
+                    created_at TEXT DEFAULT (datetime('now')),
+                    updated_at TEXT DEFAULT (datetime('now')),
+                    UNIQUE(wa_number_id, product_id),
+                    FOREIGN KEY (product_id) REFERENCES products(id) ON DELETE CASCADE
+                )
+            """)
+            
+            # product_images table
+            conn.execute("""
+                CREATE TABLE IF NOT EXISTS product_images (
+                    id TEXT PRIMARY KEY,
+                    product_id TEXT NOT NULL,
+                    image_url TEXT NOT NULL,
+                    alt_text TEXT,
+                    display_order INTEGER DEFAULT 0,
+                    is_primary INTEGER DEFAULT 0,
+                    created_at TEXT DEFAULT (datetime('now')),
+                    updated_at TEXT DEFAULT (datetime('now')),
+                    FOREIGN KEY (product_id) REFERENCES products(id) ON DELETE CASCADE
+                )
+            """)
+            
+            # Create indexes
+            conn.execute("CREATE INDEX IF NOT EXISTS idx_variants_product ON product_variants(product_id)")
+            conn.execute("CREATE INDEX IF NOT EXISTS idx_variants_sku ON product_variants(sku)")
+            conn.execute("CREATE INDEX IF NOT EXISTS idx_inventory_variant ON inventory(variant_id)")
+            conn.execute("CREATE INDEX IF NOT EXISTS idx_overrides_tenant_product ON product_overrides(wa_number_id, product_id)")
+            conn.execute("CREATE INDEX IF NOT EXISTS idx_images_product ON product_images(product_id)")
+            
+            conn.commit()
+        finally:
+            conn.close()
 
     def _connect(self) -> sqlite3.Connection:
         """Create database connection with row factory."""

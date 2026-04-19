@@ -5,7 +5,7 @@ from io import StringIO
 from typing import List, Optional
 import uuid
 
-from fastapi import APIRouter, Depends, HTTPException, Query, UploadFile, File
+from fastapi import APIRouter, Depends, HTTPException, Query, UploadFile, File, Form
 from fastapi.responses import StreamingResponse
 from pydantic import BaseModel, Field
 
@@ -770,8 +770,8 @@ class ImageUploadResponse(BaseModel):
 async def upload_product_image(
     product_id: str,
     file: UploadFile = File(...),
-    alt_text: Optional[str] = None,
-    is_primary: bool = False,
+    alt_text: Optional[str] = Form(None),
+    is_primary: bool = Form(False),
     product_repo: SQLiteProductRepository = Depends(get_product_repository),
     image_service: ImageService = Depends(get_image_service),
 ) -> ImageUploadResponse:
