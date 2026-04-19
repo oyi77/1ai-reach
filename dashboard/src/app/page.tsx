@@ -22,9 +22,9 @@ export default function DashboardPage() {
     return <div className="flex items-center justify-center h-[50vh]"><Loader2 className="h-8 w-8 animate-spin text-orange-500" /></div>;
   }
 
-  const services = svcData?.services ?? [];
-  const running = services.filter((s) => s.running).length;
-  const chartData = funnel
+  const servicesList = svcData?.services ?? [];
+  const running = servicesList.filter((s) => s.running).length;
+  const chartData = funnel?.counts
     ? Object.entries(funnel.counts).map(([name, value]) => ({ name, value, color: STAGE_COLORS[name] || "#6b7280" }))
     : [];
 
@@ -45,7 +45,7 @@ export default function DashboardPage() {
             <Server className="h-4 w-4 text-neutral-500" />
           </CardHeader>
           <CardContent>
-            <div className="text-2xl font-bold">{running}<span className="text-sm text-neutral-500">/{services.length}</span></div>
+            <div className="text-2xl font-bold">{running}<span className="text-sm text-neutral-500">/{servicesList.length}</span></div>
           </CardContent>
         </Card>
         <Card className="bg-neutral-900 border-neutral-800">
@@ -54,9 +54,9 @@ export default function DashboardPage() {
             <Zap className="h-4 w-4 text-neutral-500" />
           </CardHeader>
           <CardContent>
-            <Badge variant={services.find((s) => s.key === "autonomous")?.running ? "default" : "secondary"}
-              className={services.find((s) => s.key === "autonomous")?.running ? "bg-green-600" : "bg-neutral-700"}>
-              {services.find((s) => s.key === "autonomous")?.running ? "ACTIVE" : "STOPPED"}
+            <Badge variant={servicesList.find((s) => s.key === "autonomous")?.running ? "default" : "secondary"}
+              className={servicesList.find((s) => s.key === "autonomous")?.running ? "bg-green-600" : "bg-neutral-700"}>
+              {servicesList.find((s) => s.key === "autonomous")?.running ? "ACTIVE" : "STOPPED"}
             </Badge>
           </CardContent>
         </Card>
@@ -94,7 +94,7 @@ export default function DashboardPage() {
         <CardHeader><CardTitle>Service Status</CardTitle></CardHeader>
         <CardContent>
           <div className="space-y-2">
-            {services.map((s) => (
+            {servicesList.map((s) => (
               <div key={s.key} className="flex items-center justify-between py-2 border-b border-neutral-800 last:border-0">
                 <div className="flex items-center gap-3">
                   <div className={`h-2.5 w-2.5 rounded-full ${s.running ? "bg-green-500" : "bg-neutral-600"}`} />

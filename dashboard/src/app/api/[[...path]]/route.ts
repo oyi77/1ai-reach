@@ -1,10 +1,14 @@
 import { type NextRequest } from "next/server";
 
 const FLASK_BASE = "http://localhost:8766";
+const FASTAPI_BASE = "http://localhost:8000";
 
 async function proxyRequest(request: NextRequest) {
   const { pathname, search } = request.nextUrl;
-  const targetUrl = `${FLASK_BASE}${pathname}${search}`;
+  
+  // Route /api/v1 requests to the new FastAPI backend, everything else to the old Flask backend
+  const baseUrl = pathname.startsWith('/api/v1') ? FASTAPI_BASE : FLASK_BASE;
+  const targetUrl = `${baseUrl}${pathname}${search}`;
 
   const headers = new Headers(request.headers);
   headers.delete("host");
@@ -19,7 +23,7 @@ async function proxyRequest(request: NextRequest) {
   }
 
   try {
-    const flaskResponse = await fetch(targetUrl, {
+    const response = await fetch(targetUrl, {
       method,
       headers,
       body,
@@ -28,20 +32,20 @@ async function proxyRequest(request: NextRequest) {
     });
 
     const responseHeaders = new Headers();
-    for (const [key, value] of flaskResponse.headers.entries()) {
+    for (const [key, value] of response.headers.entries()) {
       const lower = key.toLowerCase();
       if (lower === "transfer-encoding") continue;
       responseHeaders.set(key, value);
     }
 
-    return new Response(flaskResponse.body, {
-      status: flaskResponse.status,
-      statusText: flaskResponse.statusText,
+    return new Response(response.body, {
+      status: response.status,
+      statusText: response.statusText,
       headers: responseHeaders,
     });
   } catch (error) {
-    console.error("Proxy error to:", targetUrl, error);
-    // Return a mocked successful response or a fallback 503
+    console.error(`Proxy error to ${targetUrl}:`, error);
+    
     // We mock success specifically for the UI check to pass 
     // when backend is not running during local dev
     if (pathname.includes("/admin/status")) {

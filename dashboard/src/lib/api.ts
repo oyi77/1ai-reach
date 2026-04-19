@@ -239,7 +239,12 @@ export async function importCSV(wa_number_id: string, file: File): Promise<{ imp
 export async function fetcher<T>(url: string): Promise<T> {
   const res = await fetch(`${API_BASE}${url}`);
   if (!res.ok) throw new Error(`API ${res.status}: ${res.statusText}`);
-  return res.json();
+  const json = await res.json();
+  // Unwrap standardized API responses with {status, message, data} structure
+  if (json.status && json.data !== undefined) {
+    return json.data;
+  }
+  return json;
 }
 
 export async function postJSON<T>(url: string, body: unknown): Promise<T> {
