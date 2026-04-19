@@ -11,8 +11,8 @@ function Sheet({ ...props }: SheetPrimitive.Root.Props) {
   return <SheetPrimitive.Root data-slot="sheet" {...props} />
 }
 
-function SheetTrigger({ ...props }: SheetPrimitive.Trigger.Props) {
-  return <SheetPrimitive.Trigger data-slot="sheet-trigger" {...props} />
+function SheetTrigger({ render, className, ...props }: SheetPrimitive.Trigger.Props & { className?: string }) {
+  return <SheetPrimitive.Trigger data-slot="sheet-trigger" render={render} className={className} {...props} />
 }
 
 function SheetClose({ ...props }: SheetPrimitive.Close.Props) {

@@ -23,16 +23,16 @@ router = APIRouter(
     dependencies=[Depends(verify_api_key)],
 )
 
-# Import agent_control module
 _root = Path(__file__).resolve().parent.parent.parent.parent
 _scripts_dir = _root / "scripts"
 if str(_scripts_dir) not in sys.path:
     sys.path.insert(0, str(_scripts_dir))
 
+agent_control = None
 try:
     import agent_control
-except ImportError as e:
-    raise RuntimeError(f"Failed to import agent_control: {e}")
+except ImportError:
+    pass
 
 
 class AgentResponse(BaseModel):
@@ -137,6 +137,12 @@ async def get_config() -> AgentResponse:
 async def get_funnel() -> AgentResponse:
     """Get funnel summary."""
     try:
+        if not agent_control:
+            return AgentResponse(
+                status="error",
+                message="Agent control module not available",
+                data={"stages": {}, "total": 0},
+            )
         result = agent_control.get_funnel_summary()
         return AgentResponse(
             status="success",

@@ -193,9 +193,14 @@ async def get_status() -> Dict[str, Any]:
         from pathlib import Path
 
         root = Path(__file__).resolve().parent.parent.parent.parent.parent
-        sys.path.insert(0, str(root))
+        if str(root) not in sys.path:
+            sys.path.insert(0, str(root))
         
-        import agent_control
+        try:
+            import agent_control
+        except ImportError:
+            # Fallback if agent_control not available
+            agent_control = None
 
         services = []
         
@@ -231,12 +236,16 @@ async def get_status() -> Dict[str, Any]:
             port=8501,
         ))
         
-        jobs_result = agent_control.list_jobs()
         autonomous_job = None
-        for job in jobs_result.get("items", []):
-            if job.get("stage") == "autonomous_loop" and job.get("running"):
-                autonomous_job = job
-                break
+        if agent_control:
+            try:
+                jobs_result = agent_control.list_jobs()
+                for job in jobs_result.get("items", []):
+                    if job.get("stage") == "autonomous_loop" and job.get("running"):
+                        autonomous_job = job
+                        break
+            except Exception:
+                pass
         
         services.append(ServiceStatus(
             key="autonomous",

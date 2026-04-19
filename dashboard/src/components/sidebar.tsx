@@ -100,11 +100,7 @@ export function MobileNav() {
 
   return (
     <Sheet open={open} onOpenChange={setOpen}>
-      <SheetTrigger className="md:hidden">
-        <Button variant="ghost" size="icon">
-          <Menu className="h-5 w-5" />
-        </Button>
-      </SheetTrigger>
+      <SheetTrigger render={<Button variant="ghost" size="icon" className="md:hidden"><Menu className="h-5 w-5" /></Button>} />
       <SheetContent side="left" className="p-0 w-56 bg-neutral-950 border-neutral-800">
         <NavContent onNavigate={() => setOpen(false)} />
       </SheetContent>
