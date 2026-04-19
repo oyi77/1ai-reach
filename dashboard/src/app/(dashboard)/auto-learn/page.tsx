@@ -36,14 +36,14 @@ export default function AutoLearnPage() {
   const [improveData, setImproveData] = useState<ImproveData | null>(null);
   const [loading, setLoading] = useState(false);
 
-  const { data: sessions } = useSWR<{ numbers: WASession[] }>("/api/wa-numbers", fetcher);
+  const { data: sessions } = useSWR<{ numbers: WASession[] }>("/api/v1/agents/wa/sessions", fetcher);
   const csSessions = sessions?.numbers?.filter((s) => s.mode === "cs") || [];
 
   const generateReport = async () => {
     if (!selectedSession) return;
     setLoading(true);
     try {
-      const res = await fetch(`/api/auto-learn/report?session=${selectedSession}`);
+      const res = await fetch(`/api/v1/legacy/auto-learn/report?session=${selectedSession}`);
       const data = await res.json();
       setReportData(data);
     } catch (error) {
@@ -57,7 +57,7 @@ export default function AutoLearnPage() {
     if (!selectedSession) return;
     setLoading(true);
     try {
-      const res = await fetch(`/api/auto-learn/improve`, {
+      const res = await fetch(`/api/v1/legacy/auto-learn/improve`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ session: selectedSession, apply: applyChanges }),

@@ -179,35 +179,35 @@ export interface VariantOption {
 
 // Product API Functions
 export async function fetchProducts(wa_number_id: string): Promise<Product[]> {
-  return fetcher<Product[]>(`/api/products?wa_number_id=${wa_number_id}`);
+  return fetcher<Product[]>(`/api/v1/products?wa_number_id=${wa_number_id}`);
 }
 
 export async function createProduct(product: Omit<Product, "id" | "created_at" | "updated_at">): Promise<Product> {
-  return postJSON<Product>("/api/products", product);
+  return postJSON<Product>("/api/v1/products", product);
 }
 
 export async function updateProduct(id: string, updates: Partial<Product>): Promise<Product> {
-  return patchJSON<Product>(`/api/products/${id}`, updates);
+  return patchJSON<Product>(`/api/v1/products/${id}`, updates);
 }
 
 export async function deleteProduct(id: string): Promise<void> {
-  await deleteJSON(`/api/products/${id}`);
+  await deleteJSON(`/api/v1/products/${id}`);
 }
 
 export async function fetchProductVariants(product_id: string): Promise<ProductVariant[]> {
-  return fetcher<ProductVariant[]>(`/api/products/${product_id}/variants`);
+  return fetcher<ProductVariant[]>(`/api/v1/products/${product_id}/variants`);
 }
 
 export async function createProductVariant(variant: Omit<ProductVariant, "id" | "created_at" | "updated_at">): Promise<ProductVariant> {
-  return postJSON<ProductVariant>("/api/variants", variant);
+  return postJSON<ProductVariant>("/api/v1/variants", variant);
 }
 
 export async function fetchInventory(variant_id: string): Promise<Inventory> {
-  return fetcher<Inventory>(`/api/inventory/${variant_id}`);
+  return fetcher<Inventory>(`/api/v1/inventory/${variant_id}`);
 }
 
 export async function updateInventory(variant_id: string, updates: Partial<Inventory>): Promise<Inventory> {
-  return patchJSON<Inventory>(`/api/inventory/${variant_id}`, updates);
+  return patchJSON<Inventory>(`/api/v1/inventory/${variant_id}`, updates);
 }
 
 export async function uploadImage(product_id: string, file: File, alt_text?: string): Promise<ProductImage> {
@@ -215,7 +215,7 @@ export async function uploadImage(product_id: string, file: File, alt_text?: str
   formData.append("file", file);
   if (alt_text) formData.append("alt_text", alt_text);
 
-  const res = await fetch(`${API_BASE}/api/products/${product_id}/images`, {
+  const res = await fetch(`${API_BASE}/api/v1/products/${product_id}/images`, {
     method: "POST",
     body: formData,
   });
@@ -228,7 +228,7 @@ export async function importCSV(wa_number_id: string, file: File): Promise<{ imp
   formData.append("file", file);
   formData.append("wa_number_id", wa_number_id);
 
-  const res = await fetch(`${API_BASE}/api/products/import`, {
+  const res = await fetch(`${API_BASE}/api/v1/products/import`, {
     method: "POST",
     body: formData,
   });

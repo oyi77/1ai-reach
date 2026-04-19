@@ -65,7 +65,7 @@ fi
 echo ""
 echo "📱 Checking WAHA connections..."
 WAHA_URL="https://waha.aitradepulse.com"
-if curl -s "$WAHA_URL/api/sessions" -H "X-Api-Key: 0673158ede14970b922f7e62075bd0f211490ca335111a9e" > /dev/null 2>&1; then
+if curl -s "$WAHA_URL/api/sessions" -H "X-Api-Key: 199c96bcb87e45a39f6cde9e5677ed09" > /dev/null 2>&1; then
     echo "   ✅ WAHA API is reachable"
 else
     echo "   ⚠️  WAHA API not reachable (may need manual check)"
@@ -82,7 +82,7 @@ echo "   • Streamlit UI: http://localhost:8502"
 echo "   • Public URL: https://engage.aitradepulse.com"
 echo ""
 echo "📋 Active Sessions:"
-curl -s "https://waha.aitradepulse.com/api/sessions" -H "X-Api-Key: 0673158ede14970b922f7e62075bd0f211490ca335111a9e" 2>/dev/null | grep -o '"name":"[^"]*"' | sed 's/"name":"/   • /' | sed 's/"//' || echo "   (Check WAHA manually)"
+curl -s "https://waha.aitradepulse.com/api/sessions" -H "X-Api-Key: 199c96bcb87e45a39f6cde9e5677ed09" 2>/dev/null | grep -o '"name":"[^"]*"' | sed 's/"name":"/   • /' | sed 's/"//' || echo "   (Check WAHA manually)"
 echo ""
 echo "📝 Logs available in: $LOG_DIR"
 echo ""

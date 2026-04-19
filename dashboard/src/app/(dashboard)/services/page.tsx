@@ -27,7 +27,7 @@ export default function ServicesPage() {
   const [acting, setActing] = useState<string | null>(null);
 
   const { data: logData } = useSWR<{ lines: string[] }>(
-    selectedLog ? `/api/logs/${selectedLog}?lines=80` : null, fetcher, { refreshInterval: 5000 }
+    selectedLog ? `/api/v1/admin/logs/${selectedLog}?lines=80` : null, fetcher, { refreshInterval: 5000 }
   );
 
   if (isLoading) {

@@ -1,14 +1,11 @@
 import { type NextRequest } from "next/server";
 
-const FLASK_BASE = "http://localhost:8766";
 const FASTAPI_BASE = "http://localhost:8000";
 
 async function proxyRequest(request: NextRequest) {
   const { pathname, search } = request.nextUrl;
   
-  // Route /api/v1 requests to the new FastAPI backend, everything else to the old Flask backend
-  const baseUrl = pathname.startsWith('/api/v1') ? FASTAPI_BASE : FLASK_BASE;
-  const targetUrl = `${baseUrl}${pathname}${search}`;
+  const targetUrl = `${FASTAPI_BASE}${pathname}${search}`;
 
   const headers = new Headers(request.headers);
   headers.delete("host");

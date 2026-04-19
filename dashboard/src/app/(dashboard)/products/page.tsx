@@ -22,7 +22,7 @@ import { Badge } from "@/components/ui/badge";
 import { Plus, Pencil, Trash2, Loader2, Upload, Download } from "lucide-react";
 
 export default function ProductsPage() {
-  const { data: waData, isLoading: waLoad } = useSWR<{ numbers: WANumber[] }>("/api/wa-numbers", fetcher);
+  const { data: waData, isLoading: waLoad } = useSWR<{ numbers: WANumber[] }>("/api/v1/agents/wa/sessions", fetcher);
   const [selectedWA, setSelectedWA] = useState<string>("");
   const [dialogOpen, setDialogOpen] = useState(false);
   const [editId, setEditId] = useState<string | null>(null);
@@ -47,7 +47,7 @@ export default function ProductsPage() {
 
   const waId = selectedWA || waData?.numbers[0]?.id || "";
   const { data: products, mutate, isLoading: productsLoading } = useSWR<Product[]>(
-    waId ? `/api/products?wa_number_id=${waId}` : null,
+    waId ? `/api/v1/products?wa_number_id=${waId}` : null,
     fetcher
   );
 
@@ -70,7 +70,7 @@ export default function ProductsPage() {
 
   function handleExport() {
     if (!waId) return;
-    window.open(`/api/products/export?wa_number_id=${waId}`, "_blank");
+    window.open(`/api/v1/products/export?wa_number_id=${waId}`, "_blank");
   }
 
   if (waLoad) {

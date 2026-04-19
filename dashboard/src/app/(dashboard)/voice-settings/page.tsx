@@ -24,13 +24,13 @@ const VOICE_MODES = [
 ];
 
 export default function VoiceSettingsPage() {
-  const { data: waData } = useSWR<{ numbers: WANumber[] }>("/api/wa-numbers", fetcher);
+  const { data: waData } = useSWR<{ numbers: WANumber[] }>("/api/v1/agents/wa/sessions", fetcher);
   const [selectedSession, setSelectedSession] = useState<string>("");
   const [saving, setSaving] = useState(false);
   const [saved, setSaved] = useState(false);
 
   const { data: voiceData, mutate: mutateVoice } = useSWR<VoiceConfig>(
-    selectedSession ? `/api/voice-config/${selectedSession}` : null,
+    selectedSession ? `/api/v1/legacy/voice-config/${selectedSession}` : null,
     fetcher,
     { refreshInterval: 0 }
   );
@@ -46,7 +46,7 @@ export default function VoiceSettingsPage() {
     if (!selectedSession) return;
     setSaving(true);
     try {
-      await postJSON(`/api/voice-config/${selectedSession}`, {
+      await postJSON(`/api/v1/legacy/voice-config/${selectedSession}`, {
         voice_enabled: currentConfig.voice_enabled,
         voice_reply_mode: currentConfig.voice_reply_mode,
         voice_language: currentConfig.voice_language,

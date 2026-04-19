@@ -6,7 +6,7 @@ export function useFunnel(refreshInterval = 5000) {
 }
 
 export function useWANumbers() {
-  return useSWR<{ numbers: WANumber[]; count: number }>("/api/wa-numbers", fetcher);
+  return useSWR<{ numbers: WANumber[]; count: number }>("/api/v1/agents/wa/sessions", fetcher);
 }
 
 export function useServices(refreshInterval = 3000) {
@@ -14,12 +14,12 @@ export function useServices(refreshInterval = 3000) {
 }
 
 export function usePipelineScripts() {
-  return useSWR<{ scripts: PipelineScript[] }>("/api/pipeline/scripts", fetcher);
+  return useSWR<{ scripts: PipelineScript[] }>("/api/v1/legacy/pipeline/scripts", fetcher);
 }
 
 export function useLogs(name: string, lines = 50, refreshInterval = 5000) {
   return useSWR<{ lines: string[]; count: number }>(
-    name ? `/api/logs/${name}?lines=${lines}` : null,
+    name ? `/api/v1/admin/logs/${name}?lines=${lines}` : null,
     fetcher,
     { refreshInterval }
   );

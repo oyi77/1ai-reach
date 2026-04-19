@@ -15,13 +15,13 @@ const STAGE_COLORS: Record<string, string> = {
 };
 
 export default function PipelinePage() {
-  const { data: waData, isLoading: waLoad } = useSWR<{ numbers: WANumber[] }>("/api/wa-numbers", fetcher);
+  const { data: waData, isLoading: waLoad } = useSWR<{ numbers: WANumber[] }>("/api/v1/agents/wa/sessions", fetcher);
   const [selectedWA, setSelectedWA] = useState<string>("");
   const [draggedId, setDraggedId] = useState<number | null>(null);
   const waId = selectedWA || waData?.numbers[0]?.id || "";
 
   const { data: convData, mutate } = useSWR<{ conversations: Conversation[] }>(
-    waId ? `/api/conversations?wa_number_id=${waId}` : null, fetcher, { refreshInterval: 5000 }
+    waId ? `/api/v1/legacy/conversations?wa_number_id=${waId}` : null, fetcher, { refreshInterval: 5000 }
   );
   const conversations = convData?.conversations ?? [];
 
@@ -32,7 +32,7 @@ export default function PipelinePage() {
   const byStage = Object.fromEntries(STAGES.map((s) => [s, conversations.filter((c) => (c.stage || "discovery") === s)]));
 
   async function changeStage(convId: number, stage: string) {
-    await patchJSON(`/api/conversations/${convId}/stage`, { stage });
+    await patchJSON(`/api/v1/legacy/conversations/${convId}/stage`, { stage });
     mutate();
   }
 

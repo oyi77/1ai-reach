@@ -135,11 +135,11 @@ class WAHASettings(BaseSettings):
         default="https://waha.aitradepulse.com", description="Direct WAHA URL"
     )
     api_key: str = Field(
-        default="0673158ede14970b922f7e62075bd0f211490ca335111a9e",
+        default="199c96bcb87e45a39f6cde9e5677ed09",
         description="WAHA API key",
     )
     direct_api_key: str = Field(
-        default="0673158ede14970b922f7e62075bd0f211490ca335111a9e",
+        default="199c96bcb87e45a39f6cde9e5677ed09",
         description="Direct WAHA API key",
     )
     session: str = Field(default="default", description="WAHA session name")

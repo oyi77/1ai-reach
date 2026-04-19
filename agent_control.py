@@ -46,6 +46,7 @@ CONTROL_DIR = ROOT / ".agent-control"
 LOGS_DIR = CONTROL_DIR / "logs"
 
 _STAGE_TO_SCRIPT = {
+    "scrape": "scraper.py",
     "strategy": "strategy_agent.py",
     "enricher": "enricher.py",
     "researcher": "researcher.py",
@@ -412,17 +413,16 @@ def get_tool_audit(limit: int = 100) -> dict[str, Any]:
 # Session management (wa_manager)
 # ---------------------------------------------------------------------------
 
-try:
-    import wa_manager as _wa_manager
-except ImportError:
-    _wa_manager = None  # type: ignore[assignment]
-
+import state_manager as _state_manager
 
 def list_wa_sessions() -> dict[str, Any]:
-    """List all WhatsApp sessions with WAHA + DB status."""
-    if _wa_manager is None:
-        return {"error": "wa_manager not available"}
-    return {"sessions": _wa_manager.list_sessions()}
+    if _state_manager is None:
+        return {"error": "state_manager not available"}
+    
+    db_sessions = _state_manager.get_wa_numbers()
+    
+    return {"numbers": db_sessions, "count": len(db_sessions)}
+
 
 
 def create_wa_session(

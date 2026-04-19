@@ -34,10 +34,38 @@ class ConversationInfo(BaseModel):
 
 
 class AdminResponse(BaseModel):
-    """Standard admin endpoint response."""
-
     status: str
     message: str
+
+import os
+from pathlib import Path
+
+_ROOT_DIR = Path(__file__).resolve().parent.parent.parent.parent.parent
+_LOGS_DIR = _ROOT_DIR / "logs"
+
+class LogResponse(BaseModel):
+    lines: List[str]
+    count: int
+    file: str
+
+@router.get("/logs/{name}", response_model=LogResponse)
+async def get_logs(name: str, lines: int = 50) -> LogResponse:
+    log_file = _LOGS_DIR / f"{name}.log"
+    if not log_file.exists():
+        log_file = _ROOT_DIR / ".agent-control" / "logs" / f"{name}.log"
+        if not log_file.exists():
+            raise HTTPException(status_code=404, detail=f"Log file not found: {name}")
+    
+    try:
+        text = log_file.read_text(errors="replace")
+        tail = text.strip().splitlines()[-lines:]
+        return LogResponse(
+            lines=tail,
+            count=len(tail),
+            file=str(log_file)
+        )
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))
     data: Optional[Dict[str, Any]] = None
 
 

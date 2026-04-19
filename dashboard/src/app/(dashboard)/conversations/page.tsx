@@ -16,7 +16,7 @@ import { Send, User, Loader2, ThumbsUp, ThumbsDown, MessageSquare, Bot, Hand, Pl
 type Feedback = { id: number; message_id: number; rating: string; note: string; corrected_response: string };
 
 export default function ConversationsPage() {
-  const { data: waData, isLoading: waLoad } = useSWR<{ numbers: WANumber[] }>("/api/wa-numbers", fetcher);
+  const { data: waData, isLoading: waLoad } = useSWR<{ numbers: WANumber[] }>("/api/v1/agents/wa/sessions", fetcher);
   const [selectedWA, setSelectedWA] = useState<string>("");
   const [selectedConv, setSelectedConv] = useState<number | null>(null);
   const [replyText, setReplyText] = useState("");
@@ -35,13 +35,13 @@ export default function ConversationsPage() {
 
   const waId = selectedWA || "";
   const { data: convData } = useSWR<{ conversations: Conversation[] }>(
-    waId ? `/api/conversations?wa_number_id=${waId}` : null, fetcher, { refreshInterval: 5000 }
+    waId ? `/api/v1/legacy/conversations?wa_number_id=${waId}` : null, fetcher, { refreshInterval: 5000 }
   );
   const { data: msgData, mutate: mutateMsgs } = useSWR<{ messages: Message[] }>(
-    selectedConv ? `/api/conversations/${selectedConv}/messages?limit=200` : null, fetcher, { refreshInterval: 3000 }
+    selectedConv ? `/api/v1/legacy/conversations/${selectedConv}/messages?limit=200` : null, fetcher, { refreshInterval: 3000 }
   );
   const { data: fbData } = useSWR<{ feedback: Feedback[] }>(
-    selectedConv ? `/api/conversations/${selectedConv}/feedback` : null, fetcher
+    selectedConv ? `/api/v1/legacy/conversations/${selectedConv}/feedback` : null, fetcher
   );
 
   const conversations = convData?.conversations ?? [];
@@ -63,7 +63,7 @@ export default function ConversationsPage() {
 
   async function sendReply() {
     if (!selectedConv || !replyText.trim()) return;
-    await postJSON(`/api/conversations/${selectedConv}/messages`, { message: replyText });
+    await postJSON(`/api/v1/legacy/conversations/${selectedConv}/messages`, { message: replyText });
     setReplyText("");
     mutateMsgs();
   }
@@ -72,7 +72,7 @@ export default function ConversationsPage() {
     if (!selectedConv || !feedbackMsgId) return;
     setSubmitting(true);
     try {
-      await postJSON(`/api/conversations/${selectedConv}/feedback`, {
+      await postJSON(`/api/v1/legacy/conversations/${selectedConv}/feedback`, {
         message_id: feedbackMsgId,
         rating: feedbackRating,
         note: feedbackNote,
@@ -90,7 +90,7 @@ export default function ConversationsPage() {
   async function toggleTakeover(takeover: boolean) {
     if (!selectedConv) return;
     const endpoint = takeover ? "takeover" : "release";
-    await postJSON(`/api/conversations/${selectedConv}/${endpoint}`, {});
+    await postJSON(`/api/v1/legacy/conversations/${selectedConv}/${endpoint}`, {});
     mutateMsgs();
   }
 

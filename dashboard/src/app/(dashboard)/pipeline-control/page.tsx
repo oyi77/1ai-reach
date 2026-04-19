@@ -1,34 +1,42 @@
 "use client";
 
 import { useState } from "react";
-import useSWR from "swr";
-import { fetcher, postJSON, type PipelineScript } from "@/lib/api";
+import { postJSON, type PipelineScript } from "@/lib/api";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Badge } from "@/components/ui/badge";
 import { Play, Loader2 } from "lucide-react";
 
+const STATIC_SCRIPTS: PipelineScript[] = [
+  { key: "scrape", script: "scraper.py" },
+  { key: "enrich", script: "enricher.py" },
+  { key: "research", script: "researcher.py" },
+  { key: "generate", script: "generator.py" },
+  { key: "review", script: "reviewer.py" },
+  { key: "blast", script: "blaster.py" },
+  { key: "track", script: "reply_tracker.py" },
+  { key: "followup", script: "followup.py" },
+  { key: "sync", script: "sheets_sync.py" },
+];
+
 export default function PipelineControlPage() {
-  const { data: scriptsData, isLoading } = useSWR<{ scripts: PipelineScript[] }>("/api/pipeline/scripts", fetcher);
   const [query, setQuery] = useState("Digital Agency in Jakarta");
   const [running, setRunning] = useState<string | null>(null);
   const [results, setResults] = useState<Record<string, string>>({});
 
-  if (isLoading) {
-    return <div className="p-6 flex items-center justify-center h-[50vh]"><Loader2 className="h-8 w-8 animate-spin text-orange-500" /></div>;
-  }
+  const scripts = STATIC_SCRIPTS;
 
-  const scripts = scriptsData?.scripts ?? [];
-
-  async function runScript(script: string) {
+  async function runScript(scriptObj: PipelineScript) {
+    const { key, script } = scriptObj;
     setRunning(script);
-    setResults((prev) => ({ ...prev, [script]: "Running..." }));
+    setResults((prev) => ({ ...prev, [key]: "Running..." }));
     try {
-      const res = await postJSON<{ ok: boolean; pid?: number; error?: string }>("/api/pipeline/run", { script, query });
-      setResults((prev) => ({ ...prev, [script]: res.ok ? `Started (PID ${res.pid})` : `Error: ${res.error}` }));
-    } catch (e) {
-      setResults((prev) => ({ ...prev, [script]: `Failed: ${e}` }));
+      const args = query && script === "scraper.py" ? { query } : {};
+      const res = await postJSON<{ status?: string; message?: string; ok?: boolean; error?: string }>(`/api/v1/agents/stages/${key}/start`, { args });
+      setResults((prev) => ({ ...prev, [key]: res.status === "success" || res.ok ? `Started in background` : `Error: ${res.message || res.error}` }));
+    } catch (e: any) {
+      setResults((prev) => ({ ...prev, [key]: `Failed: ${e.message || e}` }));
     }
     setRunning(null);
   }
@@ -63,7 +71,7 @@ export default function PipelineControlPage() {
                 </p>
               )}
               <Button
-                onClick={() => runScript(s.script)}
+                onClick={() => runScript(s)}
                 disabled={running !== null}
                 className="w-full bg-orange-600 hover:bg-orange-700"
               >
