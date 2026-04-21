@@ -11,8 +11,7 @@ if str(SCRIPT_DIR) not in sys.path:
 
 import state_manager
 import kb_manager
-from voice_config import get_voice_config
-from state_manager import update_voice_config
+from voice_config import get_voice_config, update_voice_config
 
 router = APIRouter(tags=["legacy"])
 
