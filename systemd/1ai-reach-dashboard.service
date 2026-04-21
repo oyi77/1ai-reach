@@ -5,14 +5,14 @@ After=network.target 1ai-reach-mcp.service
 [Service]
 Type=simple
 User=openclaw
-WorkingDirectory=/home/openclaw/.openclaw/workspace/1ai-reach/dashboard
+WorkingDirectory=/home/openclaw/projects/1ai-reach/dashboard
 Environment="PATH=/home/linuxbrew/.linuxbrew/bin:/home/linuxbrew/.linuxbrew/Cellar/node@24/24.14.1/bin:/usr/local/bin:/usr/bin:/bin"
 Environment="NODE_ENV=production"
-ExecStart=/home/linuxbrew/.linuxbrew/Cellar/node@24/24.14.1/bin/node /home/openclaw/.openclaw/workspace/1ai-reach/dashboard/node_modules/.bin/next start -p 8502
+ExecStart=/home/linuxbrew/.linuxbrew/Cellar/node@24/24.14.1/bin/node /home/openclaw/projects/1ai-reach/dashboard/node_modules/.bin/next start -p 8502
 Restart=always
 RestartSec=10
-StandardOutput=append:/home/openclaw/.openclaw/workspace/1ai-reach/logs/dashboard.log
-StandardError=append:/home/openclaw/.openclaw/workspace/1ai-reach/logs/dashboard.log
+StandardOutput=journal
+StandardError=journal
 
 [Install]
 WantedBy=multi-user.target

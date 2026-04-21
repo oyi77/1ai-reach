@@ -472,6 +472,35 @@ def get_wa_qr_code(session_name: str) -> dict[str, Any]:
     return {"ok": False, "session_name": session_name, "error": str(data)}
 
 
+def update_wa_session_persona(session_name: str, persona: str) -> dict[str, Any]:
+    """Update persona for a WhatsApp session."""
+    try:
+        import sqlite3
+        
+        session = state_manager.get_wa_number_by_session(session_name)
+        if not session:
+            return {"ok": False, "error": f"Session '{session_name}' not found"}
+        
+        db_path = ROOT / "data" / "leads.db"
+        conn = sqlite3.connect(str(db_path))
+        conn.row_factory = sqlite3.Row
+        cursor = conn.execute(
+            "UPDATE wa_numbers SET persona = ? WHERE session_name = ?",
+            (persona, session_name)
+        )
+        rows_affected = cursor.rowcount
+        conn.commit()
+        conn.close()
+        
+        if rows_affected == 0:
+            return {"ok": False, "error": f"No rows updated for session '{session_name}'"}
+        
+        updated_session = state_manager.get_wa_number_by_session(session_name)
+        return {"ok": True, "session_name": session_name, "persona": updated_session.get("persona")}
+    except Exception as e:
+        return {"ok": False, "error": str(e)}
+
+
 # ---------------------------------------------------------------------------
 # Knowledge Base (kb_manager)
 # ---------------------------------------------------------------------------

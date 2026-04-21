@@ -23,14 +23,22 @@ router = APIRouter(
     dependencies=[Depends(verify_api_key)],
 )
 
-_root = Path(__file__).resolve().parent.parent.parent.parent
+_root = Path(__file__).resolve().parent.parent.parent.parent.parent
 _scripts_dir = _root / "scripts"
 if str(_scripts_dir) not in sys.path:
     sys.path.insert(0, str(_scripts_dir))
 
 agent_control = None
+state_manager = None
+safe_filename = None
+RESEARCH_DIR = None
+PROPOSALS_DIR = None
 try:
     import agent_control
+    import state_manager
+    from utils import safe_filename
+    from config import RESEARCH_DIR, PROPOSALS_DIR
+    state_manager.init_db()
 except ImportError:
     pass
 
@@ -109,6 +117,12 @@ class CreateWASessionRequest(BaseModel):
 
     session_name: str
     phone_number: Optional[str] = None
+
+
+class UpdatePersonaRequest(BaseModel):
+    """Request to update WhatsApp session persona."""
+
+    persona: str
 
 
 class AddKBEntryRequest(BaseModel):
@@ -474,6 +488,28 @@ async def delete_wa_session(session_name: str) -> AgentResponse:
         raise HTTPException(status_code=500, detail=str(e))
 
 
+@router.patch("/wa/sessions/{session_name}/persona", response_model=AgentResponse)
+async def update_wa_session_persona(
+    session_name: str, request: UpdatePersonaRequest
+) -> AgentResponse:
+    """Update WhatsApp session persona."""
+    try:
+        result = agent_control.update_wa_session_persona(
+            session_name, persona=request.persona
+        )
+        if not result.get("ok"):
+            raise HTTPException(status_code=404, detail=result.get("error"))
+        return AgentResponse(
+            status="success",
+            message="WhatsApp session persona updated",
+            data=result,
+        )
+    except HTTPException:
+        raise
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))
+
+
 @router.get("/wa/sessions/{session_name}/qr", response_model=AgentResponse)
 async def get_wa_qr_code(session_name: str) -> AgentResponse:
     """Get WhatsApp session QR code."""
@@ -690,5 +726,96 @@ async def stop_service(key: str) -> AgentResponse:
         )
     except subprocess.TimeoutExpired:
         raise HTTPException(status_code=500, detail=f"Stop command timed out for {key}")
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))
+
+
+@router.get("/leads/{lead_id}/timeline", response_model=AgentResponse)
+async def get_lead_timeline(lead_id: str) -> AgentResponse:
+    """Get complete timeline for a lead including research, proposal, and conversation messages."""
+    try:
+        import sys
+        from pathlib import Path as P
+        import logging
+        
+        logger = logging.getLogger(__name__)
+        
+        _root = P(__file__).resolve().parent.parent.parent.parent.parent
+        _scripts_dir = _root / "scripts"
+        if str(_scripts_dir) not in sys.path:
+            sys.path.insert(0, str(_scripts_dir))
+        
+        import state_manager
+        from utils import safe_filename
+        from config import RESEARCH_DIR, PROPOSALS_DIR, LEADS_FILE, DB_FILE
+        import pandas as pd
+        
+        logger.info(f"Timeline request for lead_id: {lead_id}")
+        logger.info(f"DB_FILE: {DB_FILE}, exists: {DB_FILE.exists()}")
+        
+        state_manager.init_db()
+        
+        lead = state_manager.get_lead_by_id(lead_id)
+        logger.info(f"Lead query result: {lead is not None}")
+        if not lead:
+            raise HTTPException(status_code=404, detail=f"Lead not found in database: {lead_id}")
+        
+        df = pd.read_csv(str(LEADS_FILE))
+        matching_rows = df[df['id'] == lead_id]
+        if len(matching_rows) == 0:
+            raise HTTPException(status_code=404, detail=f"Lead not found in CSV: {lead_id}")
+        lead_index = matching_rows.index[0]
+        
+        research_text = None
+        sanitized_name = safe_filename(lead.get("displayName", ""))
+        research_file = P(RESEARCH_DIR) / f"{lead_index}_{sanitized_name}.txt"
+        if research_file.exists():
+            try:
+                research_text = research_file.read_text(encoding="utf-8")
+            except Exception:
+                pass
+        
+        proposal_data = {"email": None, "whatsapp": None}
+        proposal_file = P(PROPOSALS_DIR) / f"{lead_index}_{sanitized_name}.txt"
+        if proposal_file.exists():
+            try:
+                proposal_content = proposal_file.read_text(encoding="utf-8")
+                parts = proposal_content.split("---PROPOSAL---")
+                if len(parts) > 1:
+                    email_and_wa = parts[1].split("---WHATSAPP---")
+                    proposal_data["email"] = email_and_wa[0].strip() if email_and_wa else None
+                    proposal_data["whatsapp"] = email_and_wa[1].strip() if len(email_and_wa) > 1 else None
+            except Exception:
+                pass
+        
+        messages = []
+        conn = state_manager._connect()
+        try:
+            rows = conn.execute(
+                """
+                SELECT cm.id, cm.direction, cm.message_text, cm.message_type, cm.waha_message_id, cm.timestamp
+                FROM conversation_messages cm
+                JOIN conversations c ON cm.conversation_id = c.id
+                WHERE c.lead_id = ?
+                ORDER BY cm.timestamp ASC
+                """,
+                (lead_id,)
+            ).fetchall()
+            messages = [dict(row) for row in rows]
+        finally:
+            conn.close()
+        
+        return AgentResponse(
+            status="success",
+            message="Lead timeline retrieved",
+            data={
+                "lead": lead,
+                "research": research_text,
+                "proposal": proposal_data,
+                "messages": messages,
+            },
+        )
+    except HTTPException:
+        raise
     except Exception as e:
         raise HTTPException(status_code=500, detail=str(e))

@@ -21,11 +21,7 @@ This document provides an overview of the 1ai-reach documentation organization.
 - **[migration_guide.md](migration_guide.md)** - Migration from old structure
 
 ### Email Tracking Documentation
-- **[BREVO_WEBHOOK_SETUP.md](BREVO_WEBHOOK_SETUP.md)** - Webhook configuration guide
-- **[EMAIL_TRACKING_IMPLEMENTATION.md](EMAIL_TRACKING_IMPLEMENTATION.md)** - Technical implementation details
-- **[EMAIL_TRACKING_INDEX.md](EMAIL_TRACKING_INDEX.md)** - Feature index and quick reference
-- **[EMAIL_TRACKING_MAP.md](EMAIL_TRACKING_MAP.md)** - System architecture and data flow
-- **[EMAIL_TRACKING_AUDIT_SUMMARY.md](EMAIL_TRACKING_AUDIT_SUMMARY.md)** - Comprehensive audit report
+- **[EMAIL_TRACKING_COMPLETE.md](../EMAIL_TRACKING_COMPLETE.md)** - Complete implementation guide
 
 ### MCP Integration
 - **[mcp-contract.md](mcp-contract.md)** - MCP server contract
@@ -33,17 +29,7 @@ This document provides an overview of the 1ai-reach documentation organization.
 
 ### Operations
 - **[runbooks.md](runbooks.md)** - Operational procedures
-
-## 📁 docs/archive/
-
-Historical documentation, audit reports, and UI component snapshots (46 files).
-
-### Archived Content
-- Audit reports and certificates
-- UI component snapshots (conversations, kanban, settings, etc.)
-- Bug fix reports
-- Integration test reports
-- Old implementation guides
+- **[DEPLOYMENT.md](DEPLOYMENT.md)** - Production deployment guide
 
 ## 📊 Documentation Statistics
 

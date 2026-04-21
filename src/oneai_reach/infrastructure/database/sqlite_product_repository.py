@@ -195,14 +195,15 @@ class SQLiteProductRepository(ProductRepository):
             conn.close()
 
     def get_all(self, wa_number_id: str) -> List[Product]:
-        """Get all products for a WA number."""
+        """Get all products for a WA number using product_overrides."""
         conn = self._connect()
         try:
             cursor = conn.execute(
                 """
-                SELECT * FROM products 
-                WHERE wa_number_id = ?
-                ORDER BY created_at DESC
+                SELECT p.* FROM products p
+                INNER JOIN product_overrides po ON p.id = po.product_id
+                WHERE po.wa_number_id = ? AND po.is_hidden = 0
+                ORDER BY p.created_at DESC
             """,
                 (wa_number_id,),
             )

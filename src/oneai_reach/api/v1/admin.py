@@ -320,3 +320,145 @@ async def get_status() -> Dict[str, Any]:
 
     except Exception as e:
         raise HTTPException(status_code=500, detail=f"Failed to get status: {str(e)}")
+
+
+# WA Numbers Management
+class WANumberResponse(BaseModel):
+    """WA number information."""
+    id: str
+    session_name: str
+    phone: Optional[str] = None
+    label: Optional[str] = None
+    mode: str = "cs"
+    kb_enabled: bool = True
+    auto_reply: bool = True
+    persona: Optional[str] = None
+    status: str = "inactive"
+    webhook_url: Optional[str] = None
+
+
+class WANumberUpdate(BaseModel):
+    """WA number update request."""
+    label: Optional[str] = None
+    mode: Optional[str] = None
+    kb_enabled: Optional[bool] = None
+    auto_reply: Optional[bool] = None
+    persona: Optional[str] = None
+    status: Optional[str] = None
+
+
+@router.get("/wa-numbers", response_model=List[WANumberResponse])
+async def list_wa_numbers() -> List[WANumberResponse]:
+    """List all WA numbers."""
+    import sqlite3
+    from pathlib import Path
+    from oneai_reach.config.settings import get_settings
+    
+    settings = get_settings()
+    db_path = settings.database.db_file
+    
+    conn = sqlite3.connect(db_path)
+    conn.row_factory = sqlite3.Row
+    cursor = conn.cursor()
+    
+    cursor.execute("""
+        SELECT id, session_name, phone, label, mode, kb_enabled, auto_reply, persona, status, webhook_url
+        FROM wa_numbers
+        ORDER BY created_at DESC
+    """)
+    
+    rows = cursor.fetchall()
+    conn.close()
+    
+    return [
+        WANumberResponse(
+            id=row["id"],
+            session_name=row["session_name"],
+            phone=row["phone"],
+            label=row["label"],
+            mode=row["mode"],
+            kb_enabled=bool(row["kb_enabled"]),
+            auto_reply=bool(row["auto_reply"]),
+            persona=row["persona"],
+            status=row["status"],
+            webhook_url=row["webhook_url"]
+        )
+        for row in rows
+    ]
+
+
+@router.patch("/wa-numbers/{wa_number_id}", response_model=WANumberResponse)
+async def update_wa_number(wa_number_id: str, update: WANumberUpdate) -> WANumberResponse:
+    """Update WA number settings including persona."""
+    import sqlite3
+    from oneai_reach.config.settings import get_settings
+    
+    settings = get_settings()
+    db_path = settings.database.db_file
+    
+    conn = sqlite3.connect(db_path)
+    conn.row_factory = sqlite3.Row
+    cursor = conn.cursor()
+    
+    update_fields = []
+    params = []
+    
+    if update.label is not None:
+        update_fields.append("label = ?")
+        params.append(update.label)
+    if update.mode is not None:
+        update_fields.append("mode = ?")
+        params.append(update.mode)
+    if update.kb_enabled is not None:
+        update_fields.append("kb_enabled = ?")
+        params.append(1 if update.kb_enabled else 0)
+    if update.auto_reply is not None:
+        update_fields.append("auto_reply = ?")
+        params.append(1 if update.auto_reply else 0)
+    if update.persona is not None:
+        update_fields.append("persona = ?")
+        params.append(update.persona)
+    if update.status is not None:
+        update_fields.append("status = ?")
+        params.append(update.status)
+    
+    if not update_fields:
+        raise HTTPException(status_code=400, detail="No fields to update")
+    
+    update_fields.append("updated_at = datetime('now')")
+    params.append(wa_number_id)
+    
+    query = f"UPDATE wa_numbers SET {', '.join(update_fields)} WHERE id = ?"
+    
+    try:
+        cursor.execute(query, params)
+        conn.commit()
+        
+        if cursor.rowcount == 0:
+            conn.close()
+            raise HTTPException(status_code=404, detail=f"WA number {wa_number_id} not found")
+        
+        cursor.execute("""
+            SELECT id, session_name, phone, label, mode, kb_enabled, auto_reply, persona, status, webhook_url
+            FROM wa_numbers
+            WHERE id = ?
+        """, (wa_number_id,))
+        
+        row = cursor.fetchone()
+        conn.close()
+        
+        return WANumberResponse(
+            id=row["id"],
+            session_name=row["session_name"],
+            phone=row["phone"],
+            label=row["label"],
+            mode=row["mode"],
+            kb_enabled=bool(row["kb_enabled"]),
+            auto_reply=bool(row["auto_reply"]),
+            persona=row["persona"],
+            status=row["status"],
+            webhook_url=row["webhook_url"]
+        )
+    except sqlite3.Error as e:
+        conn.close()
+        raise HTTPException(status_code=500, detail=f"Database error: {str(e)}")

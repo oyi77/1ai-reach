@@ -6,7 +6,7 @@ Complete documentation for the 1ai-reach cold outreach automation system.
 
 - **[Main README](../README.md)** - Project overview and setup
 - **[Email Tracking Complete](../EMAIL_TRACKING_COMPLETE.md)** - Latest feature: Email tracking system
-- **[Deployment Guide](../DEPLOYMENT.md)** - Production deployment instructions
+- **[Deployment Guide](DEPLOYMENT.md)** - Production deployment instructions
 
 ## 🏗️ Architecture & Design
 
@@ -17,12 +17,7 @@ Complete documentation for the 1ai-reach cold outreach automation system.
 
 ## 📧 Email Tracking System
 
-- **[Email Tracking Complete](../EMAIL_TRACKING_COMPLETE.md)** - Implementation summary and status
-- **[Brevo Webhook Setup](BREVO_WEBHOOK_SETUP.md)** - Step-by-step webhook configuration
-- **[Email Tracking Implementation](EMAIL_TRACKING_IMPLEMENTATION.md)** - Technical details
-- **[Email Tracking Index](EMAIL_TRACKING_INDEX.md)** - Feature index and quick reference
-- **[Email Tracking Map](EMAIL_TRACKING_MAP.md)** - Architecture and data flow
-- **[Email Tracking Audit](EMAIL_TRACKING_AUDIT_SUMMARY.md)** - Comprehensive audit report
+- **[Email Tracking Complete](../EMAIL_TRACKING_COMPLETE.md)** - Complete implementation and deployment guide
 
 ## 🔧 MCP Integration
 
@@ -32,10 +27,6 @@ Complete documentation for the 1ai-reach cold outreach automation system.
 ## 📖 Runbooks
 
 - **[Runbooks](runbooks.md)** - Operational procedures and troubleshooting
-
-## 📦 Archive
-
-Historical documentation and UI snapshots are stored in `archive/` directory.
 
 ---
 

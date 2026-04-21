@@ -60,6 +60,12 @@ def create_app() -> FastAPI:
             version="1.0.0",
         )
 
+    @app.get("/", tags=["redirect"])
+    async def root_redirect():
+        """Redirect root to dashboard."""
+        from fastapi.responses import RedirectResponse
+        return RedirectResponse(url="/dashboard", status_code=302)
+
     return app
 
 

@@ -1,0 +1,19 @@
+[Unit]
+Description=1AI-Reach API Server (FastAPI)
+After=network.target
+
+[Service]
+Type=simple
+User=openclaw
+WorkingDirectory=/home/openclaw/projects/1ai-reach
+Environment=PYTHONPATH=/home/openclaw/projects/1ai-reach/src
+EnvironmentFile=/home/openclaw/projects/1ai-reach/.env
+ExecStart=/usr/bin/python3 -m uvicorn oneai_reach.api.main:app --host 0.0.0.0 --port 8000
+Restart=always
+RestartSec=5
+StandardOutput=journal
+StandardError=journal
+SyslogIdentifier=1ai-reach-api
+
+[Install]
+WantedBy=multi-user.target

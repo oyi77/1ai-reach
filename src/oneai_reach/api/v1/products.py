@@ -66,7 +66,7 @@ class ProductResponse(BaseModel):
     """Response schema for product data."""
 
     id: str
-    wa_number_id: str
+    wa_number_id: Optional[str] = None
     name: str
     description: Optional[str]
     category: str

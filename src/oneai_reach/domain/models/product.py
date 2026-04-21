@@ -42,7 +42,7 @@ class Product(BaseModel):
 
     # Core identification
     id: Optional[str] = None
-    wa_number_id: str
+    wa_number_id: Optional[str] = None
     name: str = Field(..., min_length=1, max_length=255)
     description: Optional[str] = None
     category: str = Field(default="general", max_length=100)
