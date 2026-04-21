@@ -15,11 +15,7 @@ warnings.warn(
     stacklevel=2
 )
 
-# Add src to path for imports
-_root = Path(__file__).resolve().parent.parent
-_src = _root / "src"
-if str(_src) not in sys.path:
-    sys.path.insert(0, str(_src))
+# Package is installed in editable mode, imports work without sys.path manipulation
 
 # Import and call new CLI
 from oneai_reach.cli.main import cli
