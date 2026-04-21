@@ -733,30 +733,25 @@ async def stop_service(key: str) -> AgentResponse:
 @router.get("/leads/{lead_id}/timeline", response_model=AgentResponse)
 async def get_lead_timeline(lead_id: str) -> AgentResponse:
     """Get complete timeline for a lead including research, proposal, and conversation messages."""
+    import sys
+    from pathlib import Path as P
+    
+    _root = P(__file__).resolve().parent.parent.parent.parent.parent
+    _scripts_dir = _root / "scripts"
+    if str(_scripts_dir) not in sys.path:
+        sys.path.insert(0, str(_scripts_dir))
+    
+    import state_manager
+    from utils import safe_filename
+    from config import RESEARCH_DIR, PROPOSALS_DIR, LEADS_FILE
+    import pandas as pd
+    
     try:
-        import sys
-        from pathlib import Path as P
-        import logging
-        
-        logger = logging.getLogger(__name__)
-        
-        _root = P(__file__).resolve().parent.parent.parent.parent.parent
-        _scripts_dir = _root / "scripts"
-        if str(_scripts_dir) not in sys.path:
-            sys.path.insert(0, str(_scripts_dir))
-        
-        import state_manager
-        from utils import safe_filename
-        from config import RESEARCH_DIR, PROPOSALS_DIR, LEADS_FILE, DB_FILE
-        import pandas as pd
-        
-        logger.info(f"Timeline request for lead_id: {lead_id}")
-        logger.info(f"DB_FILE: {DB_FILE}, exists: {DB_FILE.exists()}")
-        
         state_manager.init_db()
         
         lead = state_manager.get_lead_by_id(lead_id)
-        logger.info(f"Lead query result: {lead is not None}")
+        if not lead:
+            raise HTTPException(status_code=404, detail=f"Lead not found: {lead_id}")
         if not lead:
             raise HTTPException(status_code=404, detail=f"Lead not found in database: {lead_id}")
         
