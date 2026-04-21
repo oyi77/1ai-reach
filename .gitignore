@@ -1,6 +1,17 @@
 .env
 __pycache__/
 *.pyc
+*.pyo
+*.pyd
+*$py.class
+*.so
+.Python
+*.egg-info/
+dist/
+build/
+.pytest_cache/
+.coverage
+htmlcov/
 data/leads*.csv
 data/*.db
 logs/
