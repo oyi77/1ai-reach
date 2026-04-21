@@ -25,7 +25,7 @@ export async function POST(request: NextRequest) {
 
     const { stdout, stderr } = await execAsync(
       `python3 scripts/kb_import_export.py import "${tempPath}" --wa-number-id "${waNumberId}"`,
-      { cwd: "/home/openclaw/.openclaw/workspace/1ai-reach", timeout: 30000 }
+      { cwd: "/home/openclaw/projects/1ai-reach", timeout: 30000 }
     );
 
     await fs.unlink(tempPath);

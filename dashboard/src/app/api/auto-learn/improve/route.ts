@@ -18,7 +18,7 @@ export async function POST(request: NextRequest) {
       : `python3 scripts/cs_learn.py improve --wa-number-id "${session}"`;
 
     const { stdout, stderr } = await execAsync(cmd, {
-      cwd: "/home/openclaw/.openclaw/workspace/1ai-reach",
+      cwd: "/home/openclaw/projects/1ai-reach",
       timeout: 30000,
     });
 

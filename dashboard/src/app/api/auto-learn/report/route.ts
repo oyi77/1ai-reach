@@ -15,7 +15,7 @@ export async function GET(request: NextRequest) {
   try {
     const { stdout, stderr } = await execAsync(
       `python3 scripts/cs_learn.py report --wa-number-id "${session}"`,
-      { cwd: "/home/openclaw/.openclaw/workspace/1ai-reach", timeout: 30000 }
+      { cwd: "/home/openclaw/projects/1ai-reach", timeout: 30000 }
     );
 
     if (stderr) {
