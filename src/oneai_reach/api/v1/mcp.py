@@ -13,10 +13,10 @@ from pydantic import BaseModel, Field
 
 from oneai_reach.api.dependencies import verify_api_key
 
-# Add scripts/ to path for agent_control imports
-SCRIPTS_DIR = Path(__file__).resolve().parent.parent.parent.parent.parent / "scripts"
-if str(SCRIPTS_DIR) not in sys.path:
-    sys.path.insert(0, str(SCRIPTS_DIR))
+# Add project root to path for agent_control imports
+PROJECT_ROOT = Path(__file__).resolve().parent.parent.parent.parent.parent
+if str(PROJECT_ROOT) not in sys.path:
+    sys.path.insert(0, str(PROJECT_ROOT))
 
 import agent_control as control
 
