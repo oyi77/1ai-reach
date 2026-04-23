@@ -160,6 +160,12 @@ class UpdatePersonaRequest(BaseModel):
     persona: str
 
 
+class UpdateModeRequest(BaseModel):
+    """Request to update WhatsApp session operational mode."""
+
+    mode: str
+
+
 class AddKBEntryRequest(BaseModel):
     """Request to add knowledge base entry."""
 
@@ -537,6 +543,28 @@ async def update_wa_session_persona(
         return AgentResponse(
             status="success",
             message="WhatsApp session persona updated",
+            data=result,
+        )
+    except HTTPException:
+        raise
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))
+
+
+@router.patch("/wa/sessions/{session_name}/mode", response_model=AgentResponse)
+async def update_wa_session_mode(
+    session_name: str, request: UpdateModeRequest
+) -> AgentResponse:
+    """Update WhatsApp session operational mode."""
+    try:
+        result = agent_control.update_wa_session_mode(
+            session_name, mode=request.mode
+        )
+        if not result.get("ok"):
+            raise HTTPException(status_code=400, detail=result.get("error"))
+        return AgentResponse(
+            status="success",
+            message="WhatsApp session mode updated",
             data=result,
         )
     except HTTPException:

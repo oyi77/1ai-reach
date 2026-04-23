@@ -28,6 +28,13 @@ const PERSONAS = [
   "Customer Support",
 ];
 
+const MODES = [
+  { value: "cs", label: "CS (Customer Service)" },
+  { value: "cold", label: "Cold Outreach" },
+  { value: "outreach", label: "Warm Outreach" },
+  { value: "paused", label: "Paused" },
+];
+
 const STATUS_COLORS: Record<string, string> = {
   WORKING: "bg-green-600",
   SCAN_QR_CODE: "bg-yellow-600",
@@ -70,9 +77,19 @@ export default function WANumbersPage() {
     setUpdating(sessionId);
     try {
       await patchJSON(`/api/v1/agents/wa/sessions/${sessionId}/persona`, { persona });
-      await dbData;
     } catch (error) {
       console.error("Failed to update persona:", error);
+    } finally {
+      setUpdating(null);
+    }
+  }
+
+  async function updateMode(sessionId: string, mode: string) {
+    setUpdating(sessionId);
+    try {
+      await patchJSON(`/api/v1/agents/wa/sessions/${sessionId}/mode`, { mode });
+    } catch (error) {
+      console.error("Failed to update mode:", error);
     } finally {
       setUpdating(null);
     }
@@ -117,9 +134,22 @@ export default function WANumbersPage() {
                       </Badge>
                     </TableCell>
                     <TableCell>
-                      <Badge variant="outline" className="border-neutral-700">
-                        {session.mode}
-                      </Badge>
+                      <Select
+                        value={session.mode}
+                        onValueChange={(value) => value && updateMode(session.id, value)}
+                        disabled={updating === session.id}
+                      >
+                        <SelectTrigger className="w-44 bg-neutral-800 border-neutral-700">
+                          <SelectValue />
+                        </SelectTrigger>
+                        <SelectContent>
+                          {MODES.map((m) => (
+                            <SelectItem key={m.value} value={m.value}>
+                              {m.label}
+                            </SelectItem>
+                          ))}
+                        </SelectContent>
+                      </Select>
                     </TableCell>
                     <TableCell>
                       <Select

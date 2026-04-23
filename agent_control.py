@@ -501,6 +501,37 @@ def update_wa_session_persona(session_name: str, persona: str) -> dict[str, Any]
         return {"ok": False, "error": str(e)}
 
 
+def update_wa_session_mode(session_name: str, mode: str) -> dict[str, Any]:
+    """Update operational mode for a WhatsApp session."""
+    valid_modes = {"cs", "cold", "outreach", "paused"}
+    if mode not in valid_modes:
+        return {"ok": False, "error": f"Invalid mode '{mode}'. Must be one of: {valid_modes}"}
+    try:
+        import sqlite3
+
+        session = state_manager.get_wa_number_by_session(session_name)
+        if not session:
+            return {"ok": False, "error": f"Session '{session_name}' not found"}
+
+        db_path = ROOT / "data" / "leads.db"
+        conn = sqlite3.connect(str(db_path))
+        conn.row_factory = sqlite3.Row
+        cursor = conn.execute(
+            "UPDATE wa_numbers SET mode = ?, updated_at = datetime('now') WHERE session_name = ?",
+            (mode, session_name)
+        )
+        rows_affected = cursor.rowcount
+        conn.commit()
+        conn.close()
+
+        if rows_affected == 0:
+            return {"ok": False, "error": f"No rows updated for session '{session_name}'"}
+
+        return {"ok": True, "session_name": session_name, "mode": mode}
+    except Exception as e:
+        return {"ok": False, "error": str(e)}
+
+
 # ---------------------------------------------------------------------------
 # Knowledge Base (kb_manager)
 # ---------------------------------------------------------------------------
