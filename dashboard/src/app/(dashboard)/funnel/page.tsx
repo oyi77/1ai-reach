@@ -39,8 +39,8 @@ export default function FunnelPage() {
 
   const parseServices = (val: any): string[] => {
     if (!val) return [];
-    if (typeof val === "string") { try { return JSON.parse(val); } catch { return []; } }
-    if (Array.isArray(val)) return val;
+    if (typeof val === "string") { try { const parsed = JSON.parse(val); return parsed.map((s: any) => typeof s === "object" && s.service ? s.service : String(s)); } catch { return []; } }
+    if (Array.isArray(val)) return val.map((s: any) => typeof s === "object" && s.service ? s.service : String(s));
     return [];
   };
 
