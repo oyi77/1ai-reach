@@ -1,5 +1,66 @@
 export const API_BASE = "";
 
+export interface AnalyticsData {
+  kpis: {
+    total_leads: number;
+    full_funnel_conversion: number;
+    reply_rate: number;
+    avg_lead_score: number;
+    leads_this_week: number;
+    pipeline_active: number;
+  };
+  conversion_rates: {
+    new_to_enriched: number;
+    enriched_to_draft: number;
+    draft_to_reviewed: number;
+    reviewed_to_contacted: number;
+    contacted_to_replied: number;
+    replied_to_meeting: number;
+    meeting_to_won: number;
+    full_funnel: number;
+  };
+  funnel_counts: Record<string, number>;
+  channel_email: {
+    sent: number;
+    delivered: number;
+    opened: number;
+    clicked: number;
+    bounced: number;
+    delivery_rate: number;
+    open_rate: number;
+    click_rate: number;
+    bounce_rate: number;
+  };
+  channel_wa: {
+    sent: number;
+    replied: number;
+    reply_rate: number;
+  };
+  velocity: {
+    leads_this_week: number;
+    leads_this_month: number;
+    avg_days_to_contact: number | null;
+  };
+  industry_performance: Array<{
+    industry: string;
+    leads: number;
+    contacted: number;
+    replied: number;
+    converted: number;
+    reply_rate: number;
+    conversion_rate: number;
+  }>;
+  tier_stats: Record<string, { count: number; replied: number; reply_rate: number }>;
+  score_histogram: Record<string, number>;
+  service_performance: Array<{
+    service: string;
+    total: number;
+    contacted: number;
+    replied: number;
+    reply_rate: number;
+  }>;
+}
+
 export interface FunnelData {
   counts: Record<string, number>;
   total: number;

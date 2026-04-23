@@ -1,28 +1,42 @@
-#!/usr/bin/env python3
 """
-DEPRECATED: This script is deprecated. Use `oneai-reach followup` instead.
+Automated follow-up sender.
 
-Backward compatibility shim for followup.py
+Thin wrapper around FollowupService from application layer.
 """
+
 import sys
-import warnings
 from pathlib import Path
 
-# Show deprecation warning
-warnings.warn(
-    "scripts/followup.py is deprecated. Use 'oneai-reach followup' instead.",
-    DeprecationWarning,
-    stacklevel=2
-)
+sys.path.insert(0, str(Path(__file__).parent.parent / "src"))
 
-# Add src to path for imports
-_root = Path(__file__).resolve().parent.parent
-_src = _root / "src"
-if str(_src) not in sys.path:
-    sys.path.insert(0, str(_src))
+from oneai_reach.application.outreach import FollowupService
+from oneai_reach.config.settings import get_settings
+from leads import load_leads, save_leads
+from senders import send_email
+from utils import parse_display_name, is_empty
 
-# Import and call new CLI
-from oneai_reach.cli.main import cli
+
+def send_followups() -> None:
+    settings = get_settings()
+    service = FollowupService(settings)
+    
+    df = load_leads()
+    if df is None:
+        return
+
+    sent, skipped, cold_marked = service.send_followups(
+        df,
+        send_email_fn=send_email,
+        parse_display_name_fn=parse_display_name,
+        is_empty_fn=is_empty,
+        save_leads_fn=save_leads,
+    )
+
+    print(f"\n--- Follow-up complete ---")
+    print(f"  Sent:         {sent}")
+    print(f"  Skipped:      {skipped}")
+    print(f"  Marked cold:  {cold_marked}")
+
 
 if __name__ == "__main__":
-    sys.exit(cli())
+    send_followups()

@@ -16,6 +16,7 @@ import {
   Phone,
   Search,
   Brain,
+  BarChart3,
 } from "lucide-react";
 import { useState, useEffect } from "react";
 import { Button } from "@/components/ui/button";
@@ -26,6 +27,7 @@ import { cn } from "@/lib/utils";
 const NAV_ITEMS = [
   { href: "/", label: "Dashboard", icon: LayoutDashboard },
   { href: "/funnel", label: "Funnel", icon: Filter },
+  { href: "/analytics", label: "Analytics", icon: BarChart3 },
   { href: "/conversations", label: "Conversations", icon: MessageSquare },
   { href: "/wa-numbers", label: "WA Numbers", icon: Phone },
   { href: "/outreach-tracker", label: "Outreach Tracker", icon: Search },

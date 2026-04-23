@@ -981,6 +981,262 @@ async def scoring_stats():
         return AgentResponse(status="error", message=str(e))
 
 
+@router.get("/analytics", response_model=AgentResponse)
+async def get_analytics() -> AgentResponse:
+    """Compute marketing analytics from leads.db: conversion rates, channel perf, lead velocity, campaign ROI."""
+    try:
+        import json
+        import sqlite3
+        import pandas as pd
+        from datetime import datetime, timedelta, timezone
+        from pathlib import Path as _P
+        from collections import defaultdict
+
+        db_path = _P(__file__).resolve().parent.parent.parent.parent.parent / "data" / "leads.db"
+        if not db_path.exists():
+            return AgentResponse(status="ok", message="No leads database", data={})
+
+        conn = sqlite3.connect(str(db_path))
+        conn.row_factory = sqlite3.Row
+        df = pd.read_sql_query("SELECT * FROM leads", conn)
+        conn.close()
+
+        if df.empty:
+            return AgentResponse(status="ok", message="No leads", data={})
+
+        # ── helpers ──────────────────────────────────────────────────────────
+        def count(status_val):
+            return int((df["status"] == status_val).sum())
+
+        def pct(num, denom):
+            return round(num / denom * 100, 1) if denom > 0 else 0.0
+
+        # All leads that have ever progressed past a stage (status in later stages counts too)
+        LATER = {
+            "new": ["enriched","draft_ready","needs_revision","reviewed","contacted","followed_up","replied","meeting_booked","won","lost","cold"],
+            "enriched": ["draft_ready","needs_revision","reviewed","contacted","followed_up","replied","meeting_booked","won","lost"],
+            "draft_ready": ["needs_revision","reviewed","contacted","followed_up","replied","meeting_booked","won"],
+            "reviewed": ["contacted","followed_up","replied","meeting_booked","won"],
+            "contacted": ["followed_up","replied","meeting_booked","won"],
+            "replied": ["meeting_booked","won"],
+            "meeting_booked": ["won"],
+        }
+
+        def at_or_past(stage):
+            all_stages = [stage] + LATER.get(stage, [])
+            return int(df["status"].isin(all_stages).sum())
+
+        total = len(df)
+        n_new = at_or_past("new")
+        n_enriched = at_or_past("enriched")
+        n_draft = at_or_past("draft_ready")
+        n_reviewed = at_or_past("reviewed")
+        n_contacted = at_or_past("contacted")
+        n_replied = at_or_past("replied")
+        n_meeting = at_or_past("meeting_booked")
+        n_won = count("won")
+
+        # ── 1. Conversion rates ───────────────────────────────────────────────
+        conversion_rates = {
+            "new_to_enriched": pct(n_enriched, n_new),
+            "enriched_to_draft": pct(n_draft, n_enriched),
+            "draft_to_reviewed": pct(n_reviewed, n_draft),
+            "reviewed_to_contacted": pct(n_contacted, n_reviewed),
+            "contacted_to_replied": pct(n_replied, n_contacted),
+            "replied_to_meeting": pct(n_meeting, n_replied),
+            "meeting_to_won": pct(n_won, n_meeting),
+            "full_funnel": pct(n_won, n_new),
+        }
+
+        funnel_counts = {
+            "new": n_new,
+            "enriched": n_enriched,
+            "draft_ready": n_draft,
+            "reviewed": n_reviewed,
+            "contacted": n_contacted,
+            "replied": n_replied,
+            "meeting_booked": n_meeting,
+            "won": n_won,
+            "lost": count("lost"),
+            "cold": count("cold"),
+            "followed_up": count("followed_up"),
+        }
+
+        # ── 2. Channel performance ────────────────────────────────────────────
+        # Email
+        has_email = df["email"].notna() & (df["email"].astype(str).str.strip() != "")
+        contacted_mask = df["status"].isin(["contacted","followed_up","replied","meeting_booked","won"])
+        email_sent = int((contacted_mask & has_email).sum())
+        email_delivered = int(df["email_delivered_at"].notna().sum())
+        email_opened = int(df["email_opened_at"].notna().sum())
+        email_clicked = int(df["email_click_count"].fillna(0).astype(float).gt(0).sum()) if "email_click_count" in df.columns else 0
+        email_bounced = int(df["email_bounce_reason"].notna().sum()) if "email_bounce_reason" in df.columns else 0
+
+        channel_email = {
+            "sent": email_sent,
+            "delivered": email_delivered,
+            "opened": email_opened,
+            "clicked": email_clicked,
+            "bounced": email_bounced,
+            "delivery_rate": pct(email_delivered, email_sent),
+            "open_rate": pct(email_opened, email_delivered if email_delivered else email_sent),
+            "click_rate": pct(email_clicked, email_opened if email_opened else email_sent),
+            "bounce_rate": pct(email_bounced, email_sent),
+        }
+
+        # WhatsApp (has phone + contacted)
+        has_phone = df["phone"].notna() & (df["phone"].astype(str).str.strip().str.len() > 5)
+        wa_sent = int((contacted_mask & has_phone).sum())
+        wa_replied = int((df["status"].isin(["replied","meeting_booked","won"]) & has_phone).sum())
+        channel_wa = {
+            "sent": wa_sent,
+            "replied": wa_replied,
+            "reply_rate": pct(wa_replied, wa_sent),
+        }
+
+        # ── 3. Lead velocity ─────────────────────────────────────────────────
+        now = datetime.now(timezone.utc)
+        try:
+            df["_created"] = pd.to_datetime(df["created_at"], utc=True, errors="coerce")
+        except Exception:
+            df["_created"] = pd.NaT
+
+        week_ago = now - timedelta(days=7)
+        month_ago = now - timedelta(days=30)
+        leads_this_week = int((df["_created"] >= week_ago).sum())
+        leads_this_month = int((df["_created"] >= month_ago).sum())
+
+        # Time to first contact: days from created_at to contacted_at
+        avg_days_to_contact = None
+        if "contacted_at" in df.columns:
+            try:
+                df["_contacted"] = pd.to_datetime(df["contacted_at"], utc=True, errors="coerce")
+                valid = df[df["_contacted"].notna() & df["_created"].notna()].copy()
+                if not valid.empty:
+                    delta = (valid["_contacted"] - valid["_created"]).dt.total_seconds() / 86400
+                    avg_days_to_contact = round(float(delta.mean()), 1)
+            except Exception:
+                pass
+
+        velocity = {
+            "leads_this_week": leads_this_week,
+            "leads_this_month": leads_this_month,
+            "avg_days_to_contact": avg_days_to_contact,
+        }
+
+        # ── 4. Industry performance ───────────────────────────────────────────
+        industry_perf = []
+        if "primaryType" in df.columns:
+            for industry, grp in df.groupby("primaryType"):
+                if not industry or str(industry).strip() in ("", "nan", "None"):
+                    continue
+                g_total = len(grp)
+                g_contacted = int(grp["status"].isin(["contacted","followed_up","replied","meeting_booked","won"]).sum())
+                g_replied = int(grp["status"].isin(["replied","meeting_booked","won"]).sum())
+                g_converted = int(grp["status"].isin(["meeting_booked","won"]).sum())
+                industry_perf.append({
+                    "industry": str(industry),
+                    "leads": g_total,
+                    "contacted": g_contacted,
+                    "replied": g_replied,
+                    "converted": g_converted,
+                    "reply_rate": pct(g_replied, g_contacted),
+                    "conversion_rate": pct(g_converted, g_contacted),
+                })
+            industry_perf.sort(key=lambda x: x["reply_rate"], reverse=True)
+
+        # ── 5. Tier distribution + reply rate ────────────────────────────────
+        tier_stats = {}
+        if "tier" in df.columns:
+            for tier in ["hot", "warm", "cold", "skip"]:
+                mask = df["tier"].astype(str).str.lower() == tier
+                t_total = int(mask.sum())
+                t_replied = int((mask & df["status"].isin(["replied","meeting_booked","won"])).sum())
+                tier_stats[tier] = {
+                    "count": t_total,
+                    "replied": t_replied,
+                    "reply_rate": pct(t_replied, t_total),
+                }
+
+        # ── 6. Lead score histogram ───────────────────────────────────────────
+        score_hist = {"0-3": 0, "3-5": 0, "5-7": 0, "7-10": 0}
+        if "lead_score" in df.columns:
+            scores = pd.to_numeric(df["lead_score"], errors="coerce").dropna()
+            score_hist["0-3"] = int((scores < 3).sum())
+            score_hist["3-5"] = int(((scores >= 3) & (scores < 5)).sum())
+            score_hist["5-7"] = int(((scores >= 5) & (scores < 7)).sum())
+            score_hist["7-10"] = int((scores >= 7).sum())
+
+        # Avg score
+        avg_score = 0.0
+        if "lead_score" in df.columns:
+            numeric_scores = pd.to_numeric(df["lead_score"], errors="coerce").dropna()
+            if not numeric_scores.empty:
+                avg_score = round(float(numeric_scores.mean()), 1)
+
+        # ── 7. Service performance ────────────────────────────────────────────
+        service_perf: dict = {}
+        if "matched_services" in df.columns:
+            for _, row in df.iterrows():
+                ms = row.get("matched_services")
+                if not ms or str(ms).strip() in ("", "nan", "None"):
+                    continue
+                try:
+                    services_list = json.loads(str(ms))
+                    for s in services_list:
+                        svc = s["service"] if isinstance(s, dict) else str(s)
+                        if svc not in service_perf:
+                            service_perf[svc] = {"total": 0, "contacted": 0, "replied": 0}
+                        service_perf[svc]["total"] += 1
+                        if row.get("status") in ["contacted","followed_up","replied","meeting_booked","won"]:
+                            service_perf[svc]["contacted"] += 1
+                        if row.get("status") in ["replied","meeting_booked","won"]:
+                            service_perf[svc]["replied"] += 1
+                except (json.JSONDecodeError, TypeError):
+                    pass
+            # Compute rates
+            for svc, d in service_perf.items():
+                d["reply_rate"] = pct(d["replied"], d["contacted"])
+
+            service_perf_list = [{"service": k, **v} for k, v in service_perf.items()]
+            service_perf_list.sort(key=lambda x: x["reply_rate"], reverse=True)
+        else:
+            service_perf_list = []
+
+        # ── KPI summary ───────────────────────────────────────────────────────
+        active_stages = ["enriched","draft_ready","needs_revision","reviewed","contacted","followed_up","replied","meeting_booked"]
+        pipeline_active = int(df["status"].isin(active_stages).sum())
+
+        kpis = {
+            "total_leads": total,
+            "full_funnel_conversion": conversion_rates["full_funnel"],
+            "reply_rate": conversion_rates["contacted_to_replied"],
+            "avg_lead_score": avg_score,
+            "leads_this_week": leads_this_week,
+            "pipeline_active": pipeline_active,
+        }
+
+        return AgentResponse(
+            status="success",
+            message="Analytics computed",
+            data={
+                "kpis": kpis,
+                "conversion_rates": conversion_rates,
+                "funnel_counts": funnel_counts,
+                "channel_email": channel_email,
+                "channel_wa": channel_wa,
+                "velocity": velocity,
+                "industry_performance": industry_perf,
+                "tier_stats": tier_stats,
+                "score_histogram": score_hist,
+                "service_performance": service_perf_list,
+            },
+        )
+    except Exception as e:
+        import traceback
+        return AgentResponse(status="error", message=f"Analytics error: {str(e)}\n{traceback.format_exc()}", data={})
+
+
 @router.get("/experiments/status")
 async def experiments_status():
     """A/B test stats across all services."""
