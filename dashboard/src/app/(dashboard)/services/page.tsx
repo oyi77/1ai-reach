@@ -10,34 +10,24 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { Play, Square, RefreshCw, FileText, Loader2 } from "lucide-react";
 
-const LOG_FILES = [
-  { value: "dashboard", label: "Dashboard" },
-  { value: "gmaps-scraper", label: "Google Maps Scraper" },
-  { value: "api", label: "API Server" },
-  { value: "mcp", label: "MCP / Webhook" },
-  { value: "oneai_reach_api_v1_webhooks", label: "Webhook/API" },
-  { value: "oneai_reach_application_outreach_scraper_service", label: "Scraper" },
-  { value: "oneai_reach_application_outreach_enricher_service", label: "Enricher" },
-  { value: "oneai_reach_application_outreach_researcher_service", label: "Researcher" },
-  { value: "oneai_reach_application_outreach_generator_service", label: "Generator" },
-  { value: "oneai_reach_application_outreach_blaster_service", label: "Blaster" },
-  { value: "oneai_reach_application_outreach_reviewer_service", label: "Reviewer" },
-  { value: "oneai_reach_application_outreach_orchestrator_service", label: "Orchestrator" },
-  { value: "oneai_reach_application_outreach_followup_service", label: "Follow-up" },
-  { value: "oneai_reach_application_outreach_reply_tracker_service", label: "Reply Tracker" },
-  { value: "oneai_reach_application_customer_service_cs_engine_service", label: "CS Engine" },
-  { value: "oneai_reach_application_customer_service_conversation_service", label: "Conversation Service" },
-  { value: "oneai_reach_application_customer_service_analytics_service", label: "Analytics Service" },
-];
+interface LogSource {
+  value: string;
+  label: string;
+  source: string;
+}
 
 export default function ServicesPage() {
   const { data: svcData, mutate: mutateSvc, isLoading } = useSWR<{ services: ServiceStatus[] }>("/api/v1/admin/status", fetcher, { refreshInterval: 3000, dedupingInterval: 2000 });
-  const [selectedLog, setSelectedLog] = useState("dashboard");
+  const { data: logSources } = useSWR<{ sources: LogSource[] }>("/api/v1/admin/logs", fetcher, { refreshInterval: 30000 });
+  const [selectedLog, setSelectedLog] = useState<string>("");
   const [mode, setMode] = useState<"normal" | "dry_run" | "run_once">("dry_run");
   const [acting, setActing] = useState<string | null>(null);
 
+  const availableSources = logSources?.sources ?? [];
+  const effectiveSelected = availableSources.find(s => s.value === selectedLog) ? selectedLog : (availableSources[0]?.value ?? "");
+
   const { data: logData } = useSWR<{ lines: string[] }>(
-    selectedLog ? `/api/v1/admin/logs/${selectedLog}?lines=80` : null, fetcher, { refreshInterval: 5000 }
+    effectiveSelected ? `/api/v1/admin/logs/${effectiveSelected}?lines=80` : null, fetcher, { refreshInterval: 5000 }
   );
 
   if (isLoading) {
@@ -164,12 +154,12 @@ export default function ServicesPage() {
         <CardHeader>
           <div className="flex items-center justify-between">
             <CardTitle className="flex items-center gap-2"><FileText className="h-4 w-4" />Logs</CardTitle>
-            <Select value={selectedLog} onValueChange={(v) => v && setSelectedLog(v)}>
+            <Select value={effectiveSelected} onValueChange={(v) => v && setSelectedLog(v)}>
               <SelectTrigger className="w-48 bg-neutral-800 border-neutral-700">
-                <SelectValue />
+                <SelectValue placeholder="Select log source..." />
               </SelectTrigger>
               <SelectContent>
-                {LOG_FILES.map((lf) => (
+                {availableSources.map((lf) => (
                   <SelectItem key={lf.value} value={lf.value}>{lf.label}</SelectItem>
                 ))}
               </SelectContent>

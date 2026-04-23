@@ -52,6 +52,67 @@ _SYSTEMD_UNITS = {
     "gmaps-scraper": "gmaps-scraper",
 }
 
+_LABELS = {
+    "dashboard": "Dashboard",
+    "api": "API Server",
+    "mcp": "MCP / Webhook",
+    "gmaps-scraper": "Google Maps Scraper",
+    "oneai_reach_api_v1_webhooks": "Webhook/API",
+    "oneai_reach_application_outreach_scraper_service": "Scraper",
+    "oneai_reach_application_outreach_enricher_service": "Enricher",
+    "oneai_reach_application_outreach_researcher_service": "Researcher",
+    "oneai_reach_application_outreach_generator_service": "Generator",
+    "oneai_reach_application_outreach_blaster_service": "Blaster",
+    "oneai_reach_application_outreach_reviewer_service": "Reviewer",
+    "oneai_reach_application_outreach_orchestrator_service": "Orchestrator",
+    "oneai_reach_application_outreach_followup_service": "Follow-up",
+    "oneai_reach_application_outreach_reply_tracker_service": "Reply Tracker",
+    "oneai_reach_application_customer_service_cs_engine_service": "CS Engine",
+    "oneai_reach_application_customer_service_conversation_service": "Conversation Service",
+    "oneai_reach_application_customer_service_analytics_service": "Analytics Service",
+}
+
+
+class LogSource(BaseModel):
+    value: str
+    label: str
+    source: str
+
+
+class LogSourceResponse(BaseModel):
+    sources: List[LogSource]
+
+
+def _check_journal(unit: str) -> bool:
+    try:
+        result = subprocess.run(
+            ["journalctl", "--user", "-u", unit, "-n", "1", "--no-pager", "--quiet"],
+            capture_output=True, text=True, timeout=3,
+        )
+        return bool(result.stdout.strip())
+    except Exception:
+        return False
+
+
+@router.get("/logs", response_model=LogSourceResponse)
+async def list_log_sources() -> LogSourceResponse:
+    sources = []
+
+    for name, label in _LABELS.items():
+        log_file = _LOGS_DIR / f"{name}.log"
+        fallback = _ROOT_DIR / ".agent-control" / "logs" / f"{name}.log"
+
+        for candidate in [log_file, fallback]:
+            if candidate.exists() and candidate.stat().st_size > 0:
+                sources.append(LogSource(value=name, label=label, source=f"file:{candidate.name}"))
+                break
+        else:
+            unit = _SYSTEMD_UNITS.get(name)
+            if unit and _check_journal(unit):
+                sources.append(LogSource(value=name, label=label, source=f"journal:{unit}"))
+
+    return LogSourceResponse(sources=sources)
+
 class LogResponse(BaseModel):
     lines: List[str]
     count: int
