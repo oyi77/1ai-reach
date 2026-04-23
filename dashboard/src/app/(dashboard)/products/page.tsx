@@ -289,6 +289,7 @@ export default function ProductsPage() {
               <Table>
                 <TableHeader>
                   <TableRow>
+                    <TableHead className="w-[60px]">Image</TableHead>
                     <TableHead className="w-[200px]">Name</TableHead>
                     <TableHead className="w-[120px]">Category</TableHead>
                     <TableHead className="w-[100px]">SKU</TableHead>
@@ -301,6 +302,19 @@ export default function ProductsPage() {
                 <TableBody>
                   {products?.map((product) => (
                     <TableRow key={product.id}>
+                      <TableCell>
+                        {product.image_url ? (
+                          <img
+                            src={product.image_url}
+                            alt={product.name}
+                            className="w-10 h-10 rounded object-cover border border-neutral-700"
+                          />
+                        ) : (
+                          <div className="w-10 h-10 rounded bg-neutral-800 border border-neutral-700 flex items-center justify-center">
+                            <Package className="h-4 w-4 text-neutral-600" />
+                          </div>
+                        )}
+                      </TableCell>
                       <TableCell className="font-medium text-sm">{product.name}</TableCell>
                       <TableCell className="text-sm text-neutral-400">{product.category}</TableCell>
                       <TableCell className="text-sm text-neutral-400">{product.sku}</TableCell>

@@ -183,6 +183,7 @@ export interface Product {
   sku: string;
   status: ProductStatus;
   visibility: VisibilityStatus;
+  image_url?: string;
   created_at?: string;
   updated_at?: string;
 }
