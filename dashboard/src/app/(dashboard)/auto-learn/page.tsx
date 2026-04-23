@@ -6,9 +6,8 @@ import { Button } from "@/components/ui/button";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Badge } from "@/components/ui/badge";
 import { Brain, TrendingUp, AlertCircle, Lightbulb } from "lucide-react";
+import { fetcher as apiFetcher, type WANumber } from "@/lib/api";
 import useSWR from "swr";
-
-const fetcher = (url: string) => fetch(url).then((r) => r.json());
 
 interface ReportData {
   funnel_summary?: Record<string, number>;
@@ -24,12 +23,6 @@ interface ImproveData {
   errors?: string[];
 }
 
-interface WASession {
-  id: string;
-  session_name: string;
-  mode: string;
-}
-
 export default function AutoLearnPage() {
   const [selectedSession, setSelectedSession] = useState<string>("");
   const [applyChanges, setApplyChanges] = useState(false);
@@ -37,8 +30,8 @@ export default function AutoLearnPage() {
   const [improveData, setImproveData] = useState<ImproveData | null>(null);
   const [loading, setLoading] = useState(false);
 
-  const { data: sessions } = useSWR<{ numbers: WASession[] }>("/api/v1/agents/wa/sessions", fetcher);
-  const csSessions = sessions?.numbers?.filter((s) => s.mode === "cs") || [];
+  const { data: waData } = useSWR<{ numbers: WANumber[] }>("/api/v1/agents/wa/sessions", apiFetcher);
+  const csSessions = (waData?.numbers || []).filter((s) => s.mode === "cs");
 
   const generateReport = async () => {
     if (!selectedSession) return;
@@ -99,7 +92,7 @@ export default function AutoLearnPage() {
               <SelectContent>
                 {csSessions.map((s) => (
                   <SelectItem key={s.id} value={s.session_name}>
-                    {s.session_name}
+                    {s.label || s.session_name}
                   </SelectItem>
                 ))}
               </SelectContent>
