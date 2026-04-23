@@ -235,20 +235,22 @@ async def get_status() -> Dict[str, Any]:
         webhook_running = False
         webhook_pid = None
         try:
-            result = subprocess.run(
-                ["systemctl", "--user", "is-active", "1ai-reach-mcp"],
-                capture_output=True,
-                text=True,
-                timeout=5,
-            )
-            webhook_running = result.returncode == 0 and result.stdout.strip() == "active"
-            
+            import socket
+            sock = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
+            sock.settimeout(1)
+            result = sock.connect_ex(("127.0.0.1", 8766))
+            sock.close()
+            webhook_running = result == 0
+
             if webhook_running:
+                uid = os.getuid()
+                env = {**os.environ, "XDG_RUNTIME_DIR": f"/run/user/{uid}"}
                 pid_result = subprocess.run(
                     ["systemctl", "--user", "show", "1ai-reach-mcp", "--property=MainPID"],
                     capture_output=True,
                     text=True,
                     timeout=5,
+                    env=env,
                 )
                 if pid_result.returncode == 0:
                     pid_str = pid_result.stdout.strip().split("=")[-1]
@@ -312,6 +314,47 @@ async def get_status() -> Dict[str, Any]:
             running=dashboard_running,
             pid=dashboard_pid,
             port=8502,
+        ))
+        
+        scraper_running = False
+        scraper_pid = None
+        try:
+            result = subprocess.run(
+                ["systemctl", "is-active", "gmaps-scraper"],
+                capture_output=True,
+                text=True,
+                timeout=5,
+            )
+            scraper_running = result.returncode == 0 and result.stdout.strip() == "active"
+            
+            if scraper_running:
+                pid_result = subprocess.run(
+                    ["systemctl", "show", "gmaps-scraper", "--property=MainPID"],
+                    capture_output=True,
+                    text=True,
+                    timeout=5,
+                )
+                if pid_result.returncode == 0:
+                    pid_str = pid_result.stdout.strip().split("=")[-1]
+                    scraper_pid = int(pid_str) if pid_str.isdigit() else None
+        except Exception:
+            pass
+        
+        services.append(ServiceStatus(
+            key="gmaps_scraper",
+            label="GMaps Scraper",
+            running=scraper_running,
+            pid=scraper_pid,
+            port=8082,
+        ))
+        
+        import os
+        services.append(ServiceStatus(
+            key="api",
+            label="API Server (FastAPI)",
+            running=True,
+            pid=os.getpid(),
+            port=8001,
         ))
 
         return {

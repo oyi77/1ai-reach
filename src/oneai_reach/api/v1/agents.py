@@ -44,13 +44,19 @@ except ImportError:
 
 
 def load_leads_df():
-    """Load leads as pandas DataFrame, ensuring required columns exist."""
+    """Load leads as pandas DataFrame from SQLite, falling back to CSV."""
     try:
         import pandas as pd
+        import sqlite3
+        from pathlib import Path
+        db_path = Path(__file__).resolve().parent.parent.parent.parent.parent / "data" / "leads.db"
+        if db_path.exists():
+            conn = sqlite3.connect(str(db_path))
+            df = pd.read_sql_query("SELECT * FROM leads", conn)
+            conn.close()
+            return df
         from leads import load_leads
         df = load_leads()
-        # The CSV may not have columns added later (matched_services, lead_score, tier, service_proposed).
-        # Add them as None so downstream code can rely on their presence.
         for col in ["matched_services", "lead_score", "tier", "service_proposed"]:
             if col not in df.columns:
                 df[col] = None
@@ -865,7 +871,8 @@ async def list_services():
             try:
                 services = json.loads(str(ms))
                 for s in services:
-                    service_counts[s] = service_counts.get(s, 0) + 1
+                    svc_name = s["service"] if isinstance(s, dict) else str(s)
+                    service_counts[svc_name] = service_counts.get(svc_name, 0) + 1
             except (json.JSONDecodeError, TypeError):
                 pass
         service_list = [{"service": k, "leads_matched": v} for k, v in sorted(service_counts.items(), key=lambda x: -x[1])]
@@ -891,7 +898,8 @@ async def funnel_by_service():
             if not _is_empty_value(ms):
                 try:
                     services = json.loads(str(ms))
-                    service_key = services[0] if services else "unmatched"
+                    first = services[0] if services else None
+                    service_key = first["service"] if isinstance(first, dict) else str(first) if first else "unmatched"
                 except (json.JSONDecodeError, TypeError):
                     pass
             breakdown[service_key][status] += 1
