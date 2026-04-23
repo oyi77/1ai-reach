@@ -24,12 +24,12 @@ interface ScoringStats { distribution: Record<string, number>; avg_score: number
 export default function FunnelPage() {
   const { data: funnel, isLoading: fLoad } = useSWR<FunnelData>("/api/v1/agents/funnel", fetcher, { refreshInterval: 5000 });
   const { data: leadsData, isLoading: lLoad } = useSWR<{ count: number; items: Lead[] }>("/api/v1/agents/leads", fetcher, { refreshInterval: 10000 });
-  const { data: servicesData } = useSWR<{ data: { services: ServiceItem[] } }>("/api/v1/agents/services/list", fetcher, { refreshInterval: 30000 });
-  const { data: scoringData } = useSWR<{ data: ScoringStats }>("/api/v1/agents/scoring/stats", fetcher, { refreshInterval: 30000 });
+  const { data: servicesData } = useSWR<{ services: ServiceItem[] }>("/api/v1/agents/services/list", fetcher, { refreshInterval: 30000 });
+  const { data: scoringData } = useSWR<ScoringStats>("/api/v1/agents/scoring/stats", fetcher, { refreshInterval: 30000 });
 
   const leads = leadsData?.items ?? [];
-  const services = servicesData?.data?.services ?? [];
-  const tierDist = scoringData?.data?.distribution ?? {};
+  const services = servicesData?.services ?? [];
+  const tierDist = scoringData?.distribution ?? {};
   const [tierFilter, setTierFilter] = useState<string>("all");
   const filteredLeads = tierFilter === "all" ? leads : leads.filter((l: any) => ((l as any).tier || "").toLowerCase() === tierFilter);
 
