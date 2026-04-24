@@ -34,6 +34,7 @@ export default function ProductsPage() {
     sku: string;
     status: "active" | "inactive" | "discontinued" | "draft";
     visibility: "public" | "private" | "hidden";
+    image_url: string;
   }>({
     name: "",
     description: "",
@@ -42,6 +43,7 @@ export default function ProductsPage() {
     sku: "",
     status: "active",
     visibility: "public",
+    image_url: "",
   });
   const [importing, setImporting] = useState(false);
 
@@ -91,6 +93,7 @@ export default function ProductsPage() {
       sku: "",
       status: "active",
       visibility: "public",
+      image_url: "",
     });
     setDialogOpen(true);
   }
@@ -105,6 +108,7 @@ export default function ProductsPage() {
       sku: product.sku,
       status: product.status,
       visibility: product.visibility,
+      image_url: product.image_url || "",
     });
     setDialogOpen(true);
   }
@@ -201,7 +205,21 @@ export default function ProductsPage() {
                 <DialogTitle>{editId ? "Edit Product" : "Add Product"}</DialogTitle>
               </DialogHeader>
               <div className="space-y-3">
-                <Input
+                <div className="grid grid-cols-2 gap-2">
+                  <Input
+                    placeholder="Product Name"
+                    value={form.name}
+                    onChange={(e) => setForm({ ...form, name: e.target.value })}
+                    className="bg-neutral-800 border-neutral-700"
+                  />
+                  <Input
+                    placeholder="Image URL (https://...)"
+                    value={form.image_url}
+                    onChange={(e) => setForm({ ...form, image_url: e.target.value })}
+                    className="bg-neutral-800 border-neutral-700"
+                  />
+                </div>
+                <Textarea
                   placeholder="Product Name"
                   value={form.name}
                   onChange={(e) => setForm({ ...form, name: e.target.value })}
