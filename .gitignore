@@ -24,3 +24,4 @@ logs/
 dashboard/node_modules/
 dashboard/.next/
 *.core
+channels-page-quality-fix.png
