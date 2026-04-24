@@ -11,6 +11,7 @@ from oneai_reach.api.models import HealthResponse
 from oneai_reach.api.v1.admin import router as admin_router
 from oneai_reach.api.v1.agents import router as agents_router
 from oneai_reach.api.v1.channels import router as channels_router
+from oneai_reach.api.v1.contacts import router as contacts_router
 from oneai_reach.api.v1.legacy import router as legacy_router
 from oneai_reach.api.v1.mcp import router as mcp_router
 from oneai_reach.api.v1.personas import router as personas_router
@@ -63,6 +64,7 @@ def create_app() -> FastAPI:
     app.include_router(admin_router)
     app.include_router(agents_router)
     app.include_router(channels_router)
+    app.include_router(contacts_router)
     app.include_router(personas_router)
     app.include_router(products_router)
     app.include_router(legacy_router, prefix="/api/v1/legacy")
