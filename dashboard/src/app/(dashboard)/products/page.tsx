@@ -20,9 +20,10 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
 import { Badge } from "@/components/ui/badge";
-import { Plus, Pencil, Trash2, Loader2, Upload, Download, Package } from "lucide-react";
+import { Plus, Pencil, Trash2, Loader2, Upload, Download, Package, Link, FileImage } from "lucide-react";
+import { Tabs, TabsList, TabsTrigger, TabsContent } from "@/components/ui/tabs";
 
-const API_BASE = "http://localhost:8001";
+const API_BASE = "/api";
 
 export default function ProductsPage() {
   const { data: waData, isLoading: waLoad } = useSWR<{ numbers: WANumber[] }>("/api/v1/agents/wa/sessions", fetcher);
@@ -50,6 +51,7 @@ export default function ProductsPage() {
   });
   const [importing, setImporting] = useState(false);
   const [uploadingImg, setUploadingImg] = useState(false);
+  const [imageMode, setImageMode] = useState<"url" | "upload">("url");
 
   const waId = selectedWA || waData?.numbers[0]?.id || "";
   const { data: products, mutate, isLoading: productsLoading } = useSWR<Product[]>(
@@ -226,53 +228,60 @@ export default function ProductsPage() {
                 <DialogTitle>{editId ? "Edit Product" : "Add Product"}</DialogTitle>
               </DialogHeader>
               <div className="space-y-3">
-                <div className="grid grid-cols-2 gap-2">
-                  <Input
-                    placeholder="Product Name"
-                    value={form.name}
-                    onChange={(e) => setForm({ ...form, name: e.target.value })}
-                    className="bg-neutral-800 border-neutral-700"
-                  />
-                  <Input
-                    placeholder="Image URL (https://...)"
-                    value={form.image_url}
-                    onChange={(e) => setForm({ ...form, image_url: e.target.value })}
-                    className="bg-neutral-800 border-neutral-700"
-                  />
-                  {editId && (
-                    <div className="flex items-center gap-2">
-                      <input
-                        type="file"
-                        id="product-image-upload"
-                        accept="image/*"
-                        onChange={handleImageUpload}
-                        className="hidden"
-                      />
-                      <Button
-                        type="button"
-                        variant="outline"
-                        size="sm"
-                        onClick={() => document.getElementById("product-image-upload")?.click()}
-                        disabled={uploadingImg}
-                        className="border-neutral-700"
-                      >
-                        {uploadingImg ? (
-                          <Loader2 className="h-4 w-4 animate-spin" />
-                        ) : (
-                          <Upload className="h-4 w-4 mr-1" />
-                        )}
-                        {uploadingImg ? "Uploading..." : "Upload Image"}
-                      </Button>
-                      {form.image_url && (
-                        <img 
-                          src={form.image_url.startsWith("http") ? form.image_url : API_BASE + form.image_url} 
-                          alt="Preview" 
-                          className="h-10 w-10 rounded object-cover border border-neutral-700" 
+                <Tabs value={imageMode} onValueChange={(v) => setImageMode(v as "url" | "upload")}>
+                  <TabsList className="bg-neutral-800">
+                    <TabsTrigger value="url" className="flex-1">
+                      <Link className="h-4 w-4 mr-1" /> URL
+                    </TabsTrigger>
+                    <TabsTrigger value="upload" className="flex-1">
+                      <FileImage className="h-4 w-4 mr-1" /> Upload
+                    </TabsTrigger>
+                  </TabsList>
+                  <TabsContent value="url">
+                    <Input
+                      placeholder="Image URL (https://...)"
+                      value={form.image_url}
+                      onChange={(e) => setForm({ ...form, image_url: e.target.value })}
+                      className="bg-neutral-800 border-neutral-700"
+                    />
+                  </TabsContent>
+                  <TabsContent value="upload">
+                    {editId ? (
+                      <div className="flex items-center gap-2">
+                        <input
+                          type="file"
+                          id="product-image-upload"
+                          accept="image/*"
+                          onChange={handleImageUpload}
+                          className="hidden"
                         />
-                      )}
-                    </div>
-                  )}
-                </div>
+                        <Button
+                          type="button"
+                          variant="outline"
+                          onClick={() => document.getElementById("product-image-upload")?.click()}
+                          disabled={uploadingImg}
+                          className="border-neutral-700"
+                        >
+                          {uploadingImg ? (
+                            <Loader2 className="h-4 w-4 animate-spin" />
+                          ) : (
+                            <Upload className="h-4 w-4 mr-1" />
+                          )}
+                          {uploadingImg ? "Uploading..." : "Choose Image"}
+                        </Button>
+                        {form.image_url && (
+                          <img 
+                            src={form.image_url.startsWith("http") ? form.image_url : API_BASE + form.image_url} 
+                            alt="Preview" 
+                            className="h-10 w-10 rounded object-cover border border-neutral-700" 
+                          />
+                        )}
+                      </div>
+                    ) : (
+                      <p className="text-sm text-neutral-500">Save product first, then upload image</p>
+                    )}
+                  </TabsContent>
+                </Tabs>
                 <Textarea
                   placeholder="Product Name"
                   value={form.name}
