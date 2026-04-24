@@ -281,7 +281,7 @@ export async function uploadImage(product_id: string, file: File, alt_text?: str
   formData.append("file", file);
   if (alt_text) formData.append("alt_text", alt_text);
 
-  const res = await fetch(`${API_BASE}/api/v1/products/${product_id}/images`, {
+  const res = await fetch(`/api/v1/products/${product_id}/images`, {
     method: "POST",
     body: formData,
   });

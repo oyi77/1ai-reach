@@ -22,6 +22,8 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from 
 import { Badge } from "@/components/ui/badge";
 import { Plus, Pencil, Trash2, Loader2, Upload, Download, Package } from "lucide-react";
 
+const API_BASE = "http://localhost:8001";
+
 export default function ProductsPage() {
   const { data: waData, isLoading: waLoad } = useSWR<{ numbers: WANumber[] }>("/api/v1/agents/wa/sessions", fetcher);
   const [selectedWA, setSelectedWA] = useState<string>("");
@@ -262,7 +264,11 @@ export default function ProductsPage() {
                         {uploadingImg ? "Uploading..." : "Upload Image"}
                       </Button>
                       {form.image_url && (
-                        <img src={form.image_url} alt="Preview" className="h-10 w-10 rounded object-cover border border-neutral-700" />
+                        <img 
+                          src={form.image_url.startsWith("http") ? form.image_url : API_BASE + form.image_url} 
+                          alt="Preview" 
+                          className="h-10 w-10 rounded object-cover border border-neutral-700" 
+                        />
                       )}
                     </div>
                   )}
@@ -371,7 +377,7 @@ export default function ProductsPage() {
                       <TableCell>
                         {product.image_url ? (
                           <img
-                            src={product.image_url}
+                            src={product.image_url.startsWith("http") ? product.image_url : API_BASE + product.image_url}
                             alt={product.name}
                             className="w-10 h-10 rounded object-cover border border-neutral-700"
                           />
