@@ -11,7 +11,7 @@ import { Textarea } from "@/components/ui/textarea";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
-import { Send, User, Loader2, ThumbsUp, ThumbsDown, MessageSquare, Bot, Hand, Play } from "lucide-react";
+import { Send, User, Loader2, ThumbsUp, ThumbsDown, MessageSquare, Bot, Hand, Play, Square, AlertCircle } from "lucide-react";
 
 type Feedback = { id: number; message_id: number; rating: string; note: string; corrected_response: string };
 
@@ -94,6 +94,13 @@ export default function ConversationsPage() {
     mutateMsgs();
   }
 
+  async function stopConversation() {
+    if (!selectedConv) return;
+    if (!confirm("Stop this conversation? AI will stop responding to this customer.")) return;
+    await postJSON(`/api/v1/legacy/conversations/${selectedConv}/stop`, {});
+    mutateMsgs();
+  }
+
   return (
     <div className="p-6 space-y-4">
       <div className="flex items-center justify-between">
@@ -113,15 +120,20 @@ export default function ConversationsPage() {
             </SelectContent>
           </Select>
           {selectedConv && (
-            isManualMode ? (
-              <Button onClick={() => toggleTakeover(false)} variant="outline" className="border-green-700 text-green-400">
-                <Play className="h-4 w-4 mr-1" /> Return to AI
+            <>
+              <Button onClick={stopConversation} variant="outline" className="border-red-800 text-red-400">
+                <Square className="h-4 w-4 mr-1" /> Stop
               </Button>
-            ) : (
-              <Button onClick={() => toggleTakeover(true)} variant="outline" className="border-orange-700 text-orange-400">
-                <Hand className="h-4 w-4 mr-1" /> Take Over
-              </Button>
-            )
+              {isManualMode ? (
+                <Button onClick={() => toggleTakeover(false)} variant="outline" className="border-green-700 text-green-400">
+                  <Play className="h-4 w-4 mr-1" /> Return to AI
+                </Button>
+              ) : (
+                <Button onClick={() => toggleTakeover(true)} variant="outline" className="border-orange-700 text-orange-400">
+                  <Hand className="h-4 w-4 mr-1" /> Take Over
+                </Button>
+              )}
+            </>
           )}
         </div>
       </div>

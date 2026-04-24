@@ -147,6 +147,16 @@ async def api_conversation_feedback(conv_id: int, request: Request):
         raise HTTPException(status_code=400, detail="message_id and rating required")
 
     conn = state_manager._connect()
+
+
+@router.post("/conversations/{conv_id}/stop")
+async def api_stop_conversation(conv_id: int):
+    """Stop AI responses for a conversation."""
+    conn = state_manager._connect()
+    conn.execute("UPDATE conversations SET status = 'stopped' WHERE id = ?", (conv_id,))
+    conn.commit()
+    conn.close()
+    return {"status": "success", "data": {"ok": True}}
     try:
         conn.execute(
             """CREATE TABLE IF NOT EXISTS admin_feedback (
