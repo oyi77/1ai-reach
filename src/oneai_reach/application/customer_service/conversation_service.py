@@ -39,7 +39,7 @@ _COLD_FUNNEL_STAGES = frozenset(
 class ConversationService:
     """Service for managing conversation state, threading, and cross-contamination prevention."""
 
-    def __init__(self, config: Settings, db_connection):
+    def __init__(self, config: Settings = None, db_connection = None):
         """Initialize conversation service.
 
         Args:

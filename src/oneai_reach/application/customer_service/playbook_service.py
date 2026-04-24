@@ -100,11 +100,12 @@ class PlaybookService:
         "general": [],
     }
 
-    def __init__(self, config: Settings, outcomes_service):
+    def __init__(self, config: Settings = None, outcomes_service = None):
         self.config = config
         self.outcomes_service = outcomes_service
         self.patterns = self._load_default_patterns()
-        self._load_learned_patterns()
+        if config and outcomes_service:
+            self._load_learned_patterns()
 
     def _load_default_patterns(self) -> dict[str, list[ResponsePattern]]:
         patterns = {
