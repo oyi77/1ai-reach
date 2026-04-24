@@ -261,7 +261,7 @@ def _log_email_event(lead_id: str, event_type: str, details: Dict[str, Any]):
         from pathlib import Path
         import sqlite3
         
-        db_path = Path(_settings.database.path)
+        db_path = Path(_settings.database.db_file)
         conn = sqlite3.connect(str(db_path))
         cursor = conn.cursor()
         

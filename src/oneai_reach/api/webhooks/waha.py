@@ -233,12 +233,12 @@ async def handle_waha_webhook(request: Request) -> WAHAWebhookResponse:
             import sqlite3
 
             settings = get_settings()
-            conv_repo = SQLiteConversationRepository(settings.database.path)
+            conv_repo = SQLiteConversationRepository(settings.database.db_file)
 
             def get_db_connection():
-                return sqlite3.connect(settings.database.path)
+                return sqlite3.connect(settings.database.db_file)
 
-            conversation_service = ConversationService(conv_repo)
+            conversation_service = ConversationService(conv_repo, get_db_connection)
             outcomes_service = OutcomesService(settings, get_db_connection)
             playbook_service = PlaybookService()
             cs_engine = CSEngineService(
