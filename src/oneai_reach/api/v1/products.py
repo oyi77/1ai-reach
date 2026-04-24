@@ -830,7 +830,7 @@ async def upload_product_image(
     product_id: str,
     file: UploadFile = File(...),
     alt_text: Optional[str] = Form(None),
-    is_primary: bool = Form(False),
+    is_primary: bool = Form(True),
     product_repo: SQLiteProductRepository = Depends(get_product_repository),
     image_service: ImageService = Depends(get_image_service),
 ) -> ImageUploadResponse:
