@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import useSWR from "swr";
 import {
   fetcher,
@@ -59,6 +59,31 @@ export default function ProductsPage() {
     waId ? `/api/v1/products?wa_number_id=${waId}` : null,
     fetcher
   );
+
+  const [productImageMap, setProductImageMap] = useState<Record<string, ProductImage[]>>({});
+
+  useEffect(() => {
+    if (!products?.length) {
+      setProductImageMap({});
+      return;
+    }
+    Promise.all(
+      products.map(async (p) => {
+        if (!p.id) return [p.id!, []] as const;
+        try {
+          const res = await fetch(`/api/v1/products/${p.id}/images`);
+          const data = res.ok ? await res.json() : [];
+          return [p.id!, data] as const;
+        } catch {
+          return [p.id!, []] as const;
+        }
+      })
+    ).then((pairs) => {
+      const imgs: Record<string, ProductImage[]> = {};
+      pairs.forEach(([id, arr]) => { if (id) imgs[id!] = arr; });
+      setProductImageMap(imgs);
+    });
+  }, [products]);
 
   async function handleImport(e: React.ChangeEvent<HTMLInputElement>) {
     const file = e.target.files?.[0];
@@ -383,15 +408,36 @@ export default function ProductsPage() {
                 </TableHeader>
                 <TableBody>
                   {products?.map((product) => {
+                    const images = productImageMap[product.id!] || [];
+                    const hasMultiple = images.length > 1;
                     return (
                     <TableRow key={product.id}>
                       <TableCell>
-                        {product.image_url ? (
-                          <img
-                            src={product.image_url.startsWith("http") ? product.image_url : API_BASE + product.image_url}
-                            alt={product.name}
-                            className="w-10 h-10 rounded object-cover border border-neutral-700"
-                          />
+                        {images.length > 0 ? (
+                          <div className="relative group">
+                            <img
+                              src={images[0].image_url.startsWith("http") ? images[0].image_url : API_BASE + images[0].image_url}
+                              alt={product.name}
+                              className="w-10 h-10 rounded object-cover border border-neutral-700"
+                            />
+                            {hasMultiple && (
+                              <div className="absolute -bottom-1 -right-1 bg-neutral-900 text-neutral-400 text-[8px] px-1 rounded border border-neutral-700">
+                                +{images.length - 1}
+                              </div>
+                            )}
+                            {hasMultiple && (
+                              <div className="absolute left-0 top-0 hidden group-hover:flex gap-1 bg-neutral-900 p-1 rounded border border-neutral-700 z-10">
+                                {images.slice(0, 4).map((img, i) => (
+                                  <img
+                                    key={img.id}
+                                    src={img.image_url.startsWith("http") ? img.image_url : API_BASE + img.image_url}
+                                    alt={i.toString()}
+                                    className="w-8 h-8 rounded object-cover border border-neutral-600"
+                                  />
+                                ))}
+                              </div>
+                            )}
+                          </div>
                         ) : (
                           <div className="w-10 h-10 rounded bg-neutral-800 border border-neutral-700 flex items-center justify-center">
                             <Package className="h-4 w-4 text-neutral-600" />
