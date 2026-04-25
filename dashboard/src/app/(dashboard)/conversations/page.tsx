@@ -3,6 +3,10 @@
 import { useState, useRef, useEffect, useMemo } from "react";
 import useSWR from "swr";
 import { fetcher, postJSON, fetchMessageLogs, fetchWahaHistory, sendMedia, fetchPresence, fetchTemplates, fetchTags, addTags, removeTag, type WANumber, type Conversation, type Message, type MessageLog, type WahaMessage, type Template, type Tag, type PresenceInfo } from "@/lib/api";
+import { ContactProfilePanel } from "@/components/contact-profile-panel";
+import { ProposalsTab } from "@/components/proposals-tab";
+import { EmailTrackingPanel } from "@/components/email-tracking-panel";
+import { LabelsFilter } from "@/components/labels-filter";
 import { Activity, Paperclip, Zap, Tag as TagIcon, Loader2, ThumbsUp, ThumbsDown, MessageSquare, Bot, Hand, Play, Square, Phone, Search, ChevronDown, ChevronRight, X } from "lucide-react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";

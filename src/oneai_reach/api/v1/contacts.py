@@ -48,6 +48,40 @@ class ContactUpdate(BaseModel):
     source: Optional[str] = None
 
 
+class ContactProfile(BaseModel):
+    id: int
+    contact_id: int
+    wa_number_id: str
+    profile_photo_url: Optional[str] = None
+    status: Optional[str] = None
+    is_business: bool = False
+    business_name: Optional[str] = None
+    business_description: Optional[str] = None
+    address: Optional[str] = None
+    website: Optional[str] = None
+    birthday: Optional[str] = None
+    custom_fields: Optional[str] = None
+    created_at: Optional[str] = None
+    updated_at: Optional[str] = None
+
+
+class ContactProfileUpdate(BaseModel):
+    profile_photo_url: Optional[str] = None
+    status: Optional[str] = None
+    is_business: Optional[bool] = None
+    business_name: Optional[str] = None
+    business_description: Optional[str] = None
+    address: Optional[str] = None
+    website: Optional[str] = None
+    birthday: Optional[str] = None
+    custom_fields: Optional[str] = None
+
+
+class ContactWithProfile(BaseModel):
+    contact: Contact
+    profile: Optional[ContactProfile] = None
+
+
 class ContactsResponse(BaseModel):
     contacts: List[Contact]
     total: int
@@ -411,3 +445,195 @@ async def delete_contact(contact_id: int):
     conn.close()
 
     return {"status": "deleted", "contact_id": contact_id}
+
+
+def _ensure_contact_profile(conn: sqlite3.Connection, contact_id: int, wa_number_id: str):
+    cursor = conn.cursor()
+    cursor.execute(
+        "SELECT id FROM contact_profiles WHERE contact_id = ?",
+        (contact_id,)
+    )
+    if cursor.fetchone():
+        return
+    cursor.execute(
+        """
+        INSERT INTO contact_profiles (contact_id, wa_number_id, profile_photo_url, status, is_business)
+        VALUES (?, ?, NULL, NULL, 0)
+        """,
+        (contact_id, wa_number_id)
+    )
+    conn.commit()
+
+
+@router.get("/api/v1/contacts/{contact_id}/profile", response_model=ContactWithProfile)
+async def get_contact_profile(contact_id: int):
+    db_path = _get_db()
+    conn = sqlite3.connect(db_path)
+    conn.row_factory = sqlite3.Row
+    cursor = conn.cursor()
+
+    cursor.execute(
+        """
+        SELECT id, wa_number_id, name, phone, email, company, notes, tags, source, created_at, updated_at
+        FROM contacts WHERE id = ?
+        """,
+        (contact_id,)
+    )
+    contact_row = cursor.fetchone()
+
+    if not contact_row:
+        conn.close()
+        raise HTTPException(status_code=404, detail="Contact not found")
+
+    cursor.execute(
+        """
+        SELECT id, contact_id, wa_number_id, profile_photo_url, status, is_business,
+               business_name, business_description, address, website, birthday, custom_fields,
+               created_at, updated_at
+        FROM contact_profiles WHERE contact_id = ?
+        """,
+        (contact_id,)
+    )
+    profile_row = cursor.fetchone()
+
+    conn.close()
+
+    contact = Contact(
+        id=contact_row["id"],
+        wa_number_id=contact_row["wa_number_id"],
+        name=contact_row["name"],
+        phone=contact_row["phone"],
+        email=contact_row["email"],
+        company=contact_row["company"],
+        notes=contact_row["notes"],
+        tags=contact_row["tags"],
+        source=contact_row["source"],
+    )
+
+    profile = None
+    if profile_row:
+        profile = ContactProfile(
+            id=profile_row["id"],
+            contact_id=profile_row["contact_id"],
+            wa_number_id=profile_row["wa_number_id"],
+            profile_photo_url=profile_row["profile_photo_url"],
+            status=profile_row["status"],
+            is_business=bool(profile_row["is_business"]),
+            business_name=profile_row["business_name"],
+            business_description=profile_row["business_description"],
+            address=profile_row["address"],
+            website=profile_row["website"],
+            birthday=profile_row["birthday"],
+            custom_fields=profile_row["custom_fields"],
+            created_at=profile_row["created_at"],
+            updated_at=profile_row["updated_at"],
+        )
+
+    return ContactWithProfile(contact=contact, profile=profile)
+
+
+@router.put("/api/v1/contacts/{contact_id}/profile", response_model=ContactWithProfile)
+async def update_contact_profile(contact_id: int, update: ContactProfileUpdate):
+    db_path = _get_db()
+    conn = sqlite3.connect(db_path)
+    conn.row_factory = sqlite3.Row
+    cursor = conn.cursor()
+
+    cursor.execute(
+        "SELECT id, wa_number_id FROM contacts WHERE id = ?",
+        (contact_id,)
+    )
+    contact_row = cursor.fetchone()
+
+    if not contact_row:
+        conn.close()
+        raise HTTPException(status_code=404, detail="Contact not found")
+
+    _ensure_contact_profile(conn, contact_id, contact_row["wa_number_id"])
+
+    update_fields = []
+    params = []
+
+    if update.profile_photo_url is not None:
+        update_fields.append("profile_photo_url = ?")
+        params.append(update.profile_photo_url)
+    if update.status is not None:
+        update_fields.append("status = ?")
+        params.append(update.status)
+    if update.is_business is not None:
+        update_fields.append("is_business = ?")
+        params.append(1 if update.is_business else 0)
+    if update.business_name is not None:
+        update_fields.append("business_name = ?")
+        params.append(update.business_name)
+    if update.business_description is not None:
+        update_fields.append("business_description = ?")
+        params.append(update.business_description)
+    if update.address is not None:
+        update_fields.append("address = ?")
+        params.append(update.address)
+    if update.website is not None:
+        update_fields.append("website = ?")
+        params.append(update.website)
+    if update.birthday is not None:
+        update_fields.append("birthday = ?")
+        params.append(update.birthday)
+    if update.custom_fields is not None:
+        update_fields.append("custom_fields = ?")
+        params.append(update.custom_fields)
+
+    if not update_fields:
+        conn.close()
+        raise HTTPException(status_code=400, detail="No fields to update")
+
+    update_fields.append("updated_at = datetime('now')")
+    params.append(contact_id)
+
+    cursor.execute(
+        f"UPDATE contact_profiles SET {', '.join(update_fields)} WHERE contact_id = ?",
+        params
+    )
+    conn.commit()
+
+    cursor.execute(
+        """
+        SELECT id, contact_id, wa_number_id, profile_photo_url, status, is_business,
+               business_name, business_description, address, website, birthday, custom_fields,
+               created_at, updated_at
+        FROM contact_profiles WHERE contact_id = ?
+        """,
+        (contact_id,)
+    )
+    profile_row = cursor.fetchone()
+    conn.close()
+
+    contact = Contact(
+        id=contact_row["id"],
+        wa_number_id=contact_row["wa_number_id"],
+        name=contact_row["name"],
+        phone=contact_row["phone"],
+        email=contact_row["email"],
+        company=contact_row["company"],
+        notes=contact_row["notes"],
+        tags=contact_row["tags"],
+        source=contact_row["source"],
+    )
+
+    profile = ContactProfile(
+        id=profile_row["id"],
+        contact_id=profile_row["contact_id"],
+        wa_number_id=profile_row["wa_number_id"],
+        profile_photo_url=profile_row["profile_photo_url"],
+        status=profile_row["status"],
+        is_business=bool(profile_row["is_business"]),
+        business_name=profile_row["business_name"],
+        business_description=profile_row["business_description"],
+        address=profile_row["address"],
+        website=profile_row["website"],
+        birthday=profile_row["birthday"],
+        custom_fields=profile_row["custom_fields"],
+        created_at=profile_row["created_at"],
+        updated_at=profile_row["updated_at"],
+    )
+
+    return ContactWithProfile(contact=contact, profile=profile)

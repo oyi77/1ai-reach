@@ -511,3 +511,177 @@ export async function removeTag(conversationId: number, tag: string): Promise<{ 
   if (!res.ok) throw new Error(`API ${res.status}: ${res.statusText}`);
   return res.json();
 }
+
+
+
+export interface ContactProfile {
+  id: number;
+  contact_id: number;
+  wa_number_id: string;
+  profile_photo_url: string | null;
+  status: string | null;
+  is_business: boolean;
+  business_name: string | null;
+  business_description: string | null;
+  address: string | null;
+  website: string | null;
+  birthday: string | null;
+  custom_fields: string | null;
+  created_at: string;
+  updated_at: string;
+}
+
+export interface ContactWithProfile {
+  contact: Contact;
+  profile: ContactProfile | null;
+}
+
+export async function fetchContactProfile(contactId: number): Promise<ContactWithProfile> {
+  return fetcher(`/api/v1/contacts/${contactId}/profile`);
+}
+
+export async function updateContactProfile(contactId: number, data: Partial<ContactProfile>): Promise<ContactWithProfile> {
+  return putJSON(`/api/v1/contacts/${contactId}/profile`, data);
+}
+
+export interface Proposal {
+  id: number;
+  contact_id: number;
+  conversation_id: number | null;
+  wa_number_id: string | null;
+  lead_id: string | null;
+  title: string;
+  content: string;
+  status: string;
+  score: number | null;
+  reviewed: boolean;
+  reviewed_at: string | null;
+  review_notes: string | null;
+  sent_at: string | null;
+  accepted_at: string | null;
+  rejected_at: string | null;
+  expires_at: string | null;
+  sent_count: number;
+  opened_count: number;
+  clicked_count: number;
+  value_cents: number | null;
+  currency: string;
+  created_at: string;
+  updated_at: string;
+}
+
+export async function fetchContactProposals(contactId: number, status?: string): Promise<{ proposals: Proposal[]; total: number }> {
+  const params = status ? `?status=${encodeURIComponent(status)}` : "";
+  return fetcher(`/api/v1/contacts/${contactId}/proposals${params}`);
+}
+
+export async function fetchConversationProposals(conversationId: number, status?: string): Promise<{ proposals: Proposal[]; total: number }> {
+  const params = status ? `?status=${encodeURIComponent(status)}` : "";
+  return fetcher(`/api/v1/conversations/${conversationId}/proposals${params}`);
+}
+
+export async function createProposal(contactId: number, data: { title: string; content: string; conversation_id?: number; lead_id?: string; value_cents?: number; currency?: string }): Promise<{ proposal: Proposal }> {
+  return postJSON(`/api/v1/contacts/${contactId}/proposals`, data);
+}
+
+export async function updateProposal(proposalId: number, data: Partial<Proposal>): Promise<{ proposal: Proposal }> {
+  return patchJSON(`/api/v1/proposals/${proposalId}`, data);
+}
+
+export async function deleteProposal(proposalId: number): Promise<{ status: string; proposal_id: number }> {
+  const res = await fetch(`${API_BASE}/api/v1/proposals/${proposalId}`, { method: "DELETE" });
+  if (!res.ok) throw new Error(`API ${res.status}: ${res.statusText}`);
+  return res.json();
+}
+
+export interface EmailEvent {
+  id: number;
+  contact_id: number | null;
+  conversation_id: number | null;
+  lead_id: string | null;
+  wa_number_id: string | null;
+  event_type: string;
+  email: string;
+  subject: string | null;
+  message_id: string | null;
+  provider: string;
+  provider_event_id: string | null;
+  ip_address: string | null;
+  user_agent: string | null;
+  link_clicked: string | null;
+  bounce_reason: string | null;
+  timestamp: string;
+  created_at: string;
+}
+
+export interface EmailStats {
+  total_sent: number;
+  total_delivered: number;
+  total_opened: number;
+  total_clicked: number;
+  total_bounced: number;
+  open_rate: number;
+  click_rate: number;
+  delivery_rate: number;
+  last_event_at: string | null;
+}
+
+export async function fetchConversationEmails(conversationId: number): Promise<{ events: EmailEvent[]; total: number }> {
+  return fetcher(`/api/v1/conversations/${conversationId}/emails`);
+}
+
+export async function fetchConversationEmailStats(conversationId: number): Promise<EmailStats> {
+  return fetcher(`/api/v1/conversations/${conversationId}/emails/stats`);
+}
+
+export interface WahaLabel {
+  id: number;
+  wa_number_id: string;
+  waha_label_id: string;
+  name: string;
+  color: string | null;
+  is_predefined: boolean;
+  is_active: boolean;
+}
+
+export async function fetchWahaLabels(waNumberId: string): Promise<{ labels: WahaLabel[] }> {
+  return fetcher(`/api/v1/waha/${waNumberId}/labels`);
+}
+
+export async function createWahaLabel(waNumberId: string, data: { name: string; color?: string }): Promise<{ label: WahaLabel }> {
+  return postJSON(`/api/v1/waha/${waNumberId}/labels`, data);
+}
+
+export async function updateWahaLabel(waNumberId: string, labelId: number, data: Partial<WahaLabel>): Promise<{ label: WahaLabel }> {
+  return patchJSON(`/api/v1/waha/${waNumberId}/labels/${labelId}`, data);
+}
+
+export async function deleteWahaLabel(waNumberId: string, labelId: number): Promise<{ status: string }> {
+  const res = await fetch(`${API_BASE}/api/v1/waha/${waNumberId}/labels/${labelId}`, { method: "DELETE" });
+  if (!res.ok) throw new Error(`API ${res.status}: ${res.statusText}`);
+  return res.json();
+}
+
+export async function fetchConversationLabels(conversationId: number): Promise<{ labels: WahaLabel[] }> {
+  return fetcher(`/api/v1/conversations/${conversationId}/labels`);
+}
+
+export async function assignLabelToConversation(conversationId: number, labelId: number, assignedBy?: string): Promise<{ status: string }> {
+  return postJSON(`/api/v1/conversations/${conversationId}/labels/${labelId}`, { assigned_by: assignedBy });
+}
+
+export async function removeLabelFromConversation(conversationId: number, labelId: number): Promise<{ status: string }> {
+  const res = await fetch(`${API_BASE}/api/v1/conversations/${conversationId}/labels/${labelId}`, { method: "DELETE" });
+  if (!res.ok) throw new Error(`API ${res.status}: ${res.statusText}`);
+  return res.json();
+}
+
+async function putJSON(url: string, body: object) {
+  const res = await fetch(`${API_BASE}${url}`, {
+    method: "PUT",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify(body),
+  });
+  if (!res.ok) throw new Error(`API ${res.status}: ${res.statusText}`);
+  return res.json();
+}
