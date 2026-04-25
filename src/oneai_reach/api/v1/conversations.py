@@ -499,3 +499,234 @@ async def api_merge_conversations(conversation_id: int, request: Request):
         raise HTTPException(status_code=500, detail=str(e))
     finally:
         conn.close()
+
+
+@router.get("/{conversation_id}/waha-history")
+async def api_waha_history(conversation_id: int, limit: int = 50, before: Optional[str] = None):
+    """Load message history from WAHA for a conversation, merged with local messages."""
+    import httpx
+
+    conn = state_manager._connect()
+    try:
+        conv = conn.execute("SELECT * FROM conversations WHERE id = ?", (conversation_id,)).fetchone()
+        if not conv:
+            raise HTTPException(status_code=404, detail="Conversation not found")
+        conv_dict = dict(conv)
+        contact_phone = conv_dict.get("contact_phone", "")
+        wa_number_id = conv_dict.get("wa_number_id", "")
+
+        wa_number = state_manager.get_wa_number_by_session(wa_number_id) if wa_number_id else None
+        session = wa_number.get("session_name", wa_number_id) if wa_number else wa_number_id
+    finally:
+        conn.close()
+
+    settings = get_settings()
+    waha_url = settings.waha.url.rstrip("/")
+    waha_key = settings.waha.api_key
+
+    params = {"limit": limit, "downloadMedia": 0}
+    if before:
+        params["before"] = before
+
+    try:
+        async with httpx.AsyncClient(timeout=30.0) as client:
+            resp = await client.get(
+                f"{waha_url}/api/chats/{contact_phone}/messages",
+                headers={"X-Api-Key": waha_key},
+                params=params,
+            )
+            if resp.status_code == 404:
+                raise HTTPException(status_code=404, detail="Chat not found in WAHA")
+            resp.raise_for_status()
+            waha_messages = resp.json()
+    except httpx.ConnectError:
+        raise HTTPException(status_code=502, detail="WAHA service unavailable")
+    except httpx.HTTPStatusError as e:
+        raise HTTPException(status_code=e.response.status_code, detail=e.response.text)
+
+    # Get local messages for dedup
+    conn = state_manager._connect()
+    try:
+        local_msgs = conn.execute(
+            "SELECT waha_message_id FROM conversation_messages WHERE conversation_id = ? AND waha_message_id IS NOT NULL",
+            (conversation_id,),
+        ).fetchall()
+        local_ids = {row["waha_message_id"] for row in local_msgs}
+    finally:
+        conn.close()
+
+    merged = []
+    for msg in waha_messages:
+        msg_id = msg.get("id", {})
+        if isinstance(msg_id, dict):
+            msg_id = msg_id.get("id", "")
+        if msg_id in local_ids:
+            continue
+
+        from_me = msg.get("fromMe", msg.get("key", {}).get("fromMe", False))
+        body = msg.get("body", "")
+        if not body:
+            msg_obj = msg.get("message", {})
+            if isinstance(msg_obj, dict):
+                body = msg_obj.get("conversation", "") or (msg_obj.get("extendedTextMessage") or {}).get("text", "")
+
+        merged.append({
+            "id": msg_id,
+            "direction": "out" if from_me else "in",
+            "text": body,
+            "timestamp": msg.get("timestamp", 0),
+            "from_waha": True,
+            "type": msg.get("type", "chat"),
+        })
+
+    return {"status": "success", "data": {"messages": merged, "count": len(merged)}}
+
+
+@router.post("/{conversation_id}/send-media")
+async def api_send_media(conversation_id: int, request: Request):
+    """Send media (image, video, document, voice) to a WhatsApp conversation."""
+    import httpx
+
+    conn = state_manager._connect()
+    try:
+        conv = conn.execute("SELECT * FROM conversations WHERE id = ?", (conversation_id,)).fetchone()
+        if not conv:
+            raise HTTPException(status_code=404, detail="Conversation not found")
+        conv_dict = dict(conv)
+        contact_phone = conv_dict.get("contact_phone", "")
+        wa_number_id = conv_dict.get("wa_number_id", "")
+
+        wa_number = state_manager.get_wa_number_by_session(wa_number_id) if wa_number_id else None
+        session = wa_number.get("session_name", wa_number_id) if wa_number else wa_number_id
+    finally:
+        conn.close()
+
+    settings = get_settings()
+    waha_url = settings.waha.url.rstrip("/")
+    waha_key = settings.waha.api_key
+
+    form = await request.form()
+    file = form.get("file")
+    media_type = form.get("type", "document")
+    caption = form.get("caption", "")
+
+    if not file:
+        raise HTTPException(status_code=400, detail="No file provided")
+
+    file_content = await file.read()
+    file_size = len(file_content)
+
+    if file_size > 10 * 1024 * 1024:
+        raise HTTPException(status_code=413, detail="File too large (max 10MB)")
+
+    allowed_types = {"image", "video", "document", "voice"}
+    if media_type not in allowed_types:
+        raise HTTPException(status_code=400, detail=f"Invalid media type. Allowed: {allowed_types}")
+
+    endpoint_map = {"image": "sendImage", "video": "sendVideo", "document": "sendFile", "voice": "sendVoice"}
+    waha_endpoint = endpoint_map.get(media_type, "sendFile")
+
+    try:
+        async with httpx.AsyncClient(timeout=60.0) as client:
+            files = {"file": (file.filename, file_content, file.content_type)}
+            data = {"chatId": contact_phone}
+            if caption and media_type in ("image", "video", "document"):
+                data["caption"] = caption
+
+            resp = await client.post(
+                f"{waha_url}/api/{session}/{waha_endpoint}",
+                headers={"X-Api-Key": waha_key},
+                files=files,
+                data=data,
+            )
+            resp.raise_for_status()
+            waha_response = resp.json()
+    except httpx.ConnectError:
+        raise HTTPException(status_code=502, detail="WAHA service unavailable")
+    except httpx.HTTPStatusError as e:
+        raise HTTPException(status_code=e.response.status_code, detail=e.response.text)
+
+    # Store media message in DB
+    conn = state_manager._connect()
+    try:
+        msg_id = waha_response.get("id", waha_response.get("key", {}).get("id", ""))
+        state_manager.add_conversation_message(
+            conversation_id=conversation_id,
+            message_text=caption or f"[{media_type}]",
+            direction="out",
+            message_type=media_type,
+            waha_message_id=msg_id,
+        )
+
+        conn.execute(
+            "INSERT INTO media_messages (conversation_id, message_id, media_type, file_name, file_size, caption) VALUES (?, ?, ?, ?, ?, ?)",
+            (conversation_id, None, media_type, file.filename, file_size, caption),
+        )
+        conn.commit()
+    finally:
+        conn.close()
+
+    return {"status": "success", "data": {"message_id": msg_id, "media_type": media_type, "file_name": file.filename}}
+
+
+@router.get("/{conversation_id}/tags")
+async def api_get_tags(conversation_id: int):
+    """Get tags for a conversation."""
+    conn = state_manager._connect()
+    try:
+        conv = conn.execute("SELECT id FROM conversations WHERE id = ?", (conversation_id,)).fetchone()
+        if not conv:
+            raise HTTPException(status_code=404, detail="Conversation not found")
+
+        tags = conn.execute(
+            "SELECT id, tag, created_at FROM conversation_tags WHERE conversation_id = ? ORDER BY created_at",
+            (conversation_id,),
+        ).fetchall()
+        return {"status": "success", "data": {"tags": [dict(t) for t in tags]}}
+    finally:
+        conn.close()
+
+
+@router.post("/{conversation_id}/tags")
+async def api_add_tags(conversation_id: int, request: Request):
+    """Add tags to a conversation."""
+    data = await request.json()
+    tags = data.get("tags", [])
+    if not tags:
+        raise HTTPException(status_code=400, detail="tags list required")
+
+    conn = state_manager._connect()
+    try:
+        conv = conn.execute("SELECT id FROM conversations WHERE id = ?", (conversation_id,)).fetchone()
+        if not conv:
+            raise HTTPException(status_code=404, detail="Conversation not found")
+
+        added = []
+        for tag in tags:
+            try:
+                conn.execute(
+                    "INSERT INTO conversation_tags (conversation_id, tag) VALUES (?, ?)",
+                    (conversation_id, tag),
+                )
+                added.append(tag)
+            except Exception:
+                pass
+        conn.commit()
+        return {"status": "success", "data": {"added": added}}
+    finally:
+        conn.close()
+
+
+@router.delete("/{conversation_id}/tags/{tag}")
+async def api_remove_tag(conversation_id: int, tag: str):
+    """Remove a tag from a conversation."""
+    conn = state_manager._connect()
+    try:
+        conn.execute(
+            "DELETE FROM conversation_tags WHERE conversation_id = ? AND tag = ?",
+            (conversation_id, tag),
+        )
+        conn.commit()
+        return {"status": "success", "data": {"removed": tag}}
+    finally:
+        conn.close()

@@ -30,6 +30,8 @@ from oneai_reach.api.v1.settings import router as settings_router
 from oneai_reach.api.v1.webhooks import router as webhooks_router
 from oneai_reach.api.v1.brain import router as brain_router
 from oneai_reach.api.v1.waha_proxy import router as waha_proxy_router
+from oneai_reach.api.v1.presence import router as presence_router
+from oneai_reach.api.v1.templates import router as templates_router
 from oneai_reach.api.webhooks import capi_router, waha_router
 from oneai_reach.config.settings import get_settings
 
@@ -96,6 +98,8 @@ def create_app() -> FastAPI:
     app.include_router(pipeline_router, prefix="/api/v1/pipeline")
     app.include_router(brain_router, prefix="/api/v1/brain")
     app.include_router(waha_proxy_router, prefix="/api/v1/waha")
+    app.include_router(presence_router)
+    app.include_router(templates_router)
 
     data_dir = os.path.join(os.path.dirname(os.path.dirname(os.path.dirname(os.path.dirname(__file__)))), "data")
     if os.path.isdir(data_dir):
