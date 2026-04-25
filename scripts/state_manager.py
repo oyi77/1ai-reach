@@ -5,6 +5,15 @@ from datetime import datetime
 
 from config import DB_FILE
 
+
+def normalize_jid(jid: str) -> str:
+    if not jid:
+        return jid
+    if "@lid" in jid:
+        return jid
+    base = jid.split("@")[0]
+    return f"{base}@c.us"
+
 _SCHEMA_SQL = """
 CREATE TABLE IF NOT EXISTS leads (
     id TEXT PRIMARY KEY,
@@ -732,6 +741,7 @@ def create_conversation(
     contact_name: str = "",
     lead_id: str | None = None,
 ) -> int:
+    contact_phone = normalize_jid(contact_phone)
     conn = _connect()
     try:
         conn.execute("BEGIN IMMEDIATE")
@@ -766,6 +776,7 @@ def get_conversation(conversation_id: int) -> dict | None:
 def get_or_create_conversation(
     wa_number_id: str, contact_phone: str, engine_mode: str
 ) -> int:
+    contact_phone = normalize_jid(contact_phone)
     conn = _connect()
     try:
         row = conn.execute(

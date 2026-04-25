@@ -120,7 +120,27 @@ def _normalize_phone(phone: str) -> str:
     return clean
 
 
+def _normalize_jid(jid: str) -> str:
+    """Normalize a WhatsApp JID to canonical @c.us format.
+
+    WhatsApp uses multiple JID suffixes for the same contact:
+    - @c.us (standard, most common)
+    - @s.whatsapp.net (NOWEB uses this for some messages)
+    - @lid (encrypted push names)
+
+    Strips the suffix and normalizes to @c.us for phone-number JIDs.
+    @lid JIDs are preserved as-is (no phone number to normalize).
+    """
+    if not jid:
+        return jid
+    if "@lid" in jid:
+        return jid  # encrypted push name — preserve as-is
+    base = jid.split("@")[0]
+    return f"{base}@c.us"
+
+
 def _is_manual_mode_active(wa_number_id: str, contact_phone: str) -> bool:
+    contact_phone = _normalize_jid(contact_phone)
     try:
         conn = state_manager._connect()
         try:
@@ -276,6 +296,7 @@ async def handle_waha_webhook(request: Request) -> WAHAWebhookResponse:
 
         # --- Message processing ---
         sender = payload.get("from") or payload.get("chatId", "")
+        sender = _normalize_jid(sender)
         body_text = _extract_body(payload)
         msg_type = payload.get("type", "chat")
         from_me = _extract_from_me(payload)
