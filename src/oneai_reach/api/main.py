@@ -12,11 +12,17 @@ from oneai_reach.api.v1.admin import router as admin_router
 from oneai_reach.api.v1.agents import router as agents_router
 from oneai_reach.api.v1.channels import router as channels_router
 from oneai_reach.api.v1.contacts import router as contacts_router
-from oneai_reach.api.v1.legacy import router as legacy_router
+from oneai_reach.api.v1.conversations import router as conversations_router
+from oneai_reach.api.v1.kb import router as kb_router
+from oneai_reach.api.v1.voice_config import router as voice_config_router
+from oneai_reach.api.v1.auto_learn import router as auto_learn_router
+from oneai_reach.api.v1.pipeline import router as pipeline_router
 from oneai_reach.api.v1.mcp import router as mcp_router
 from oneai_reach.api.v1.personas import router as personas_router
 from oneai_reach.api.v1.products import router as products_router
+from oneai_reach.api.v1.settings import router as settings_router
 from oneai_reach.api.v1.webhooks import router as webhooks_router
+from oneai_reach.api.v1.brain import router as brain_router
 from oneai_reach.api.webhooks import capi_router, waha_router
 from oneai_reach.config.settings import get_settings
 
@@ -67,7 +73,13 @@ def create_app() -> FastAPI:
     app.include_router(contacts_router)
     app.include_router(personas_router)
     app.include_router(products_router)
-    app.include_router(legacy_router, prefix="/api/v1/legacy")
+    app.include_router(settings_router)
+    app.include_router(conversations_router, prefix="/api/v1/conversations")
+    app.include_router(kb_router, prefix="/api/v1/kb")
+    app.include_router(voice_config_router, prefix="/api/v1/voice-config")
+    app.include_router(auto_learn_router, prefix="/api/v1/auto-learn")
+    app.include_router(pipeline_router, prefix="/api/v1/pipeline")
+    app.include_router(brain_router, prefix="/api/v1/brain")
 
     data_dir = os.path.join(os.path.dirname(os.path.dirname(os.path.dirname(os.path.dirname(__file__)))), "data")
     if os.path.isdir(data_dir):
