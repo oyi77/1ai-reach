@@ -432,5 +432,82 @@ export async function deleteWAHAServer(id: number): Promise<void> {
 
 export async function testWAHAServer(id: number): Promise<TestResult> {
   const data = await postJSON<TestResult>(`/api/v1/settings/waha-servers/${id}/test`, {});
-  return data;
+   return data;
+}
+
+// CRM Phase A types and API functions
+
+export interface WahaMessage {
+  id: string;
+  direction: "in" | "out";
+  text: string;
+  timestamp: number;
+  from_waha: boolean;
+  type: string;
+}
+
+export interface Template {
+  id: number;
+  wa_number_id: string | null;
+  name: string;
+  content: string;
+  category: string;
+  created_at?: string;
+  updated_at?: string;
+}
+
+export interface Tag {
+  id: number;
+  tag: string;
+  created_at?: string;
+}
+
+export interface PresenceInfo {
+  contact_phone: string;
+  status: string;
+  last_seen_at: string | null;
+  updated_at?: string;
+}
+
+export async function fetchWahaHistory(conversationId: number, limit = 50, before?: string): Promise<{ messages: WahaMessage[]; count: number }> {
+  const params = new URLSearchParams({ limit: String(limit) });
+  if (before) params.set("before", before);
+  return fetcher(`/api/v1/conversations/${conversationId}/waha-history?${params}`);
+}
+
+export async function sendMedia(conversationId: number, file: File, type: string, caption?: string): Promise<{ message_id: string; media_type: string; file_name: string }> {
+  const formData = new FormData();
+  formData.append("file", file);
+  formData.append("type", type);
+  if (caption) formData.append("caption", caption);
+  const res = await fetch(`${API_BASE}/api/v1/conversations/${conversationId}/send-media`, {
+    method: "POST",
+    body: formData,
+  });
+  if (!res.ok) throw new Error(`API ${res.status}: ${res.statusText}`);
+  const json = await res.json();
+  return json.data || json;
+}
+
+export async function fetchPresence(session: string): Promise<{ presences: PresenceInfo[] }> {
+  return fetcher(`/api/v1/presence/${session}`);
+}
+
+export async function fetchTemplates(waNumberId?: string): Promise<{ templates: Template[] }> {
+  const params = waNumberId ? `?wa_number_id=${waNumberId}` : "";
+  return fetcher(`/api/v1/templates${params}`);
+}
+
+export async function fetchTags(conversationId: number): Promise<{ tags: Tag[] }> {
+  return fetcher(`/api/v1/conversations/${conversationId}/tags`);
+}
+
+export async function addTags(conversationId: number, tags: string[]): Promise<{ added: string[] }> {
+  return postJSON(`/api/v1/conversations/${conversationId}/tags`, { tags });
+}
+
+export async function removeTag(conversationId: number, tag: string): Promise<{ removed: string }> {
+  const res = await fetch(`${API_BASE}/api/v1/conversations/${conversationId}/tags/${encodeURIComponent(tag)}`, { method: "DELETE" });
+  if (!res.ok) throw new Error(`API ${res.status}: ${res.statusText}`);
+  return res.json();
 }

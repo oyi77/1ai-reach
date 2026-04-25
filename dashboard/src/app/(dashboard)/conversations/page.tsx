@@ -2,8 +2,8 @@
 
 import { useState, useRef, useEffect, useMemo } from "react";
 import useSWR from "swr";
-import { fetcher, postJSON, fetchMessageLogs, type WANumber, type Conversation, type Message, type MessageLog } from "@/lib/api";
-import { Activity } from "lucide-react";
+import { fetcher, postJSON, fetchMessageLogs, fetchWahaHistory, sendMedia, fetchPresence, fetchTemplates, fetchTags, addTags, removeTag, type WANumber, type Conversation, type Message, type MessageLog, type WahaMessage, type Template, type Tag, type PresenceInfo } from "@/lib/api";
+import { Activity, Paperclip, Zap, Tag as TagIcon, Loader2, ThumbsUp, ThumbsDown, MessageSquare, Bot, Hand, Play, Square, Phone, Search, ChevronDown, ChevronRight, X } from "lucide-react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
@@ -11,7 +11,7 @@ import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
-import { Send, User, Loader2, ThumbsUp, ThumbsDown, MessageSquare, Bot, Hand, Play, Square, Phone, Search, ChevronDown, ChevronRight } from "lucide-react";
+import { Send, User } from "lucide-react";
 
 type Feedback = { id: number; message_id: number; rating: string; note: string; corrected_response: string };
 
@@ -38,6 +38,20 @@ export default function ConversationsPage() {
   const [newChatWA, setNewChatWA] = useState("");
   const [sendingNew, setSendingNew] = useState(false);
   const scrollRef = useRef<HTMLDivElement>(null);
+
+  // CRM Phase A state
+  const [wahaHistory, setWahaHistory] = useState<WahaMessage[]>([]);
+  const [loadingHistory, setLoadingHistory] = useState(false);
+  const [noMoreHistory, setNoMoreHistory] = useState(false);
+  const [mediaFile, setMediaFile] = useState<File | null>(null);
+  const [mediaPreview, setMediaPreview] = useState<string | null>(null);
+  const [sendingMedia, setSendingMedia] = useState(false);
+  const [presenceMap, setPresenceMap] = useState<Map<string, PresenceInfo>>(new Map());
+  const [showTemplates, setShowTemplates] = useState(false);
+  const [templates, setTemplates] = useState<Template[]>([]);
+  const [convTags, setConvTags] = useState<Tag[]>([]);
+  const [newTag, setNewTag] = useState("");
+  const [showTagInput, setShowTagInput] = useState(false);
 
   // Fetch ALL conversations across all WA numbers
   const { data: allConvData, mutate: mutateAllConv } = useSWR<{ conversations: Conversation[] }>(
@@ -106,6 +120,35 @@ export default function ConversationsPage() {
       scrollRef.current.scrollTop = scrollRef.current.scrollHeight;
     }
   }, [messages]);
+
+  // Load presence for all WA sessions
+  useEffect(() => {
+    if (numbers.length === 0) return;
+    const loadPresence = async () => {
+      const newMap = new Map<string, PresenceInfo>();
+      for (const n of numbers) {
+        try {
+          const data = await fetchPresence(n.session_name || n.id);
+          for (const p of data.presences) {
+            newMap.set(p.contact_phone, p);
+          }
+        } catch {}
+      }
+      setPresenceMap(newMap);
+    };
+    loadPresence();
+    const interval = setInterval(loadPresence, 15000);
+    return () => clearInterval(interval);
+  }, [numbers]);
+
+  // Load templates and tags when conversation changes
+  useEffect(() => {
+    if (!selectedConv) return;
+    fetchTemplates().then((d) => setTemplates(d.templates || [])).catch(() => {});
+    fetchTags(selectedConv).then((d) => setConvTags(d.tags || [])).catch(() => {});
+    setWahaHistory([]);
+    setNoMoreHistory(false);
+  }, [selectedConv]);
 
   if (waLoad) {
     return <div className="p-6 flex items-center justify-center h-[50vh]"><Loader2 className="h-8 w-8 animate-spin text-orange-500" /></div>;
@@ -178,6 +221,79 @@ export default function ConversationsPage() {
       else next.add(waId);
       return next;
     });
+  }
+
+  async function loadOlderMessages() {
+    if (!selectedConv || loadingHistory || noMoreHistory) return;
+    setLoadingHistory(true);
+    try {
+      const oldestTs = wahaHistory.length > 0 ? String(wahaHistory[0].timestamp) : undefined;
+      const data = await fetchWahaHistory(selectedConv, 50, oldestTs);
+      if (data.messages.length === 0) {
+        setNoMoreHistory(true);
+      } else {
+        setWahaHistory((prev) => [...data.messages, ...prev]);
+      }
+    } catch (e) {
+      console.error("Failed to load history:", e);
+    } finally {
+      setLoadingHistory(false);
+    }
+  }
+
+  async function handleSendMedia() {
+    if (!selectedConv || !mediaFile) return;
+    setSendingMedia(true);
+    try {
+      const ext = mediaFile.name.split(".").pop()?.toLowerCase() || "";
+      const typeMap: Record<string, string> = { jpg: "image", jpeg: "image", png: "image", gif: "image", webp: "image", mp4: "video", pdf: "document", doc: "document", docx: "document", ogg: "voice", mp3: "voice" };
+      const mediaType = typeMap[ext] || "document";
+      await sendMedia(selectedConv, mediaFile, mediaType, replyText || undefined);
+      setMediaFile(null);
+      setMediaPreview(null);
+      setReplyText("");
+      mutateMsgs();
+    } catch (e) {
+      alert("Failed to send media: " + e);
+    } finally {
+      setSendingMedia(false);
+    }
+  }
+
+  function handleFileSelect(e: React.ChangeEvent<HTMLInputElement>) {
+    const file = e.target.files?.[0];
+    if (!file) return;
+    setMediaFile(file);
+    if (file.type.startsWith("image/")) {
+      const reader = new FileReader();
+      reader.onload = (ev) => setMediaPreview(ev.target?.result as string);
+      reader.readAsDataURL(file);
+    } else {
+      setMediaPreview(null);
+    }
+  }
+
+  async function handleAddTag() {
+    if (!selectedConv || !newTag.trim()) return;
+    try {
+      await addTags(selectedConv, [newTag.trim()]);
+      setNewTag("");
+      const data = await fetchTags(selectedConv);
+      setConvTags(data.tags || []);
+    } catch (e) {
+      console.error("Failed to add tag:", e);
+    }
+  }
+
+  async function handleRemoveTag(tag: string) {
+    if (!selectedConv) return;
+    try {
+      await removeTag(selectedConv, tag);
+      const data = await fetchTags(selectedConv);
+      setConvTags(data.tags || []);
+    } catch (e) {
+      console.error("Failed to remove tag:", e);
+    }
   }
 
   const statusColors: Record<string, string> = {
@@ -272,6 +388,9 @@ export default function ConversationsPage() {
                     {!isCollapsed && convs.map((conv) => {
                       const lastMsg = conv.last_message_text || conv.contact_phone;
                       const hasManual = conv.manual_mode === 1;
+                      const presInfo = presenceMap.get(conv.contact_phone);
+                      const presColor = presInfo?.status === "online" ? "bg-green-500" : presInfo?.status === "composing" ? "bg-yellow-500" : "bg-neutral-600";
+                      const convTagsForConv = selectedConv === conv.id ? convTags : [];
                       return (
                         <button
                           key={conv.id}
@@ -279,13 +398,26 @@ export default function ConversationsPage() {
                           className={`w-full text-left px-4 py-2.5 border-b border-neutral-800/50 hover:bg-neutral-800/50 transition-colors pl-6 ${selectedConv === conv.id ? "bg-orange-500/10 border-l-2 border-l-orange-500" : ""}`}
                         >
                           <div className="flex items-center justify-between">
-                            <span className="font-medium text-sm truncate max-w-[140px]">{conv.contact_name || conv.contact_phone?.replace("@c.us", "")}</span>
+                            <span className="font-medium text-sm truncate max-w-[140px] flex items-center gap-1.5">
+                              <span className={`w-2 h-2 rounded-full shrink-0 ${presColor}`} title={presInfo?.status === "online" ? "Online" : presInfo?.status === "composing" ? "Typing..." : presInfo?.last_seen_at ? `Last seen ${new Date(presInfo.last_seen_at).toLocaleString()}` : "Offline"} />
+                              {conv.contact_name || conv.contact_phone?.replace("@c.us", "").replace("@lid", "🔒")}
+                            </span>
                             <div className="flex gap-1">
                               {hasManual && <Badge className="text-xs bg-orange-700">Admin</Badge>}
                               <Badge variant="secondary" className={`text-xs ${statusColors[conv.status ?? ""] || "bg-neutral-700"}`}>{conv.status || "unknown"}</Badge>
                             </div>
                           </div>
                           <p className="text-xs text-neutral-500 mt-0.5 truncate">{lastMsg}</p>
+                          {convTagsForConv.length > 0 && (
+                            <div className="flex flex-wrap gap-1 mt-1">
+                              {convTagsForConv.map((t) => (
+                                <span key={t.id} className="inline-flex items-center gap-0.5 px-1.5 py-0.5 text-xs rounded-full bg-neutral-700 text-neutral-300">
+                                  {t.tag}
+                                  <button onClick={(e) => { e.stopPropagation(); handleRemoveTag(t.tag); }} className="hover:text-red-400 ml-0.5"><X className="h-2.5 w-2.5" /></button>
+                                </span>
+                              ))}
+                            </div>
+                          )}
                         </button>
                       );
                     })}
@@ -318,6 +450,30 @@ export default function ConversationsPage() {
               <CardContent className="flex-1 p-0 overflow-hidden">
                 <ScrollArea className="h-[calc(100vh-370px)] p-4">
                   <div ref={scrollRef} className="space-y-3">
+                    {/* Load older messages button */}
+                    {selectedConv && (
+                      <div className="text-center py-2">
+                        {loadingHistory ? (
+                          <Loader2 className="h-4 w-4 animate-spin mx-auto text-neutral-500" />
+                        ) : noMoreHistory ? (
+                          <p className="text-xs text-neutral-600">No more messages</p>
+                        ) : (
+                          <button onClick={loadOlderMessages} className="text-xs text-orange-400 hover:text-orange-300 underline">
+                            Load older messages
+                          </button>
+                        )}
+                      </div>
+                    )}
+                    {/* WAHA history messages */}
+                    {wahaHistory.map((msg) => (
+                      <div key={`waha-${msg.id}`} className={`flex ${msg.direction === "out" ? "justify-end" : "justify-start"}`}>
+                        <div className={`max-w-[75%] rounded-lg px-3 py-2 text-sm ${msg.direction === "out" ? "bg-orange-600 text-white" : "bg-neutral-800 text-neutral-200"}`}>
+                          <p className="whitespace-pre-wrap">{msg.text}</p>
+                          <p className="text-xs opacity-50 mt-1">{msg.type !== "chat" ? `[${msg.type}]` : ""} {new Date(msg.timestamp * 1000).toLocaleTimeString().slice(0, 5)}</p>
+                        </div>
+                      </div>
+                    ))}
+                    {/* Local messages */}
                     {messages.map((msg) => {
                       const fb = feedbackMap.get(msg.id);
                       const isAI = msg.direction === "out";
@@ -367,17 +523,73 @@ export default function ConversationsPage() {
                   </div>
                 </ScrollArea>
               </CardContent>
-              <div className="p-3 border-t border-neutral-800 flex gap-2">
-                <Input
-                  value={replyText}
-                  onChange={(e) => setReplyText(e.target.value)}
-                  onKeyDown={(e) => e.key === "Enter" && !e.shiftKey && sendReply()}
-                  placeholder={isManualMode ? "Reply as admin..." : "Reply..."}
-                  className="bg-neutral-800 border-neutral-700"
-                />
-                <Button onClick={sendReply} size="icon" className="bg-orange-600 hover:bg-orange-700">
-                  <Send className="h-4 w-4" />
-                </Button>
+              <div className="p-3 border-t border-neutral-800">
+                {/* Tags for selected conversation */}
+                {selectedConv && convTags.length > 0 && (
+                  <div className="flex flex-wrap gap-1 mb-2">
+                    {convTags.map((t) => (
+                      <span key={t.id} className="inline-flex items-center gap-0.5 px-1.5 py-0.5 text-xs rounded-full bg-neutral-700 text-neutral-300">
+                        {t.tag}
+                        <button onClick={() => handleRemoveTag(t.tag)} className="hover:text-red-400 ml-0.5"><X className="h-2.5 w-2.5" /></button>
+                      </span>
+                    ))}
+                  </div>
+                )}
+                {/* Add tag input */}
+                {selectedConv && showTagInput && (
+                  <div className="flex gap-1 mb-2">
+                    <Input value={newTag} onChange={(e) => setNewTag(e.target.value)} onKeyDown={(e) => e.key === "Enter" && handleAddTag()} placeholder="Add tag..." className="h-7 text-xs bg-neutral-800 border-neutral-700" />
+                    <Button size="sm" onClick={handleAddTag} className="h-7 bg-orange-600 hover:bg-orange-700 text-xs">Add</Button>
+                  </div>
+                )}
+                {/* Media preview */}
+                {mediaPreview && (
+                  <div className="mb-2 relative">
+                    <img src={mediaPreview} alt="Preview" className="h-20 rounded border border-neutral-700" />
+                    <button onClick={() => { setMediaFile(null); setMediaPreview(null); }} className="absolute top-1 right-1 bg-neutral-800 rounded-full p-0.5 hover:bg-red-800"><X className="h-3 w-3" /></button>
+                  </div>
+                )}
+                {mediaFile && !mediaPreview && (
+                  <div className="mb-2 text-xs text-neutral-400 flex items-center gap-1">
+                    <Paperclip className="h-3 w-3" /> {mediaFile.name}
+                    <button onClick={() => { setMediaFile(null); }} className="hover:text-red-400"><X className="h-3 w-3" /></button>
+                  </div>
+                )}
+                {/* Template picker dropdown */}
+                {showTemplates && (
+                  <div className="mb-2 bg-neutral-800 border border-neutral-700 rounded-lg max-h-40 overflow-y-auto">
+                    {templates.length === 0 ? (
+                      <p className="text-xs text-neutral-500 p-2">No templates</p>
+                    ) : (
+                      templates.map((t) => (
+                        <button key={t.id} onClick={() => { setReplyText(t.content); setShowTemplates(false); }} className="w-full text-left px-3 py-2 hover:bg-neutral-700 border-b border-neutral-700/50 last:border-0">
+                          <span className="text-xs text-orange-400 font-medium">{t.name}</span>
+                          <span className="text-xs text-neutral-500 ml-2">{t.category}</span>
+                          <p className="text-xs text-neutral-400 truncate">{t.content}</p>
+                        </button>
+                      ))
+                    )}
+                  </div>
+                )}
+                {/* Reply input row */}
+                <div className="flex gap-2 items-center">
+                  <button onClick={() => setShowTagInput(!showTagInput)} className="p-2 rounded hover:bg-neutral-800 text-neutral-400 hover:text-orange-400" title="Add tag"><TagIcon className="h-4 w-4" /></button>
+                  <button onClick={() => setShowTemplates(!showTemplates)} className="p-2 rounded hover:bg-neutral-800 text-neutral-400 hover:text-yellow-400" title="Quick reply templates"><Zap className="h-4 w-4" /></button>
+                  <label className="p-2 rounded hover:bg-neutral-800 text-neutral-400 hover:text-blue-400 cursor-pointer" title="Attach file">
+                    <Paperclip className="h-4 w-4" />
+                    <input type="file" accept="image/*,video/*,.pdf,.doc,.docx,.ogg,.mp3" className="hidden" onChange={handleFileSelect} />
+                  </label>
+                  <Input
+                    value={replyText}
+                    onChange={(e) => setReplyText(e.target.value)}
+                    onKeyDown={(e) => e.key === "Enter" && !e.shiftKey && !mediaFile && sendReply()}
+                    placeholder={isManualMode ? "Reply as admin..." : "Reply..."}
+                    className="flex-1 bg-neutral-800 border-neutral-700"
+                  />
+                  <Button onClick={mediaFile ? handleSendMedia : sendReply} disabled={sendingMedia} size="icon" className="bg-orange-600 hover:bg-orange-700">
+                    {sendingMedia ? <Loader2 className="h-4 w-4 animate-spin" /> : <Send className="h-4 w-4" />}
+                  </Button>
+                </div>
               </div>
             </>
           ) : (
