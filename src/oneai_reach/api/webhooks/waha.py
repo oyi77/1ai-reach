@@ -40,7 +40,7 @@ logger = logging.getLogger(__name__)
 _processed_messages: set[str] = set()
 _MAX_PROCESSED_MESSAGES = 2000
 _CONVERSATION_MESSAGE_COUNTS: dict[str, int] = {}
-_CONVERSATION_MAX_MESSAGES = 50
+_CONVERSATION_MAX_MESSAGES = 10
 _COUNTS_PRUNE_THRESHOLD = 500  # prune when total entries exceed this
 
 # Background thread pool for CS engine (non-blocking)
@@ -130,6 +130,42 @@ def _is_manual_mode_active(wa_number_id: str, contact_phone: str) -> bool:
     except Exception as e:
         logger.warning(f"manual_mode check failed wa={wa_number_id} phone={contact_phone} err={e}")
     return False
+
+
+_KNOWN_BOT_PHONES: set[str] = set()
+_BOT_PHONES_LOADED_AT: float = 0
+_BOT_PHONES_TTL = 300
+
+
+def _get_known_bot_phones() -> set[str]:
+    global _KNOWN_BOT_PHONES, _BOT_PHONES_LOADED_AT
+    now = _time.time()
+    if _KNOWN_BOT_PHONES and (now - _BOT_PHONES_LOADED_AT) < _BOT_PHONES_TTL:
+        return _KNOWN_BOT_PHONES
+    try:
+        from state_manager import get_wa_numbers
+        numbers = get_wa_numbers()
+        _KNOWN_BOT_PHONES = {_normalize_phone(n.get("phone", "")) for n in numbers if n.get("phone")}
+        _BOT_PHONES_LOADED_AT = now
+        logger.info(f"BOT PHONES loaded: {_KNOWN_BOT_PHONES}")
+    except Exception as e:
+        logger.warning(f"Failed to load bot phones: {e}")
+    return _KNOWN_BOT_PHONES
+
+
+def _is_sender_a_bot(sender: str, session: str) -> bool:
+    normalized_sender = _normalize_phone(sender)
+    bot_phones = _get_known_bot_phones()
+    # Don't flag the session's own number as a bot (that's handled by from_me check)
+    if normalized_sender not in bot_phones:
+        return False
+    # Get this session's own number
+    wa_number = get_wa_number_by_session(session)
+    if wa_number:
+        own_phone = _normalize_phone(wa_number.get("phone", ""))
+        if normalized_sender == own_phone:
+            return False  # own messages handled by from_me check
+    return True
 
 
 def _extract_body(payload: dict) -> str:
@@ -257,6 +293,11 @@ async def handle_waha_webhook(request: Request) -> WAHAWebhookResponse:
         # Skip own messages
         if from_me:
             return WAHAWebhookResponse(status="ok", skipped="from_me")
+
+        # Skip messages from other known bot numbers (prevents infinite chat loops)
+        if _is_sender_a_bot(sender, session):
+            logger.warning(f"BOT LOOP BLOCKED session={session} sender={sender}")
+            return WAHAWebhookResponse(status="ok", skipped="bot_sender")
 
         # Skip group messages
         if "@g.us" in sender:
