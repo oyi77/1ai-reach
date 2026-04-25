@@ -66,25 +66,26 @@ async def api_new_conversation(request: Request):
         raise HTTPException(status_code=400, detail="wa_number_id, phone, and message required")
 
     conn = state_manager._connect()
-    conn.row_factory = sqlite3.Row
+    try:
+        conn.row_factory = sqlite3.Row
 
-    wa_num = conn.execute("SELECT session_name, phone FROM wa_numbers WHERE id = ?", (wa_number_id,)).fetchone()
-    if not wa_num:
+        wa_num = conn.execute("SELECT session_name, phone FROM wa_numbers WHERE id = ?", (wa_number_id,)).fetchone()
+        if not wa_num:
+            raise HTTPException(status_code=404, detail="WA number not found")
+
+        conv_id = conn.execute("""
+            INSERT INTO conversations (wa_number_id, contact_phone, status, engine_mode, message_count)
+            VALUES (?, ?, 'active', 'manual', 1)
+        """, (wa_number_id, f"{phone}@c.us")).lastrowid
+        conn.commit()
+
+        conn.execute("""
+            INSERT INTO conversation_messages (conversation_id, direction, message_text, message_type)
+            VALUES (?, 'out', ?, 'text')
+        """, (conv_id, message))
+        conn.commit()
+    finally:
         conn.close()
-        raise HTTPException(status_code=404, detail="WA number not found")
-
-    conv_id = conn.execute("""
-        INSERT INTO conversations (wa_number_id, contact_phone, status, engine_mode, message_count)
-        VALUES (?, ?, 'active', 'manual', 1)
-    """, (wa_number_id, f"{phone}@c.us")).lastrowid
-    conn.commit()
-
-    conn.execute("""
-        INSERT INTO conversation_messages (conversation_id, direction, message_text, message_type)
-        VALUES (?, 'out', ?, 'text')
-    """, (conv_id, message))
-    conn.commit()
-    conn.close()
 
     from scripts.senders import send_whatsapp
     logger.info(f"NEW CONV wa_number_id={wa_number_id} phone={phone} session={wa_num['session_name']} msg_len={len(message)}")
@@ -105,9 +106,11 @@ async def api_new_conversation(request: Request):
 async def api_stop_conversation(conv_id: int):
     """Stop AI responses for a conversation."""
     conn = state_manager._connect()
-    conn.execute("UPDATE conversations SET status = 'stopped' WHERE id = ?", (conv_id,))
-    conn.commit()
-    conn.close()
+    try:
+        conn.execute("UPDATE conversations SET status = 'stopped' WHERE id = ?", (conv_id,))
+        conn.commit()
+    finally:
+        conn.close()
     return {"status": "success", "data": {"ok": True}}
 
 
@@ -129,16 +132,15 @@ async def api_conversation_send(conv_id: int, request: Request):
         raise HTTPException(status_code=400, detail="message required")
 
     conn = state_manager._connect()
-    conv = conn.execute("SELECT wa_number_id, contact_phone FROM conversations WHERE id = ?", (conv_id,)).fetchone()
+    try:
+        conv = conn.execute("SELECT wa_number_id, contact_phone FROM conversations WHERE id = ?", (conv_id,)).fetchone()
+        if not conv:
+            raise HTTPException(status_code=404, detail="Conversation not found")
 
-    if not conv:
+        wa_number_id, contact_phone = conv[0], conv[1]
+        wa_num = conn.execute("SELECT session_name, phone FROM wa_numbers WHERE id = ?", (wa_number_id,)).fetchone()
+    finally:
         conn.close()
-        raise HTTPException(status_code=404, detail="Conversation not found")
-
-    wa_number_id, contact_phone = conv[0], conv[1]
-
-    wa_num = conn.execute("SELECT session_name, phone FROM wa_numbers WHERE id = ?", (wa_number_id,)).fetchone()
-    conn.close()
 
     msg_id = state_manager.add_conversation_message(
         conversation_id=conv_id,
@@ -175,15 +177,15 @@ async def api_conversation_waha_history(conv_id: int, limit: int = 100):
     Merges WAHA messages with local DB messages, deduplicating by WAHA message ID.
     """
     conn = state_manager._connect()
-    conv = conn.execute(
-        "SELECT wa_number_id, contact_phone FROM conversations WHERE id = ?", (conv_id,)
-    ).fetchone()
-    if not conv:
+    try:
+        conv = conn.execute(
+            "SELECT wa_number_id, contact_phone FROM conversations WHERE id = ?", (conv_id,)
+        ).fetchone()
+        if not conv:
+            raise HTTPException(status_code=404, detail="Conversation not found")
+        wa_number_id, contact_phone = conv[0], conv[1]
+    finally:
         conn.close()
-        raise HTTPException(status_code=404, detail="Conversation not found")
-
-    wa_number_id, contact_phone = conv[0], conv[1]
-    conn.close()
 
     wa_num = None
     try:
@@ -191,9 +193,13 @@ async def api_conversation_waha_history(conv_id: int, limit: int = 100):
         wa_num = c2.execute(
             "SELECT session_name, phone FROM wa_numbers WHERE id = ?", (wa_number_id,)
         ).fetchone()
-        c2.close()
     except Exception:
         pass
+    finally:
+        try:
+            c2.close()
+        except Exception:
+            pass
 
     if not wa_num:
         return {"status": "success", "data": {"messages": [], "count": 0}}

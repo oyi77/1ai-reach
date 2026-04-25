@@ -38,8 +38,10 @@ logger = logging.getLogger(__name__)
 
 # --- Dedup & rate limiting ---
 _processed_messages: set[str] = set()
+_MAX_PROCESSED_MESSAGES = 2000
 _CONVERSATION_MESSAGE_COUNTS: dict[str, int] = {}
 _CONVERSATION_MAX_MESSAGES = 50
+_COUNTS_PRUNE_THRESHOLD = 500  # prune when total entries exceed this
 
 # Background thread pool for CS engine (non-blocking)
 _executor = ThreadPoolExecutor(max_workers=4, thread_name_prefix="cs_engine")
@@ -249,7 +251,7 @@ async def handle_waha_webhook(request: Request) -> WAHAWebhookResponse:
             return WAHAWebhookResponse(status="ok", skipped="duplicate")
         if msg_id:
             _processed_messages.add(msg_id)
-            if len(_processed_messages) > 2000:
+            if len(_processed_messages) > _MAX_PROCESSED_MESSAGES:
                 _processed_messages.clear()
 
         # Skip own messages
@@ -329,6 +331,10 @@ async def handle_waha_webhook(request: Request) -> WAHAWebhookResponse:
         if conv_key not in _CONVERSATION_MESSAGE_COUNTS:
             _CONVERSATION_MESSAGE_COUNTS[conv_key] = 0
         _CONVERSATION_MESSAGE_COUNTS[conv_key] += 1
+
+        if len(_CONVERSATION_MESSAGE_COUNTS) > _COUNTS_PRUNE_THRESHOLD:
+            _CONVERSATION_MESSAGE_COUNTS.clear()
+            _CONVERSATION_MESSAGE_COUNTS[conv_key] = 1
 
         if _CONVERSATION_MESSAGE_COUNTS[conv_key] > _CONVERSATION_MAX_MESSAGES:
             logger.warning(
