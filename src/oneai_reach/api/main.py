@@ -66,6 +66,14 @@ def create_app() -> FastAPI:
         logger.error(f"Persona migration failed: {e}")
         raise
 
+    # Run CRM Phase A migration (tags, templates, @lid mapping, presence, media)
+    try:
+        from oneai_reach.infrastructure.database.migration_crm_phase_a import run_crm_migration
+        if os.path.exists(db_path):
+            run_crm_migration(db_path)
+    except Exception as e:
+        logger.error(f"CRM Phase A migration failed: {e}")
+
     setup_middleware(app)
     setup_exception_handlers(app)
 
