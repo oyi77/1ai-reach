@@ -10,6 +10,7 @@ from pathlib import Path
 from typing import Optional, Set
 
 from pydantic import Field, field_validator
+import os
 from pydantic_settings import BaseSettings
 
 
@@ -145,7 +146,9 @@ class WAHASettings(BaseSettings):
         default="199c96bcb87e45a39f6cde9e5677ed09",
         description="Direct WAHA API key",
     )
-    session: str = Field(default="default", description="WAHA session name")
+    session: str = Field(
+            default=os.environ.get("WAHA_SESSION", "default"), description="WAHA session name"
+        )
     own_number: str = Field(default="6282247006969", description="Own WhatsApp number")
     webhook_path: str = Field(
         default="/webhook/waha", description="Webhook path for WAHA"
