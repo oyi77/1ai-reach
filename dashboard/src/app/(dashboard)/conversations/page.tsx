@@ -2,7 +2,8 @@
 
 import { useState, useRef, useEffect, useMemo } from "react";
 import useSWR from "swr";
-import { fetcher, postJSON, type WANumber, type Conversation, type Message } from "@/lib/api";
+import { fetcher, postJSON, fetchMessageLogs, type WANumber, type Conversation, type Message, type MessageLog } from "@/lib/api";
+import { Activity } from "lucide-react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
@@ -28,6 +29,12 @@ export default function ConversationsPage() {
   const [newChatOpen, setNewChatOpen] = useState(false);
   const [newChatPhone, setNewChatPhone] = useState("");
   const [newChatMsg, setNewChatMsg] = useState("");
+  const [showLog, setShowLog] = useState(false);
+  const { data: logData, mutate: mutateLogs } = useSWR<MessageLog[]>(
+    showLog ? "/api/v1/conversations/logs?limit=50" : null,
+    fetcher,
+    { refreshInterval: 5000 }
+  );
   const [newChatWA, setNewChatWA] = useState("");
   const [sendingNew, setSendingNew] = useState(false);
   const scrollRef = useRef<HTMLDivElement>(null);
@@ -381,6 +388,34 @@ export default function ConversationsPage() {
             </div>
           )}
         </Card>
+      </div>
+
+      {/* Activity Log */}
+      <div className="mt-4">
+        <Button variant="outline" size="sm" onClick={() => { setShowLog(!showLog); if (!showLog) mutateLogs(); }} className="border-neutral-700 text-neutral-400 hover:text-white">
+          <Activity className="h-4 w-4 mr-1" /> {showLog ? "Hide Activity Log" : "Show Activity Log"}
+        </Button>
+        {showLog && (
+          <Card className="mt-2 bg-neutral-900 border-neutral-800">
+            <CardHeader className="pb-2">
+              <CardTitle className="text-sm text-neutral-300">Message Activity Log</CardTitle>
+            </CardHeader>
+            <CardContent className="max-h-64 overflow-y-auto">
+              {(logData as any)?.logs?.length ? (
+                <div className="space-y-1 font-mono text-xs">
+                  {(logData as any).logs.map((log: MessageLog, i: number) => (
+                    <div key={i} className={`px-2 py-1 rounded ${log.priority === "3" ? "bg-red-900/30 text-red-300" : log.priority === "4" ? "bg-yellow-900/30 text-yellow-300" : "bg-neutral-800 text-neutral-400"}`}>
+                      <span className="text-neutral-600">{log.timestamp ? new Date(Number(log.timestamp) / 1000).toLocaleTimeString() : ""}</span>{" "}
+                      {log.message}
+                    </div>
+                  ))}
+                </div>
+              ) : (
+                <p className="text-neutral-500 text-xs">No activity logged yet. Send a message to see logs.</p>
+              )}
+            </CardContent>
+          </Card>
+        )}
       </div>
 
       {/* New Chat Dialog */}

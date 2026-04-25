@@ -50,6 +50,7 @@ def _waha_targets():
 async def api_conversations(wa_number_id: Optional[str] = None):
     """List all conversations, optionally filtered by WA number."""
     convs = state_manager.get_all_conversation_stages(wa_number_id=wa_number_id)
+    logger.debug(f"LIST convs wa_number_id={wa_number_id} count={len(convs)}")
     return {"status": "success", "data": {"conversations": convs, "count": len(convs)}}
 
 
@@ -86,12 +87,15 @@ async def api_new_conversation(request: Request):
     conn.close()
 
     from scripts.senders import send_whatsapp
-    logger.info(f"New conversation: wa_number_id={wa_number_id}, phone={phone}, session={wa_num['session_name']}")
+    logger.info(f"NEW CONV wa_number_id={wa_number_id} phone={phone} session={wa_num['session_name']} msg_len={len(message)}")
     try:
         result = send_whatsapp(phone, message, wa_num["session_name"])
-        logger.info(f"send_whatsapp result: {result}")
+        if result:
+            logger.info(f"NEW CONV SEND OK session={wa_num['session_name']} to={phone}")
+        else:
+            logger.error(f"NEW CONV SEND FAIL session={wa_num['session_name']} to={phone} all_methods_failed")
     except Exception as e:
-        logger.error(f"send_whatsapp failed: {e}", exc_info=True)
+        logger.error(f"NEW CONV SEND ERROR session={wa_num['session_name']} to={phone} err={e}", exc_info=True)
         raise HTTPException(status_code=500, detail=f"Send failed: {e}")
 
     return JSONResponse(status_code=201, content={"status": "success", "data": {"ok": True, "conversation_id": conv_id}})
@@ -146,7 +150,18 @@ async def api_conversation_send(conv_id: int, request: Request):
     if wa_num:
         session_name = wa_num[0]
         from scripts.senders import send_whatsapp
-        send_whatsapp(contact_phone.replace("@c.us", ""), text, session_name)
+        clean_phone = contact_phone.replace("@c.us", "")
+        logger.info(f"SEND msg conv={conv_id} session={session_name} to={clean_phone} len={len(text)}")
+        try:
+            ok = send_whatsapp(clean_phone, text, session_name)
+            if ok:
+                logger.info(f"SEND OK conv={conv_id} session={session_name} to={clean_phone}")
+            else:
+                logger.error(f"SEND FAIL conv={conv_id} session={session_name} to={clean_phone} all_methods_failed")
+        except Exception as e:
+            logger.error(f"SEND ERROR conv={conv_id} session={session_name} to={clean_phone} err={e}")
+    else:
+        logger.warning(f"SEND SKIP conv={conv_id} no_waha_session wa_number_id={wa_number_id}")
 
     return JSONResponse(status_code=201, content={"status": "success", "data": {"ok": True, "message_id": msg_id}})
 
@@ -192,6 +207,7 @@ async def api_conversation_waha_history(conv_id: int, limit: int = 100):
         if not url:
             continue
         try:
+            logger.info(f"WAHA HISTORY conv={conv_id} target={target_name} session={session_name} chat={chat_id}")
             r = http_requests.get(
                 f"{url}/api/{session_name}/chats/{url_quote(chat_id, safe='')}/messages",
                 params={"limit": str(limit), "downloadMedia": "false"},
@@ -201,10 +217,13 @@ async def api_conversation_waha_history(conv_id: int, limit: int = 100):
             if r.status_code == 200:
                 raw = r.json()
                 waha_messages = raw if isinstance(raw, list) else raw.get("messages", [])
+                logger.info(f"WAHA HISTORY OK conv={conv_id} target={target_name} msgs={len(waha_messages)}")
                 break
+            logger.warning(f"WAHA HISTORY FAIL conv={conv_id} target={target_name} status={r.status_code} body={r.text[:100]}")
             if r.status_code == 404:
                 continue
-        except Exception:
+        except Exception as e:
+            logger.error(f"WAHA HISTORY ERROR conv={conv_id} target={target_name} err={e}")
             continue
 
     # Also get local messages for dedup
@@ -365,3 +384,54 @@ async def api_conversation_feedback_get(conv_id: int):
         return {"status": "success", "data": {"feedback": [dict(r) for r in rows]}}
     finally:
         conn.close()
+
+
+# ── Message Log ───────────────────────────────────────────────────────
+
+@router.get("/logs")
+async def api_message_logs(
+    limit: int = 100,
+    direction: Optional[str] = None,
+    session: Optional[str] = None,
+):
+    """Recent message activity log from journald (1ai-reach-api unit).
+
+    Queries journald for the last N log entries matching our structured
+    send/receive/error log lines. Filterable by direction (in/out) or session name.
+    """
+    import subprocess as sp
+
+    cmd = [
+        "journalctl", "--user", "-u", "1ai-reach-api",
+        "--no-pager", "-n", str(min(limit, 500)),
+        "--output=json",
+    ]
+    try:
+        result = sp.run(cmd, capture_output=True, text=True, timeout=10)
+        entries = []
+        for line in result.stdout.strip().split("\n"):
+            if not line.strip():
+                continue
+            try:
+                import json
+                entry = json.loads(line)
+                msg = entry.get("MESSAGE", "")
+                if not msg:
+                    continue
+                # Filter to our structured log lines
+                if any(kw in msg for kw in ("SEND ", "RECV ", "WAHA ", "NEW CONV")):
+                    if direction and direction not in msg:
+                        continue
+                    if session and session not in msg:
+                        continue
+                    entries.append({
+                        "timestamp": entry.get("__REALTIME_TIMESTAMP", entry.get("__MONOTONIC_TIMESTAMP", "")),
+                        "message": msg,
+                        "priority": entry.get("PRIORITY", "6"),
+                    })
+            except (json.JSONDecodeError, KeyError):
+                continue
+        return {"status": "success", "data": {"logs": entries, "count": len(entries)}}
+    except Exception as e:
+        logger.error(f"message log query failed: {e}")
+        return {"status": "error", "data": {"logs": [], "count": 0, "error": str(e)}}

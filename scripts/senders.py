@@ -1,6 +1,10 @@
+import logging
 import os
 import subprocess
 import sys
+
+_wa_logger = logging.getLogger("waha")
+_email_logger = logging.getLogger("email")
 
 try:
     import requests as _req
@@ -206,6 +210,7 @@ def _send_wa_waha(phone: str, message: str, session_name: str = None) -> bool:
                 )
                 if r.status_code < 300:
                     print(f"✅ WA sent via {target_name} ({session_name}) to {clean}")
+                    _wa_logger.info(f"SEND OK target={target_name} session={session_name} to={clean} len={len(message)}")
                     return True
                 # Session FAILED or other error — try next target
                 print(
@@ -213,9 +218,10 @@ def _send_wa_waha(phone: str, message: str, session_name: str = None) -> bool:
                     f"{r.text[:200]}, falling back to other sessions",
                     file=sys.stderr,
                 )
+                _wa_logger.warning(f"SEND FAIL target={target_name} session={session_name} to={clean} status={r.status_code} body={r.text[:100]}")
             except Exception as e:
                 print(f"❌ {target_name} ({session_name}) failed: {e}", file=sys.stderr)
-        # Preferred session failed on all targets — fall through to try working sessions
+                _wa_logger.error(f"SEND ERROR target={target_name} session={session_name} to={clean} err={e}")
 
     for target_name, base_url, headers in _waha_targets():
         for sess in _waha_sessions(base_url, headers):

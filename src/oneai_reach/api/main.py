@@ -3,6 +3,12 @@
 import logging
 import os
 
+logging.basicConfig(
+    level=logging.INFO,
+    format="%(levelname)s %(name)s %(message)s",
+    force=True,
+)
+
 from fastapi import FastAPI
 from fastapi.staticfiles import StaticFiles
 

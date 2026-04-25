@@ -353,6 +353,19 @@ export async function deleteJSON<T>(url: string): Promise<T> {
   return res.json();
 }
 
+export interface MessageLog {
+  timestamp: string;
+  message: string;
+  priority: string;
+}
+
+export async function fetchMessageLogs(limit = 50, direction?: string, session?: string): Promise<{ logs: MessageLog[]; count: number }> {
+  const params = new URLSearchParams({ limit: String(limit) });
+  if (direction) params.set("direction", direction);
+  if (session) params.set("session", session);
+  return fetcher(`/api/v1/conversations/logs?${params}`);
+}
+
 export async function fetchContacts(search?: string, limit = 50, offset = 0): Promise<{ contacts: Contact[]; total: number }> {
   const params = new URLSearchParams({ limit: String(limit), offset: String(offset) });
   if (search) params.set("search", search);

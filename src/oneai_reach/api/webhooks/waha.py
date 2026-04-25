@@ -1,6 +1,7 @@
 """WAHA webhook endpoints for WhatsApp message and status events."""
 
 import asyncio
+import logging
 import sys
 from concurrent.futures import ThreadPoolExecutor
 from pathlib import Path
@@ -22,6 +23,7 @@ from state_manager import (
 )
 
 router = APIRouter(prefix="/api/v1/webhooks/waha", tags=["webhooks"])
+logger = logging.getLogger(__name__)
 
 _processed_messages = set()
 _CONVERSATION_MESSAGE_COUNTS = {}  # Track message count per conversation
@@ -113,7 +115,7 @@ async def handle_waha_webhook(request: Request) -> WAHAWebhookResponse:
         session = data.get("session", "")
         payload = data.get("payload") or data.get("data", {})
 
-        print(f"[WEBHOOK] Event: {event}, Session: {session}")
+        logger.info(f"RECV webhook event={event} session={session}")
 
         if event in ("message", "message.any"):
             sender = payload.get("from") or payload.get("chatId", "")
@@ -121,6 +123,8 @@ async def handle_waha_webhook(request: Request) -> WAHAWebhookResponse:
             msg_type = payload.get("type", "chat")
             from_me = payload.get("fromMe", False)
             msg_id = payload.get("id", "")
+
+            logger.info(f"RECV msg session={session} from={sender} type={msg_type} from_me={from_me} id={msg_id} len={len(body_text)}")
 
             global _processed_messages
             if msg_id and msg_id in _processed_messages:
@@ -167,7 +171,7 @@ async def handle_waha_webhook(request: Request) -> WAHAWebhookResponse:
                 except ImportError:
                     pass
                 except Exception as e:
-                    print(f"[webhook] Voice processing error: {e}")
+                    logger.error(f"VOICE ERROR session={session} err={e}")
 
             if msg_type in ("image", "video", "document", "audio", "ptt"):
                 media_labels = {
@@ -206,9 +210,7 @@ async def handle_waha_webhook(request: Request) -> WAHAWebhookResponse:
             _CONVERSATION_MESSAGE_COUNTS[conv_key] += 1
 
             if _CONVERSATION_MESSAGE_COUNTS[conv_key] > _CONVERSATION_MAX_MESSAGES:
-                print(
-                    f"[WEBHOOK] STOP: Conversation {conv_key} exceeded {_CONVERSATION_MAX_MESSAGES} messages - infinite loop detected"
-                )
+                logger.warning(f"LOOP GUARD conv={conv_key} count={_CONVERSATION_MESSAGE_COUNTS[conv_key]} max={_CONVERSATION_MAX_MESSAGES}")
                 return WAHAWebhookResponse(
                     status="ok",
                     skipped=f"infinite_loop_guard:{_CONVERSATION_MESSAGE_COUNTS[conv_key]}",
@@ -259,13 +261,13 @@ async def handle_waha_webhook(request: Request) -> WAHAWebhookResponse:
                         session_name=session,
                     )
                 except Exception as e:
-                    print(f"[CS ENGINE ERROR] {e}")
+                    logger.error(f"CS ENGINE ERROR session={session} from={sender} err={e}")
                     return {"response": None, "error": str(e)}
 
             try:
                 result = _run_cs_engine()
             except Exception as e:
-                print(f"[SYNC ERROR] {e}")
+                logger.error(f"SYNC ERROR session={session} from={sender} err={e}")
                 result = {"response": None, "skip": "error"}
 
             response_preview = ""
@@ -283,7 +285,7 @@ async def handle_waha_webhook(request: Request) -> WAHAWebhookResponse:
     except HTTPException:
         raise
     except Exception as e:
-        print(f"[WEBHOOK ERROR] {e}")
+        logger.error(f"WEBHOOK ERROR event={data.get('event','')} session={data.get('session','')} err={e}", exc_info=True)
         raise HTTPException(status_code=500, detail=str(e))
 
 
@@ -298,10 +300,10 @@ async def handle_waha_status(request: Request) -> WAHAWebhookResponse:
         event = data.get("event", "")
         session = data.get("session", "")
 
-        print(f"[WEBHOOK STATUS] Event: {event}, Session: {session}")
+        logger.info(f"RECV STATUS event={event} session={session}")
 
         return WAHAWebhookResponse(status="ok", event=event)
 
     except Exception as e:
-        print(f"[WEBHOOK STATUS ERROR] {e}")
+        logger.error(f"STATUS WEBHOOK ERROR err={e}")
         raise HTTPException(status_code=500, detail=str(e))
