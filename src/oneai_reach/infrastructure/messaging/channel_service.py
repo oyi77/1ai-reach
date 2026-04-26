@@ -407,9 +407,12 @@ class ChannelService:
             settings = get_settings()
             cs = ConversationService(settings.database.db_file)
 
-            # Get or create conversation
+            # Extract wa_number_id from channel config
+            config = ch.get("config", {})
+            wa_number_id = config.get("wa_number_id") or ch.get("wa_number_id") or ch.get("channel_id", "")
+
             conv = cs.get_or_create_conversation(
-                wa_number_id=ch.get("wa_number_id", ch.get("channel_id", "")),
+                wa_number_id=wa_number_id,
                 contact_phone=recipient,
                 engine_mode="manual",
             )

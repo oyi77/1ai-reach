@@ -451,8 +451,9 @@ def _make_html_body(body: str) -> str:
 </body></html>"""
 
 
-def _send_via_brevo(email: str, subject: str, body: str) -> bool:
+def _send_via_brevo(email: str, subject: str, body: str, pdf_bytes: Optional[bytes] = None, filename: Optional[str] = None) -> bool:
     """Primary: send via Brevo HTTP API (trusted IP, 300/day free)."""
+    import base64
     from email.utils import parseaddr
 
     print(f"Attempting email via Brevo to {email}...")
@@ -464,16 +465,24 @@ def _send_via_brevo(email: str, subject: str, body: str) -> bool:
         from_name = (
             SMTP_FROM.split("<")[0].strip() if "<" in SMTP_FROM else "BerkahKarya"
         )
+
+        msg_payload = {
+            "sender": {"name": from_name, "email": from_email},
+            "to": [{"email": email}],
+            "subject": subject,
+            "textContent": body,
+            "htmlContent": _make_html_body(body),
+        }
+
+        if pdf_bytes and filename:
+            msg_payload["attachment"] = [
+                {"name": filename, "content": base64.b64encode(pdf_bytes).decode("utf-8")}
+            ]
+
         resp = _req.post(
             "https://api.brevo.com/v3/smtp/email",
             headers={"api-key": BREVO_API_KEY, "Content-Type": "application/json"},
-            json={
-                "sender": {"name": from_name, "email": from_email},
-                "to": [{"email": email}],
-                "subject": subject,
-                "textContent": body,
-                "htmlContent": _make_html_body(body),
-            },
+            json=msg_payload,
             timeout=30,
         )
         if resp.status_code in (200, 201) or "messageId" in resp.text:
@@ -486,8 +495,11 @@ def _send_via_brevo(email: str, subject: str, body: str) -> bool:
         return False
 
 
-def _send_via_stalwart(email: str, subject: str, body: str) -> bool:
+def _send_via_stalwart(email: str, subject: str, body: str, pdf_bytes: Optional[bytes] = None, filename: Optional[str] = None) -> bool:
     """Fallback: send via Stalwart SMTP as marketing@berkahkarya.org."""
+    import base64
+    from email.mime.base import MIMEBase
+    from email import encoders
     from email.utils import parseaddr
 
     print(f"Attempting email via Stalwart SMTP to {email}...")
@@ -498,6 +510,14 @@ def _send_via_stalwart(email: str, subject: str, body: str) -> bool:
         msg["Subject"] = subject
         msg.attach(MIMEText(body, "plain", "utf-8"))
         msg.attach(MIMEText(_make_html_body(body), "html", "utf-8"))
+
+        if pdf_bytes and filename:
+            part = MIMEBase("application", "pdf")
+            part.set_payload(pdf_bytes)
+            encoders.encode_base64(part)
+            part.add_header("Content-Disposition", f"attachment; filename={filename}")
+            msg.attach(part)
+
         _, mail_from = parseaddr(SMTP_FROM)
         mail_from = mail_from or SMTP_USER
         with smtplib.SMTP(SMTP_HOST, SMTP_PORT, timeout=30) as server:
@@ -579,13 +599,13 @@ def _send_via_mock(email: str, subject: str, body: str) -> bool:
     return True
 
 
-def send_email(email: str, subject: str, body: str) -> bool:
+def send_email(email: str, subject: str, body: str, pdf_bytes: Optional[bytes] = None, filename: Optional[str] = None) -> bool:
     if is_empty(email):
         print("Skip Email: No email address.")
         return False
     for name, method in [
-        ("brevo", lambda: _send_via_brevo(email, subject, body)),
-        ("stalwart", lambda: _send_via_stalwart(email, subject, body)),
+        ("brevo", lambda: _send_via_brevo(email, subject, body, pdf_bytes, filename)),
+        ("stalwart", lambda: _send_via_stalwart(email, subject, body, pdf_bytes, filename)),
         ("gog", lambda: _send_via_gog(email, subject, body)),
         ("himalaya", lambda: _send_via_himalaya(email, subject, body)),
         ("queue", lambda: _send_via_mock(email, subject, body)),

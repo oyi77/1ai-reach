@@ -5,6 +5,7 @@ from datetime import datetime, timedelta, timezone
 from typing import Optional
 
 import pandas as pd
+from weasyprint import HTML
 
 from oneai_reach.config.settings import Settings
 from oneai_reach.domain.exceptions import ExternalAPIError
@@ -109,11 +110,15 @@ class BlasterService:
             wa_sent = False
             email_sent = False
 
+            # Convert proposal to PDF
+            pdf_bytes = self._generate_pdf_from_html(proposal, name)
+
             if phone:
                 wa_sent = send_whatsapp_fn(phone, wa_draft)
 
             if email:
-                email_sent = send_email_fn(email, PROPOSAL_SUBJECT, proposal)
+                # Send email with PDF attachment
+                email_sent = send_email_fn(email, PROPOSAL_SUBJECT, proposal, pdf_bytes=pdf_bytes, filename=f"Proposal_{name.replace(' ', '_')}.pdf")
 
             if wa_sent or email_sent:
                 df.at[index, "status"] = "contacted"
@@ -125,6 +130,28 @@ class BlasterService:
             f"{skipped_no_draft} skipped (no draft)"
         )
         return sent, skipped_cooldown, skipped_no_draft
+
+    def _generate_pdf_from_html(self, content: str, name: str) -> bytes:
+        """Convert HTML content to PDF bytes."""
+        html_wrapped = f"""
+        <!DOCTYPE html>
+        <html>
+        <head>
+            <meta charset="UTF-8">
+            <style>
+                body {{ font-family: Arial, sans-serif; line-height: 1.6; padding: 40px; color: #333; }}
+                h1 {{ color: #1a1a2e; }}
+                p {{ margin: 12px 0; }}
+                .signature {{ margin-top: 24px; padding-top: 16px; border-top: 2px solid #ddd; }}
+                .company {{ color: #666; font-size: 14px; }}
+            </style>
+        </head>
+        <body>
+            {content}
+        </body>
+        </html>
+        """
+        return HTML(string=html_wrapped).write_pdf()
 
     def _is_recently_contacted(self, row: pd.Series, is_empty_fn) -> bool:
         """Check if lead was contacted within cooldown period.

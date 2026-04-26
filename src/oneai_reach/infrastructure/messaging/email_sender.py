@@ -49,7 +49,7 @@ class EmailSender:
             settings.database.logs_dir + "/email_queue.log"
         )
 
-    def send(self, email: str, subject: str, body: str, lead_id: Optional[str] = None) -> bool:
+    def send(self, email: str, subject: str, body: str, lead_id: Optional[str] = None, pdf_bytes: Optional[bytes] = None, filename: Optional[str] = None) -> bool:
         """Send email with fallback chain.
 
         Args:
@@ -57,6 +57,8 @@ class EmailSender:
             subject: Email subject
             body: Email body (plain text)
             lead_id: Optional lead ID for tracking
+            pdf_bytes: Optional PDF attachment bytes
+            filename: Optional filename for PDF attachment
 
         Returns:
             True if sent successfully via any method
@@ -66,8 +68,8 @@ class EmailSender:
             return False
 
         for name, method in [
-            ("brevo", lambda: self._send_via_brevo(email, subject, body, lead_id)),
-            ("stalwart", lambda: self._send_via_stalwart(email, subject, body)),
+            ("brevo", lambda: self._send_via_brevo(email, subject, body, lead_id, pdf_bytes, filename)),
+            ("stalwart", lambda: self._send_via_stalwart(email, subject, body, pdf_bytes, filename)),
             ("gog", lambda: self._send_via_gog(email, subject, body)),
             ("himalaya", lambda: self._send_via_himalaya(email, subject, body)),
             ("queue", lambda: self._send_via_queue(email, subject, body)),
@@ -116,8 +118,10 @@ class EmailSender:
   {tracking_pixel}
 </body></html>"""
 
-    def _send_via_brevo(self, email: str, subject: str, body: str, lead_id: Optional[str] = None) -> bool:
+    def _send_via_brevo(self, email: str, subject: str, body: str, lead_id: Optional[str] = None, pdf_bytes: Optional[bytes] = None, filename: Optional[str] = None) -> bool:
         """Send via Brevo HTTP API (primary method)."""
+        import base64
+
         print(f"Attempting email via Brevo to {email}...")
         if not _HTTP_OK:
             print("❌ Brevo: requests not available")
@@ -135,19 +139,30 @@ class EmailSender:
                 else "BerkahKarya"
             )
 
+            msg_payload = {
+                "sender": {"name": from_name, "email": from_email},
+                "to": [{"email": email}],
+                "subject": subject,
+                "textContent": body,
+                "htmlContent": self._make_html_body(body),
+            }
+
+            # Add PDF attachment if provided
+            if pdf_bytes and filename:
+                msg_payload["attachment"] = [
+                    {
+                        "name": filename,
+                        "content": base64.b64encode(pdf_bytes).decode("utf-8"),
+                    }
+                ]
+
             resp = requests.post(
                 "https://api.brevo.com/v3/smtp/email",
                 headers={
                     "api-key": self.settings.email.brevo_api_key,
                     "Content-Type": "application/json",
                 },
-                json={
-                    "sender": {"name": from_name, "email": from_email},
-                    "to": [{"email": email}],
-                    "subject": subject,
-                    "textContent": body,
-                    "htmlContent": self._make_html_body(body),
-                },
+                json=msg_payload,
                 timeout=30,
             )
 
@@ -162,8 +177,11 @@ class EmailSender:
             print(f"❌ Brevo failed: {e}")
             return False
 
-    def _send_via_stalwart(self, email: str, subject: str, body: str) -> bool:
+    def _send_via_stalwart(self, email: str, subject: str, body: str, pdf_bytes: Optional[bytes] = None, filename: Optional[str] = None) -> bool:
         """Send via Stalwart SMTP (fallback method)."""
+        from email.mime.base import MIMEBase
+        from email import encoders
+
         print(f"Attempting email via Stalwart SMTP to {email}...")
 
         if not self.settings.email.smtp_password:
@@ -177,6 +195,14 @@ class EmailSender:
             msg["Subject"] = subject
             msg.attach(MIMEText(body, "plain", "utf-8"))
             msg.attach(MIMEText(self._make_html_body(body), "html", "utf-8"))
+
+            # Add PDF attachment if provided
+            if pdf_bytes and filename:
+                part = MIMEBase("application", "pdf")
+                part.set_payload(pdf_bytes)
+                encoders.encode_base64(part)
+                part.add_header("Content-Disposition", f"attachment; filename={filename}")
+                msg.attach(part)
 
             _, mail_from = parseaddr(self.settings.email.smtp_from)
             mail_from = mail_from or self.settings.email.smtp_user
