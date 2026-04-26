@@ -1,7 +1,7 @@
 from fastapi import APIRouter, HTTPException, Query
 from pydantic import BaseModel
 
-from scripts import brain_client as _brain
+from oneai_reach.infrastructure.legacy import brain_client as _brain
 
 router = APIRouter(tags=["brain"])
 
