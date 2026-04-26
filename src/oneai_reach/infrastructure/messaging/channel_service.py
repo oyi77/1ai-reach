@@ -389,7 +389,33 @@ class ChannelService:
             sys.path.insert(0, scripts)
         try:
             from senders import send_whatsapp
-            return send_whatsapp(recipient, message)
+            ok = send_whatsapp(recipient, message)
+            if ok:
+                # Log the message to conversation for display in UI
+                self._log_sent_message(ch, recipient, message)
+            return ok
         except Exception as e:
             logger.error(f"WhatsApp send failed: {e}")
             return False
+
+    def _log_sent_message(self, ch: dict, recipient: str, message: str) -> None:
+        """Log sent message to conversation for UI display."""
+        try:
+            from oneai_reach.application.customer_service.conversation_service import ConversationService
+            from oneai_reach.config.settings import get_settings
+
+            settings = get_settings()
+            cs = ConversationService(settings.database.db_file)
+
+            # Get or create conversation
+            conv = cs.get_or_create_conversation(
+                wa_number_id=ch.get("wa_number_id", ch.get("channel_id", "")),
+                contact_phone=recipient,
+                engine_mode="manual",
+            )
+
+            if conv and conv.get("id"):
+                cs.add_message(conv["id"], "out", message)
+                logger.info(f"Logged sent message to conversation {conv['id']}")
+        except Exception as e:
+            logger.error(f"Failed to log sent message: {e}")
