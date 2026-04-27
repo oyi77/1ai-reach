@@ -1,28 +1,62 @@
-#!/usr/bin/env python3
-"""
-DEPRECATED: This script is deprecated. Use `oneai-reach warmcall-engine` instead.
-
-Backward compatibility shim for warmcall_engine.py
-"""
+import argparse
 import sys
-import warnings
 from pathlib import Path
 
-# Show deprecation warning
-warnings.warn(
-    "scripts/warmcall_engine.py is deprecated. Use 'oneai-reach warmcall-engine' instead.",
-    DeprecationWarning,
-    stacklevel=2
-)
+sys.path.insert(0, str(Path(__file__).parent.parent / "src"))
 
-# Add src to path for imports
-_root = Path(__file__).resolve().parent.parent
-_src = _root / "src"
-if str(_src) not in sys.path:
-    sys.path.insert(0, str(_src))
+from oneai_reach.application.agents.warmcall_service import WarmcallService
+from oneai_reach.config.settings import get_settings
+from state_manager import init_db
 
-# Import and call new CLI
-from oneai_reach.cli.main import cli
+
+def main():
+    parser = argparse.ArgumentParser(
+        description="Warmcall engine — multi-turn follow-up sequences with intent routing"
+    )
+    parser.add_argument(
+        "--start", action="store_true", help="Start a new warmcall sequence"
+    )
+    parser.add_argument("--phone", type=str, help="Contact phone number (for --start)")
+    parser.add_argument("--name", type=str, help="Contact name (for --start)")
+    parser.add_argument("--context", type=str, help="Business context (for --start)")
+    parser.add_argument(
+        "--session",
+        type=str,
+        default="default",
+        help="WAHA session name (default: default)",
+    )
+    parser.add_argument("--lead-id", type=str, default=None, help="Link to lead ID")
+    parser.add_argument(
+        "--process-due",
+        action="store_true",
+        help="Process all due warmcall follow-ups",
+    )
+    parser.add_argument("--test", action="store_true", help="Run simulated 3-turn test")
+    args = parser.parse_args()
+
+    init_db()
+    settings = get_settings()
+    service = WarmcallService(settings)
+
+    if args.start:
+        if not args.phone or not args.name:
+            parser.error("--start requires --phone and --name")
+        result = service.start_sequence(
+            wa_number_id=args.session,
+            contact_phone=args.phone,
+            contact_name=args.name,
+            context=args.context or "",
+            lead_id=args.lead_id,
+        )
+        print(f"Result: {result}")
+
+    elif args.process_due:
+        result = service.process_all_due()
+        print(f"Summary: {result}")
+
+    else:
+        parser.print_help()
+
 
 if __name__ == "__main__":
-    sys.exit(cli())
+    main()

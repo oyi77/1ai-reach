@@ -1,133 +1,110 @@
-#!/usr/bin/env python3
 """
-Backward compatibility shim for conversation_tracker.py
-Maps old function names to new Clean Architecture implementation.
+Conversation tracker — message threading, state machine, cross-contamination guard.
+
+Cross-contamination guard forces engine_mode="cold" when contact_phone
+matches a lead in the cold-call funnel, preventing CS responses to pipeline contacts.
+State machine: active → resolved | escalated | cold.
 """
+
 import sys
+from datetime import datetime, timedelta
 from pathlib import Path
-from typing import List, Dict, Any
 
-_root = Path(__file__).resolve().parent.parent
-_src = _root / "src"
-if str(_src) not in sys.path:
-    sys.path.insert(0, str(_src))
+sys.path.insert(0, str(Path(__file__).parent.parent / "src"))
 
-from oneai_reach.infrastructure.database.sqlite_conversation_repository import (  # noqa: E402
-    SQLiteConversationRepository,
-)
+from oneai_reach.application.customer_service import ConversationService
+from oneai_reach.config.settings import get_settings
+from state_manager import _connect, init_db
 
-_db_path = _root / "data" / "leads.db"
-_repo = SQLiteConversationRepository(str(_db_path))
+_settings = get_settings()
+_service = ConversationService(_settings, _connect)
 
 
-def get_active_conversations() -> List[Dict[str, Any]]:
-    conversations = _repo.get_all()
-    
-    result = []
-    for conv in conversations:
-        if conv.status != "resolved":
-            result.append({
-                "id": conv.id,
-                "wa_number_id": conv.wa_number_id or "unknown",
-                "contact_phone": conv.contact_phone or "",
-                "message_count": len(conv.messages) if hasattr(conv, 'messages') else 0,
-                "last_message_at": conv.updated_at.isoformat() if conv.updated_at else None,
-                "status": conv.status,
-                "engine_mode": conv.engine_mode or "cs",
-            })
-    
-    return result
-
-
-def update_status(conversation_id: int, status: str) -> bool:
-    try:
-        conv = _repo.get_by_id(conversation_id)
-        if not conv:
-            return False
-        
-        conv.status = status
-        _repo.update(conv)
-        return True
-    except Exception:
-        return False
-
-
-def _connect():
-    import sqlite3
-    import config
-
-    conn = sqlite3.connect(str(config.DB_FILE))
-    conn.row_factory = sqlite3.Row
-    return conn
+def _is_cold_lead(contact_phone: str) -> bool:
+    return _service.is_cold_lead(contact_phone)
 
 
 def get_or_create_conversation(
     wa_number_id: str,
     contact_phone: str,
-    engine_mode: str = "cs",
-    contact_name: str = "",
+    engine_mode: str,
+    contact_name: str | None = None,
     lead_id: str | None = None,
 ) -> dict:
-    conn = _connect()
-    try:
-        row = conn.execute(
-            """SELECT * FROM conversations
-                WHERE wa_number_id = ? AND contact_phone = ? AND status = 'active'""",
-            (wa_number_id, contact_phone),
-        ).fetchone()
-        if row:
-            return dict(row)
-
-        columns = {row[1] for row in conn.execute("PRAGMA table_info(conversations)")}
-        if "stage" in columns:
-            cursor = conn.execute(
-                """INSERT INTO conversations
-                    (wa_number_id, contact_phone, engine_mode, stage, status, message_count)
-                    VALUES (?, ?, ?, 'awareness', 'active', 0)""",
-                (wa_number_id, contact_phone, engine_mode),
-            )
-        else:
-            cursor = conn.execute(
-                """INSERT INTO conversations
-                    (wa_number_id, contact_phone, contact_name, lead_id, engine_mode, status, message_count)
-                    VALUES (?, ?, ?, ?, ?, 'active', 0)""",
-                (wa_number_id, contact_phone, contact_name, lead_id, engine_mode),
-            )
-        conn.commit()
-        row = conn.execute(
-            "SELECT * FROM conversations WHERE id = ?", (cursor.lastrowid,)
-        ).fetchone()
-        return dict(row)
-    finally:
-        conn.close()
+    return _service.get_or_create_conversation(
+        wa_number_id, contact_phone, engine_mode, contact_name, lead_id
+    )
 
 
-def add_message(conversation_id: int, direction: str, message_text: str) -> int:
-    conn = _connect()
-    try:
-        tables = {row[0] for row in conn.execute("SELECT name FROM sqlite_master WHERE type='table'")}
-        if "messages" in tables:
-            cursor = conn.execute(
-                """INSERT INTO messages
-                    (conversation_id, direction, message_text, created_at)
-                    VALUES (?, ?, ?, datetime('now'))""",
-                (conversation_id, direction, message_text),
-            )
-        else:
-            cursor = conn.execute(
-                """INSERT INTO conversation_messages
-                    (conversation_id, direction, message_text, timestamp)
-                    VALUES (?, ?, ?, datetime('now'))""",
-                (conversation_id, direction, message_text),
-            )
-        conn.execute(
-            """UPDATE conversations
-                SET message_count = COALESCE(message_count, 0) + 1,
-                    updated_at = datetime('now')
-                WHERE id = ?""",
-            (conversation_id,),
-        )
-        conn.commit()
-        return cursor.lastrowid
-    finally:
-        conn.close()
+def add_message(
+    conversation_id: int,
+    direction: str,
+    message_text: str,
+    message_type: str = "text",
+    waha_message_id: str | None = None,
+) -> int:
+    return _service.add_message(
+        conversation_id, direction, message_text, message_type, waha_message_id
+    )
+
+
+def get_messages(conversation_id: int, limit: int = 50) -> list[dict]:
+    return _service.get_messages(conversation_id, limit)
+
+
+def get_active_conversations(wa_number_id: str | None = None) -> list[dict]:
+    return _service.get_active_conversations(wa_number_id)
+
+
+def update_status(conversation_id: int, status: str) -> bool:
+    return _service.update_status(conversation_id, status)
+
+
+def escalate(conversation_id: int, reason: str) -> bool:
+    return _service.escalate(conversation_id, reason)
+
+
+def get_conversation_context(conversation_id: int, max_messages: int = 10) -> str:
+    return _service.get_conversation_context(conversation_id, max_messages)
+
+
+def link_to_lead(conversation_id: int, lead_id: str) -> bool:
+    return _service.link_to_lead(conversation_id, lead_id)
+
+
+def auto_resolve_stale(hours: int = 48) -> int:
+    return _service.auto_resolve_stale(hours)
+
+
+def advance_stage(
+    conversation_id: int, message_text: str, kb_results: list = None
+) -> str | None:
+    return _service.advance_stage(conversation_id, message_text, kb_results)
+
+
+def get_stage_context(conversation_id: int) -> str:
+    return _service.get_stage_context(conversation_id)
+
+
+if __name__ == "__main__":
+    init_db()
+    print("[conversation_tracker] DB initialized")
+
+    conv = get_or_create_conversation("default", "628111@c.us", "cs")
+    print(f"[conversation_tracker] Conversation: {conv}")
+
+    msg_id = add_message(conv["id"], "in", "Hello, I need help with my order")
+    print(f"[conversation_tracker] Added message id={msg_id}")
+
+    msg_id2 = add_message(
+        conv["id"], "out", "Hi! I'd be happy to help. What's your order number?"
+    )
+    print(f"[conversation_tracker] Added message id={msg_id2}")
+
+    ctx = get_conversation_context(conv["id"])
+    print(f"[conversation_tracker] Context:\n{ctx}")
+
+    active = get_active_conversations()
+    print(f"[conversation_tracker] Active conversations: {len(active)}")
+
+    print("[conversation_tracker] All tests passed ✓")

@@ -1,3 +1,4 @@
+from pathlib import Path
 import subprocess
 
 from oneai_reach.infrastructure.legacy.state_manager import count_by_status
@@ -12,9 +13,9 @@ class AutonomousService:
 
     def __init__(self, config: Settings):
         self.config = config
-        self.loop_sleep_seconds = config.autonomous.loop_sleep_seconds
-        self.min_new_leads_threshold = config.autonomous.min_new_leads_threshold
-        self.scripts_dir = Path(config.paths.scripts_dir)
+        self.loop_sleep_seconds = getattr(config, 'autonomous', type('obj', (object,), {'loop_sleep_seconds': 300})).loop_sleep_seconds
+        self.min_new_leads_threshold = getattr(config, 'autonomous', type('obj', (object,), {'min_new_leads_threshold': 10})).min_new_leads_threshold
+        self.scripts_dir = Path(__file__).resolve().parents[4] / 'scripts'
         self._running = {}
 
     def _is_running(self, name: str) -> bool:

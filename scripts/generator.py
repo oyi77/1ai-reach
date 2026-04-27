@@ -15,256 +15,39 @@ CLI flags:
 """
 
 import argparse
-import json
 import os
-import subprocess
 import sys
 
-import requests
-
 from leads import load_leads
-from utils import parse_display_name, draft_path, safe_filename, is_empty
-from config import (
-    PROPOSALS_DIR as _PROPOSALS_DIR,
-    RESEARCH_DIR as _RESEARCH_DIR,
-    GENERATOR_MODEL,
-)
-import brain_client as _brain
+from utils import parse_display_name, draft_path, is_empty
+from config import PROPOSALS_DIR as _PROPOSALS_DIR
 import state_manager as _sm
 
+sys.path.insert(0, os.path.join(os.path.dirname(__file__), "..", "src"))
+
+from oneai_reach.config.settings import get_settings
+from oneai_reach.application.outreach.generator_service import GeneratorService
+
 PROPOSALS_DIR = str(_PROPOSALS_DIR)
-RESEARCH_DIR = str(_RESEARCH_DIR)
-
-OMNIROUTE_URL = "http://localhost:20128/v1/chat/completions"
 
 
-def _call_omniroute(system_prompt: str, user_prompt: str) -> str:
-    """Call Omniroute AI proxy (OpenAI-compatible). No auth needed on localhost."""
-    models = [
-        ("high-availability", 30),
-        ("ollama-cloud/deepseek-v3.2", 45),
-    ]
-    for model, timeout in models:
-        payload = {
-            "model": model,
-            "messages": [
-                {"role": "system", "content": system_prompt},
-                {"role": "user", "content": user_prompt},
-            ],
-            "max_tokens": 4096,
-            "temperature": 0.7,
-            "stream": False,
-        }
-        try:
-            resp = requests.post(OMNIROUTE_URL, json=payload, timeout=timeout)
-            resp.raise_for_status()
-            text = resp.text.strip()
-            data = json.loads(text.split("\n")[0])
-            if isinstance(data, list):
-                data = data[0]
-            msg = data["choices"][0]["message"]
-            content = msg.get("content", "").strip()
-            if content:
-                return content
-        except Exception as e:
-            print(f"Omniroute error ({model}): {e}", file=sys.stderr)
-    return ""
-
-
-_CAPABILITY_FALLBACK = (
-    "BerkahKarya capabilities:\n"
-    "- Custom web & mobile app development (Next.js, React Native, Flutter)\n"
-    "- AI-powered automation workflows (n8n, Make, custom agents)\n"
-    "- WhatsApp Business API integration & chatbot development\n"
-    "- Digital marketing: SEO, Google Ads, Meta Ads, TikTok Ads\n"
-    "- Social media management & content production\n"
-    "- Branding, UI/UX design, and design systems\n"
-    "- E-commerce solutions (Shopify, WooCommerce, custom)\n"
-    "- Landing page & conversion rate optimization\n"
-    "- Data analytics dashboards & BI reporting\n"
-    "- IT consulting & digital transformation roadmaps"
-)
-
-
-def _load_research(lead_id, name: str) -> str:
-    """Load the research brief for this lead if it exists."""
-    path = os.path.join(RESEARCH_DIR, f"{lead_id}_{safe_filename(name)}.txt")
-    if os.path.exists(path):
-        with open(path) as f:
-            return f.read().strip()
-    return ""
-
-
-def _get_capability_matrix(vertical: str) -> str:
-    """Query Hub Brain for BerkahKarya capabilities, fall back to hardcoded list."""
-    matrix = _brain.get_strategy("berkahkarya_capabilities")
-    if matrix:
-        return matrix
-
-    results = _brain.search(f"BerkahKarya services capabilities {vertical}", limit=5)
-    if results:
-        lines = []
-        for r in results:
-            content = _brain._extract_content(r.get("content", ""))
-            if not content and r.get("title"):
-                content = r.get("title", "").strip()
-            if content:
-                lines.append(f"- {content[:200]}")
-        if lines:
-            return "BerkahKarya capabilities (from brain):\n" + "\n".join(lines)
-
-    return _CAPABILITY_FALLBACK
-
-
-def _build_prompt(
-    lead: dict,
-    research: str,
-    capability_matrix: str,
-    brain_context: str = "",
-) -> tuple:
-    """
-    Build system + user prompt pair. Returns (system_prompt, user_prompt).
-    No static boilerplate — everything is dynamic based on lead data + brain intelligence.
-    """
-    lead_name = parse_display_name(lead.get("displayName"))
-    business_type = str(lead.get("type") or lead.get("primaryType") or "Business")
-    website = str(lead.get("websiteUri") or lead.get("website") or "")
-    email = str(lead.get("email") or "")
-    phone = str(lead.get("phone") or lead.get("internationalPhoneNumber") or "")
-    address = str(lead.get("formattedAddress") or "")
-    csv_research = str(lead.get("research") or "")
-
-    system_prompt = (
-        "You are a senior Solution Architect at BerkahKarya, a technology and growth partner.\n\n"
-        f"Available capability matrix:\n{capability_matrix}\n\n"
-        "Your task: Based on the prospect's research data below, INVENT a specific, tailored digital solution.\n"
-        "DO NOT use generic phrases like 'we are a digital agency' or 'we help businesses grow'.\n"
-        "Instead, identify the exact gap or opportunity this prospect has, and propose 1-2 concrete solutions.\n"
-        "Be creative — you may bundle or combine services from the capability matrix.\n"
-        "Sign the email as Vilona from BerkahKarya."
-    )
-
-    user_parts = [
-        f"Prospect: {lead_name}",
-        f"Business Type: {business_type}",
-    ]
-    if website and not is_empty(website):
-        user_parts.append(f"Website: {website}")
-    if address and not is_empty(address):
-        user_parts.append(f"Location: {address}")
-    if email and not is_empty(email):
-        user_parts.append(f"Email: {email}")
-    if phone and not is_empty(phone):
-        user_parts.append(f"Phone: {phone}")
-
-    if research:
-        user_parts.append(
-            f"\nProspect Research (scraped from their website):\n{research}"
-        )
-    elif (
-        csv_research
-        and not is_empty(csv_research)
-        and csv_research.lower() != "no_data"
-    ):
-        user_parts.append(f"\nProspect Research Summary: {csv_research}")
-
-    if brain_context:
-        user_parts.append(f"\n{brain_context}")
-
-    if research or (csv_research and not is_empty(csv_research)):
-        pain_instruction = (
-            "Use the research above to write a HIGHLY PERSONALIZED proposal. "
-            "Reference their specific services, observed gaps, or tech stack. "
-            "Do NOT write generic filler."
-        )
-    else:
-        pain_instruction = (
-            "Write a proposal specific to their business type. "
-            "Reference challenges common to this niche."
-        )
-
-    user_parts.append(
-        f"\nInstructions:\n"
-        f"- {pain_instruction}\n"
-        f"- The email must open with a specific observation about their business "
-        f"(not 'I hope this email finds you well').\n"
-        f"- Propose 1-2 concrete solutions from the capability matrix — name the deliverables.\n"
-        f"- Mention a specific ROI or metric where possible (e.g., '30% more leads', "
-        f"'cut response time by 5x').\n"
-        f"- End with a low-friction CTA: offer a 15-minute call or a free audit.\n"
-        f"- The WhatsApp message must be SHORT (3-4 sentences), casual, in Indonesian (Bahasa Indonesia).\n"
-        f"- The WhatsApp message should feel human, not like a sales pitch.\n\n"
-        f"Output format (use these exact separators, nothing before or after):\n"
-        f"---PROPOSAL---\n"
-        f"[professional email body in English]\n"
-        f"---WHATSAPP---\n"
-        f"[short casual WhatsApp message in Indonesian]"
-    )
-
-    user_prompt = "\n".join(user_parts)
-    return system_prompt, user_prompt
-
-
-def generate_proposal(lead: dict, dry_run: bool = False) -> str:
-    """Generate a proposal for a single lead. Returns proposal text or ''."""
-    lead_id = lead["id"]
-    lead_name = parse_display_name(lead.get("displayName"))
-    business_type = str(lead.get("type") or lead.get("primaryType") or "Business")
-
-    research = _load_research(lead_id, lead_name)
-    capability_matrix = _get_capability_matrix(business_type)
-    brain_context = _brain.get_strategy(business_type)
-
-    system_prompt, user_prompt = _build_prompt(
-        lead, research, capability_matrix, brain_context
-    )
-
-    full_prompt = f"[SYSTEM]\n{system_prompt}\n\n[USER]\n{user_prompt}"
-
-    if dry_run:
-        print(f"[DRY-RUN] Would generate proposal for: {lead_name}")
-        print("=" * 72)
-        print(full_prompt)
-        print("=" * 72)
-        return ""
-
-    result = _call_omniroute(system_prompt, user_prompt)
-    if result:
-        return result
-
-    tools = [
-        ("claude", ["claude", "-p", "--model", GENERATOR_MODEL], True),
-        ("gemini", ["gemini", "ask", full_prompt], False),
-        ("oracle", ["oracle", full_prompt], False),
-    ]
-
-    for tool, cmd, use_stdin in tools:
-        try:
-            kwargs = dict(capture_output=True, text=True, timeout=90)
-            if use_stdin:
-                kwargs["input"] = full_prompt
-            result = subprocess.run(cmd, **kwargs)
-            if result.returncode == 0 and result.stdout.strip():
-                return result.stdout
-            print(
-                f"{tool} failed (exit {result.returncode}): {result.stderr.strip()[:120]}",
-                file=sys.stderr,
-            )
-        except Exception as e:
-            print(f"{tool} error: {e}", file=sys.stderr)
-
-    print(f"ERROR: All LLM tools failed for {lead_name}. Skipping.", file=sys.stderr)
-    return ""
-
-
-def _process_single_lead(lead: dict, dry_run: bool = False) -> bool:
+def _process_single_lead(
+    service: GeneratorService, lead: dict, dry_run: bool = False
+) -> bool:
     """Process one lead. Returns True if proposal was generated/saved."""
     lead_id = lead["id"]
     lead_name = parse_display_name(lead.get("displayName"))
     business_type = str(lead.get("type") or lead.get("primaryType") or "Business")
 
     print(f"Generating proposal for {lead_name} ({business_type})...")
-    proposal_text = generate_proposal(lead, dry_run=dry_run)
+
+    try:
+        proposal_text = service.generate_proposal(lead, dry_run=dry_run)
+    except Exception as e:
+        print(
+            f"ERROR: Failed to generate proposal for {lead_name}: {e}", file=sys.stderr
+        )
+        return False
 
     if dry_run:
         return True
@@ -290,12 +73,15 @@ def process_proposals(lead_id: str = None, dry_run: bool = False) -> None:
     """
     os.makedirs(PROPOSALS_DIR, exist_ok=True)
 
+    config = get_settings()
+    service = GeneratorService(config)
+
     if lead_id:
         lead = _sm.get_lead_by_id(lead_id)
         if not lead:
             print(f"ERROR: Lead {lead_id} not found in database.", file=sys.stderr)
             sys.exit(1)
-        _process_single_lead(lead, dry_run=dry_run)
+        _process_single_lead(service, lead, dry_run=dry_run)
         return
 
     df = load_leads()
@@ -310,7 +96,7 @@ def process_proposals(lead_id: str = None, dry_run: bool = False) -> None:
             if is_empty(email):
                 skipped += 1
                 continue
-            ok = _process_single_lead(lead, dry_run=dry_run)
+            ok = _process_single_lead(service, lead, dry_run=dry_run)
             if ok:
                 generated += 1
             else:
@@ -361,7 +147,14 @@ def process_proposals(lead_id: str = None, dry_run: bool = False) -> None:
         }
 
         print(f"Generating proposal for {name} ({business})...")
-        proposal_text = generate_proposal(lead_dict, dry_run=dry_run)
+
+        try:
+            proposal_text = service.generate_proposal(lead_dict, dry_run=dry_run)
+        except Exception as e:
+            print(
+                f"ERROR: Failed to generate proposal for {name}: {e}", file=sys.stderr
+            )
+            continue
 
         if dry_run:
             generated += 1

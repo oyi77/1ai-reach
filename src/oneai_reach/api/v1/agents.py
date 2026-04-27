@@ -724,8 +724,8 @@ async def restart_service(key: str) -> AgentResponse:
         import subprocess
         
         service_commands = {
-            "webhook": ["sudo", "systemctl", "restart", "1ai-reach-mcp"],
-            "dashboard": ["sudo", "systemctl", "restart", "1ai-reach-dashboard"],
+            "webhook": ["systemctl", "--user", "restart", "1ai-reach-mcp.service"],
+            "dashboard": ["systemctl", "--user", "restart", "1ai-reach-dashboard.service"],
         }
         
         if key not in service_commands:
@@ -761,8 +761,8 @@ async def stop_service(key: str) -> AgentResponse:
         import subprocess
         
         service_commands = {
-            "webhook": ["sudo", "systemctl", "stop", "1ai-reach-mcp"],
-            "dashboard": ["sudo", "systemctl", "stop", "1ai-reach-dashboard"],
+            "webhook": ["systemctl", "--user", "stop", "1ai-reach-mcp.service"],
+            "dashboard": ["systemctl", "--user", "stop", "1ai-reach-dashboard.service"],
         }
         
         if key not in service_commands:

@@ -1,28 +1,35 @@
-#!/usr/bin/env python3
 """
-DEPRECATED: This script is deprecated. Use `oneai-reach voice-pipeline` instead.
+Voice Pipeline — Orchestration between STT, LLM, and TTS.
 
-Backward compatibility shim for voice_pipeline.py
+DEPRECATED: Thin wrapper for backward compatibility.
+Use oneai_reach.application.voice.VoicePipelineService instead.
 """
+
 import sys
-import warnings
 from pathlib import Path
 
-# Show deprecation warning
-warnings.warn(
-    "scripts/voice_pipeline.py is deprecated. Use 'oneai-reach voice-pipeline' instead.",
-    DeprecationWarning,
-    stacklevel=2
-)
+_ROOT = Path(__file__).parent.parent
+sys.path.insert(0, str(_ROOT / "src"))
 
-# Add src to path for imports
-_root = Path(__file__).resolve().parent.parent
-_src = _root / "src"
-if str(_src) not in sys.path:
-    sys.path.insert(0, str(_src))
+from oneai_reach.application.voice import VoicePipelineService
+from oneai_reach.config.settings import get_settings
 
-# Import and call new CLI
-from oneai_reach.cli.main import cli
+_service = VoicePipelineService(get_settings())
 
-if __name__ == "__main__":
-    sys.exit(cli())
+
+def process_inbound_voice(
+    media_url: str,
+    wa_number_id: str,
+    contact_phone: str,
+    session_name: str,
+    msg_type: str = "ptt",
+) -> dict:
+    """Process inbound voice note end-to-end."""
+    return _service.process_inbound_voice(
+        media_url, wa_number_id, contact_phone, session_name, msg_type
+    )
+
+
+def generate_voice_reply(text: str, session_name: str, contact_phone: str) -> bool:
+    """Generate and send voice reply for given text."""
+    return _service.generate_voice_reply(text, session_name, contact_phone)
