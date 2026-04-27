@@ -57,6 +57,7 @@ class ScraperService:
         logger.info(f"Searching leads: {full_query}")
 
         sources = [
+            ("Semantic Intent Search", lambda: self._search_semantic_intent(full_query)),
             ("Google Places", lambda: self._search_google_places(full_query)),
             ("Yellow Pages ID", lambda: self._search_yellowpages(query, city.lower())),
             ("DuckDuckGo", lambda: self._search_duckduckgo(full_query)),
@@ -76,6 +77,60 @@ class ScraperService:
             status_code=0,
             reason="All scraping sources failed",
         )
+
+    def _search_semantic_intent(self, query: str) -> List[dict]:
+        """Fetch leads using Exa or DuckDuckGo semantic intent search."""
+        import asyncio
+        from oneai_reach.infrastructure.semantic_search import search_leads_by_intent
+        
+        api_key = getattr(self.config.external_api, 'exa_api_key', None)
+        
+        try:
+            loop = asyncio.get_event_loop()
+        except RuntimeError:
+            loop = asyncio.new_event_loop()
+            asyncio.set_event_loop(loop)
+            
+        if loop.is_running():
+            import threading
+            def run_async(coro):
+                res = []
+                def f():
+                    res.append(asyncio.run(coro))
+                t = threading.Thread(target=f)
+                t.start()
+                t.join()
+                return res[0]
+            results = run_async(search_leads_by_intent(query, api_key))
+        else:
+            results = loop.run_until_complete(search_leads_by_intent(query, api_key))
+            
+        leads = []
+        for res in results:
+            if not res.get("website"):
+                continue
+            leads.append(
+                {
+                    "id": f"sem_{abs(hash(res.get('website', ''))) % 999999}",
+                    "displayName": res.get("text", "Unknown Business"),
+                    "formattedAddress": None,
+                    "internationalPhoneNumber": None,
+                    "phone": None,
+                    "websiteUri": res.get("website"),
+                    "primaryType": query,
+                    "type": query,
+                    "source": "semantic_intent",
+                }
+            )
+
+        if not leads:
+            raise ExternalAPIError(
+                service="semantic_search",
+                endpoint="/search",
+                status_code=200,
+                reason=f"No results found for '{query}'",
+            )
+        return leads
 
     def _search_google_places(self, query: str, max_pages: int = 3) -> List[dict]:
         """Fetch leads from Google Places API (new v1).

@@ -51,6 +51,10 @@ def process_leads() -> None:
                 df.at[index, "phone"] = info["phone"]
             if info.get("linkedin"):
                 df.at[index, "linkedin"] = info["linkedin"]
+            if info.get("research_data"):
+                if "research_data" not in df.columns:
+                    df["research_data"] = None
+                df.at[index, "research_data"] = info["research_data"]
             enriched += 1
             if str(df.at[index, "status"] or "") in ("new", ""):
                 df.at[index, "status"] = "enriched"

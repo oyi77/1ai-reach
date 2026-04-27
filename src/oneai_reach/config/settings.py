@@ -204,6 +204,9 @@ class ExternalAPISettings(BaseSettings):
         default="sk-f0c1ddf471008e76-501723-c663b4ac",
         description="AiTradePulse API key",
     )
+    exa_api_key: str = Field(
+        default="", description="Exa API key for semantic intent search"
+    )
 
     model_config = ConfigDict(env_prefix="")
 

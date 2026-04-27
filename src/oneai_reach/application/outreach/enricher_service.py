@@ -13,6 +13,8 @@ from bs4 import BeautifulSoup
 from oneai_reach.config.settings import Settings
 from oneai_reach.domain.exceptions import ExternalAPIError
 from oneai_reach.infrastructure.logging import get_logger
+from oneai_reach.infrastructure.web_reader import JinaWebReader
+import asyncio
 
 logger = get_logger(__name__)
 
@@ -106,6 +108,30 @@ class EnricherService:
         if self._is_empty(website):
             return None
 
+        research_data = None
+        try:
+            try:
+                loop = asyncio.get_event_loop()
+            except RuntimeError:
+                loop = asyncio.new_event_loop()
+                asyncio.set_event_loop(loop)
+            
+            if loop.is_running():
+                import threading
+                def run_async(coro):
+                    res = []
+                    def f():
+                        res.append(asyncio.run(coro))
+                    t = threading.Thread(target=f)
+                    t.start()
+                    t.join()
+                    return res[0]
+                research_data = run_async(JinaWebReader.fetch_markdown(website))
+            else:
+                research_data = loop.run_until_complete(JinaWebReader.fetch_markdown(website))
+        except Exception as e:
+            logger.warning(f"[JinaWebReader] failed to fetch markdown for {website}: {e}")
+
         strategies = [
             ("AgentCash Minerva", lambda: self._via_agentcash(website, name)),
             ("Website scraping", lambda: self._scrape_website(website)),
@@ -117,9 +143,13 @@ class EnricherService:
                 result = fn()
                 if result.get("email") or result.get("phone"):
                     logger.info(f"[{label}] found contact info")
+                    result["research_data"] = research_data
                     return result
             except Exception as e:
                 logger.warning(f"[{label}] failed: {e}")
+
+        if research_data:
+            return {"email": None, "phone": None, "linkedin": None, "research_data": research_data}
 
         return None
 
