@@ -11,6 +11,7 @@ from oneai_reach.config.settings import Settings
 from oneai_reach.domain.exceptions import ExternalAPIError, MissingConfigurationError
 from oneai_reach.domain.models import Lead, LeadStatus
 from oneai_reach.infrastructure.logging import get_logger
+from oneai_reach.infrastructure.rate_limiter import get_rate_limiter, get_circuit_breaker, retry_with_backoff
 
 logger = get_logger(__name__)
 
@@ -166,6 +167,8 @@ class ScraperService:
 
         leads = []
         page_token = None
+        rate_limiter = get_rate_limiter("google_places", calls_per_minute=30)
+        circuit_breaker = get_circuit_breaker("google_places", failure_threshold=5, recovery_timeout=60)
 
         for _ in range(max_pages):
             body = {"textQuery": query, "languageCode": "id", "maxResultCount": 20}
@@ -173,7 +176,16 @@ class ScraperService:
                 body["pageToken"] = page_token
 
             try:
-                resp = requests.post(url, json=body, headers=headers, timeout=15)
+                import threading
+                def make_request():
+                    return requests.post(url, json=body, headers=headers, timeout=15)
+                
+                if threading.current_thread() is threading.main_thread():
+                    asyncio.get_event_loop().run_until_complete(rate_limiter.acquire())
+                else:
+                    asyncio.run(rate_limiter.acquire())
+                    
+                resp = make_request()
                 resp.raise_for_status()
                 data = resp.json()
             except requests.RequestException as e:

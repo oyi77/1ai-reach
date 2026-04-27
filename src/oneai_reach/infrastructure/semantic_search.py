@@ -2,6 +2,7 @@ import aiohttp
 import asyncio
 from typing import List, Dict
 import logging
+from oneai_reach.infrastructure.rate_limiter import get_rate_limiter
 
 logger = logging.getLogger(__name__)
 
@@ -9,9 +10,11 @@ async def fetch_exa_results(query: str, api_key: str) -> List[Dict[str, str]]:
     """
     Fetch search results from Exa's semantic search API.
     """
+    rate_limiter = get_rate_limiter("exa_api", calls_per_minute=30)
+    await rate_limiter.acquire()
+    
     url = "https://api.exa.ai/search"
     headers = {"Authorization": f"Bearer {api_key}"}
-    params = {"query": query}
 
     async with aiohttp.ClientSession() as session:
         async with session.post(url, json={"query": query, "useAutoprompt": True}, headers=headers, timeout=15) as response:
@@ -28,6 +31,9 @@ async def fetch_duckduckgo_results(query: str) -> List[Dict[str, str]]:
     """
     Fetch search results using DuckDuckGo.
     """
+    rate_limiter = get_rate_limiter("duckduckgo", calls_per_minute=20)
+    await rate_limiter.acquire()
+    
     url = "https://api.duckduckgo.com"
     params = {"q": query, "format": "json", "no_html": 1}
 
