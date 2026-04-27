@@ -1,13 +1,6 @@
 import subprocess
-import sys
-from pathlib import Path
 
-_SCRIPTS_DIR = Path(__file__).resolve().parents[3] / "scripts"
-if str(_SCRIPTS_DIR) not in sys.path:
-    sys.path.insert(0, str(_SCRIPTS_DIR))
-
-from state_manager import count_by_status
-
+from oneai_reach.infrastructure.legacy.state_manager import count_by_status
 from oneai_reach.config.settings import Settings
 from oneai_reach.domain.exceptions import ExternalAPIError
 from oneai_reach.infrastructure.logging import get_logger

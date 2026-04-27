@@ -1,7 +1,6 @@
 """Proposal reviewer service - extracts business logic from scripts/reviewer.py."""
 
 import subprocess
-import sys
 from typing import Dict, Optional
 
 from oneai_reach.config.settings import Settings

@@ -8,6 +8,10 @@ import pytest
 sys.path.insert(0, str(Path(__file__).parent.parent / "scripts"))
 
 
+@pytest.mark.filterwarnings("ignore:scripts/cs_outcomes.py is deprecated:DeprecationWarning")
+@pytest.mark.filterwarnings("ignore:scripts/cs_self_improve.py is deprecated:DeprecationWarning")
+
+
 class TestAutoLearnE2E:
     def test_complete_learning_cycle(self, fresh_db):
         from cs_outcomes import (

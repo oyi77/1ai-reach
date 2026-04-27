@@ -1,7 +1,6 @@
 """CS Playbook service - dynamic response playbook with scenario-based strategies."""
 
 import random
-from typing import Optional
 
 from oneai_reach.config.settings import Settings
 from oneai_reach.infrastructure.logging import get_logger
@@ -274,12 +273,13 @@ class PlaybookService:
         except KeyError:
             response_text = pattern.text
 
-        self.outcomes_service.record_pattern_use(
-            pattern.pattern_id,
-            pattern.text,
-            scenario,
-            was_successful=False,
-        )
+        if self.outcomes_service:
+            self.outcomes_service.record_pattern_use(
+                pattern.pattern_id,
+                pattern.text,
+                scenario,
+                was_successful=False,
+            )
 
         return {
             "response": response_text,

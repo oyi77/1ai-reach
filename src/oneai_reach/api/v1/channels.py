@@ -390,12 +390,7 @@ async def poll_dms(wa_number_id: str):
 
 @router.post("/poll-all")
 async def poll_all_dms():
-    import sys, os
-    _project = os.path.dirname(os.path.dirname(os.path.dirname(os.path.dirname(os.path.dirname(__file__)))))
-    _scripts = os.path.join(_project, "scripts")
-    if _scripts not in sys.path:
-        sys.path.insert(0, _scripts)
-    from state_manager import get_wa_numbers
+    from oneai_reach.infrastructure.legacy.state_manager import get_wa_numbers
     numbers = get_wa_numbers()
     wa_ids = [n.get("id", "") or n.get("session_name", "") for n in numbers]
     from oneai_reach.infrastructure.messaging.channels.dm_poller import poll_all

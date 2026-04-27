@@ -2,21 +2,14 @@
 
 import os
 import subprocess
-import sys
 import yaml
 from pathlib import Path
 from typing import Optional, Tuple
 
 from oneai_reach.config.settings import Settings
 from oneai_reach.domain.exceptions import ExternalAPIError
+from oneai_reach.infrastructure.legacy import brain_client as _brain
 from oneai_reach.infrastructure.logging import get_logger
-
-# Import brain_client from scripts (will be abstracted in Task 13)
-_scripts_path = Path(__file__).parent.parent.parent.parent.parent / "scripts"
-if str(_scripts_path) not in sys.path:
-    sys.path.insert(0, str(_scripts_path))
-
-import brain_client as _brain
 
 logger = get_logger(__name__)
 

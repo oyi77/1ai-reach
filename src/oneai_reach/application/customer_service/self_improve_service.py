@@ -1,10 +1,7 @@
 """CS Self-Improvement service - auto-learn from conversation outcomes."""
 
-import hashlib
-import json
-import sqlite3
-from datetime import datetime, timedelta
-from typing import List, Dict, Optional
+from datetime import datetime
+from typing import List
 
 from oneai_reach.config.settings import Settings
 from oneai_reach.infrastructure.logging import get_logger
@@ -301,13 +298,13 @@ class SelfImproveService:
                 """
                 SELECT af.corrected_response, af.note, m.message_text as original
                 FROM admin_feedback af
-                JOIN conversation_messages m ON af.message_id = m.id
+                LEFT JOIN conversation_messages m ON af.message_id = m.id
                 WHERE af.corrected_response IS NOT NULL
                 AND af.corrected_response != ''
                 AND af.rating = 'bad'
                 ORDER BY af.created_at DESC
                 LIMIT 10
-                """,
+                """
             ).fetchall()
 
             for row in corrected:

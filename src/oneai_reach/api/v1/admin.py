@@ -181,16 +181,7 @@ async def list_conversations() -> List[ConversationInfo]:
     for monitoring and debugging purposes.
     """
     try:
-        import sys
-        from pathlib import Path
-
-        scripts_dir = (
-            Path(__file__).resolve().parent.parent.parent.parent.parent / "scripts"
-        )
-        if str(scripts_dir) not in sys.path:
-            sys.path.insert(0, str(scripts_dir))
-
-        import conversation_tracker
+        from oneai_reach.infrastructure.legacy import conversation_tracker
 
         convs = conversation_tracker.get_active_conversations()
 
@@ -232,16 +223,7 @@ async def stop_conversation(conv_id: int) -> AdminResponse:
         conv_id: Conversation ID to stop
     """
     try:
-        import sys
-        from pathlib import Path
-
-        scripts_dir = (
-            Path(__file__).resolve().parent.parent.parent.parent.parent / "scripts"
-        )
-        if str(scripts_dir) not in sys.path:
-            sys.path.insert(0, str(scripts_dir))
-
-        import conversation_tracker
+        from oneai_reach.infrastructure.legacy import conversation_tracker
 
         success = conversation_tracker.update_status(conv_id, "resolved")
 
@@ -316,18 +298,8 @@ async def get_status() -> Dict[str, Any]:
     """
     try:
         import subprocess
-        import sys
-        from pathlib import Path
 
-        root = Path(__file__).resolve().parent.parent.parent.parent.parent
-        if str(root) not in sys.path:
-            sys.path.insert(0, str(root))
-        
-        try:
-            import agent_control
-        except ImportError:
-            # Fallback if agent_control not available
-            agent_control = None
+        from oneai_reach.infrastructure.legacy import agent_control
 
         services = []
         

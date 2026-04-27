@@ -10,16 +10,7 @@ from fastapi import APIRouter, HTTPException, Request
 from fastapi.responses import JSONResponse
 
 from oneai_reach.config.settings import get_settings
-
-import sys
-from pathlib import Path
-
-# Make sure we can import legacy scripts
-_SCRIPT_DIR = Path(__file__).resolve().parent.parent.parent.parent.parent / "scripts"
-if str(_SCRIPT_DIR) not in sys.path:
-    sys.path.insert(0, str(_SCRIPT_DIR))
-
-import state_manager
+from oneai_reach.infrastructure.legacy import state_manager
 
 logger = logging.getLogger(__name__)
 

@@ -5,9 +5,9 @@ from pathlib import Path
 
 import pytest
 
-sys.path.insert(0, str(Path(__file__).parent.parent / "scripts"))
+sys.path.insert(0, str(Path(__file__).parent.parent / "src"))
 
-from cs_playbook import CSPlaybook
+from oneai_reach.application.customer_service.playbook_service import PlaybookService as CSPlaybook
 
 
 class TestCSPlaybook:

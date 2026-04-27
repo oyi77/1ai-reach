@@ -1,17 +1,11 @@
 """CAPI webhook endpoints for Meta Conversions API lead tracking."""
 
-import sys
-from pathlib import Path
 from typing import Optional
 
 from fastapi import APIRouter, HTTPException, Request
 from pydantic import BaseModel, Field
 
-SCRIPTS_DIR = Path(__file__).resolve().parent.parent.parent.parent.parent / "scripts"
-if str(SCRIPTS_DIR) not in sys.path:
-    sys.path.insert(0, str(SCRIPTS_DIR))
-
-import capi_tracker
+from oneai_reach.infrastructure.legacy import capi_tracker
 
 router = APIRouter(prefix="/api/v1/webhooks/capi", tags=["webhooks"])
 

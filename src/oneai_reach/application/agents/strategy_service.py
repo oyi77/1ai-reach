@@ -9,16 +9,9 @@ is offline or returns no actionable data.
 
 import json
 import subprocess
-import sys
 from pathlib import Path
 
-# Add scripts directory to path for external client imports
-_scripts_dir = Path(__file__).parent.parent.parent.parent.parent / "scripts"
-if str(_scripts_dir) not in sys.path:
-    sys.path.insert(0, str(_scripts_dir))
-
-import brain_client
-
+from oneai_reach.infrastructure.legacy import brain_client
 from oneai_reach.config.settings import Settings
 from oneai_reach.domain.exceptions import ExternalAPIError
 from oneai_reach.infrastructure.logging import get_logger

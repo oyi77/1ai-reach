@@ -195,17 +195,19 @@ class SQLiteProductRepository(ProductRepository):
             conn.close()
 
     def get_all(self, wa_number_id: str) -> List[Product]:
-        """Get all products for a WA number using product_overrides."""
+        """Get all visible products for a WA number."""
         conn = self._connect()
         try:
             cursor = conn.execute(
                 """
                 SELECT p.* FROM products p
-                INNER JOIN product_overrides po ON p.id = po.product_id
-                WHERE po.wa_number_id = ? AND po.is_hidden = 0
+                LEFT JOIN product_overrides po
+                    ON p.id = po.product_id AND po.wa_number_id = ?
+                WHERE (p.wa_number_id = ? OR po.wa_number_id = ?)
+                  AND COALESCE(po.is_hidden, 0) = 0
                 ORDER BY p.created_at DESC
             """,
-                (wa_number_id,),
+                (wa_number_id, wa_number_id, wa_number_id),
             )
             rows = cursor.fetchall()
             return [self._row_to_product(row) for row in rows]
@@ -350,7 +352,8 @@ class SQLiteProductRepository(ProductRepository):
             cursor = conn.execute(
                 """
                 SELECT * FROM products
-                WHERE wa_number_id = ? 
+                WHERE wa_number_id = ?
+                AND visibility != 'hidden'
                 AND (
                     name LIKE ? OR 
                     description LIKE ? OR 

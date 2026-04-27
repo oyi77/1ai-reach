@@ -25,15 +25,8 @@ class EmailSender:
 
     def send(self, to_email: str, subject: str, body: str) -> bool:
         """Send email using the existing senders.py chain."""
-        import sys
-        import os
-        project_root = os.path.dirname(os.path.dirname(os.path.dirname(os.path.dirname(os.path.dirname(__file__)))))
-        scripts = os.path.join(project_root, "scripts")
-        if scripts not in sys.path:
-            sys.path.insert(0, scripts)
-
         try:
-            from senders import send_email
+            from oneai_reach.infrastructure.legacy.senders import send_email
             return send_email(to_email, subject, body)
         except Exception as e:
             logger.error(f"Email send failed to {to_email}: {e}")

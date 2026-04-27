@@ -1,10 +1,12 @@
 import json
 import subprocess
-import sys
 from datetime import datetime
 from pathlib import Path
 
 from oneai_reach.config.settings import Settings
+from oneai_reach.infrastructure.legacy.config import RESEARCH_DIR, PROPOSALS_DIR, LEADS_FILE
+from oneai_reach.infrastructure.legacy.leads import load_leads, save_leads
+from oneai_reach.infrastructure.legacy import brain_client as brain
 from oneai_reach.infrastructure.logging import get_logger
 
 logger = get_logger(__name__)
@@ -20,8 +22,7 @@ class OrchestratorService:
         """Scrape leads using gosom Google Maps scraper."""
         logger.info(f"Scraping leads via gosom: {query}")
         try:
-            sys.path.insert(0, str(self.scripts_dir))
-            from gmaps_client import GmapsScraperClient
+            from oneai_reach.infrastructure.legacy.gmaps_client import GmapsScraperClient
             from leads import load_leads, save_leads
 
             client = GmapsScraperClient()
@@ -73,9 +74,8 @@ class OrchestratorService:
         """Run service_detector on leads that don't have matched_services yet."""
         logger.info("Running service detection on new leads")
         try:
-            sys.path.insert(0, str(self.scripts_dir))
-            from leads import load_leads, save_leads
-            from service_detector import detect_services
+            from oneai_reach.infrastructure.legacy.leads import load_leads, save_leads
+            from oneai_reach.infrastructure.legacy.service_detector import detect_services
 
             df = load_leads()
             if df is None or df.empty:
@@ -108,9 +108,8 @@ class OrchestratorService:
         """Run lead_scorer on leads that don't have a score yet."""
         logger.info("Running lead scoring on new leads")
         try:
-            sys.path.insert(0, str(self.scripts_dir))
-            from leads import load_leads, save_leads
-            from lead_scorer import score_lead
+            from oneai_reach.infrastructure.legacy.leads import load_leads, save_leads
+            from oneai_reach.infrastructure.legacy.lead_scorer import score_lead
 
             df = load_leads()
             if df is None or df.empty:
@@ -224,9 +223,6 @@ class OrchestratorService:
     def _brain_sync(self) -> bool:
         logger.info(f"[{datetime.now().strftime('%H:%M:%S')}] Syncing outcomes to hub brain")
         try:
-            from leads import load_leads
-            import brain_client as brain
-
             if not brain.is_online():
                 logger.info("Hub brain offline — skipping brain sync")
                 return False

@@ -11,28 +11,22 @@ Key design decisions:
 import asyncio
 import logging
 import sqlite3
-import sys
 import time as _time
 from concurrent.futures import ThreadPoolExecutor
 from functools import lru_cache
-from pathlib import Path
 from typing import Any, Dict, Optional
 
 from fastapi import APIRouter, HTTPException, Request
 from pydantic import BaseModel, Field
 
-SCRIPTS_DIR = Path(__file__).resolve().parent.parent.parent.parent.parent / "scripts"
-if str(SCRIPTS_DIR) not in sys.path:
-    sys.path.insert(0, str(SCRIPTS_DIR))
-
 from oneai_reach.config.settings import get_settings as _get_app_settings
-from state_manager import (
+from oneai_reach.infrastructure.legacy.state_manager import (
     add_conversation_message,
     get_or_create_conversation,
     get_wa_number_by_session,
     is_manual_mode,
 )
-import state_manager
+from oneai_reach.infrastructure.legacy import state_manager
 
 router = APIRouter(prefix="/api/v1/webhooks/waha", tags=["webhooks"])
 logger = logging.getLogger(__name__)
@@ -221,7 +215,7 @@ def _get_known_bot_phones() -> set[str]:
     if _KNOWN_BOT_PHONES and (now - _BOT_PHONES_LOADED_AT) < _BOT_PHONES_TTL:
         return _KNOWN_BOT_PHONES
     try:
-        from state_manager import get_wa_numbers
+        from oneai_reach.infrastructure.legacy.state_manager import get_wa_numbers
         numbers = get_wa_numbers()
         _KNOWN_BOT_PHONES = {_normalize_phone(n.get("phone", "")) for n in numbers if n.get("phone")}
         _BOT_PHONES_LOADED_AT = now
@@ -310,7 +304,7 @@ def _process_voice_sync(
 ) -> dict:
     """Process voice note in a background thread."""
     try:
-        from voice_pipeline import process_inbound_voice
+        from oneai_reach.infrastructure.legacy.voice_pipeline import process_inbound_voice
 
         return process_inbound_voice(
             media_url=media_url,
@@ -402,7 +396,7 @@ async def handle_waha_webhook(request: Request) -> WAHAWebhookResponse:
         # Voice notes — process in background thread
         if msg_type in ("audio", "ptt"):
             try:
-                from voice_config import get_voice_config
+                from oneai_reach.infrastructure.legacy.voice_config import get_voice_config
 
                 voice_config = get_voice_config(session)
                 if voice_config.get("voice_enabled"):

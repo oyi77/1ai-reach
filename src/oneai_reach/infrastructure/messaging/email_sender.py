@@ -6,10 +6,11 @@ Fallback chain: Brevo → Stalwart SMTP → gog → himalaya → queue
 import os
 import smtplib
 import subprocess
+from pathlib import Path
 from email.mime.multipart import MIMEMultipart
 from email.mime.text import MIMEText
 from email.utils import parseaddr
-from typing import Dict, Optional
+from typing import Optional
 
 try:
     import requests
@@ -19,8 +20,6 @@ except ImportError:
     _HTTP_OK = False
 
 from oneai_reach.config.settings import Settings
-from oneai_reach.domain.exceptions import ExternalAPIError
-
 
 class EmailSender:
     """Email sender with multi-provider fallback chain.
@@ -67,13 +66,17 @@ class EmailSender:
             print("Skip Email: No email address.")
             return False
 
+        attachment_required = pdf_bytes is not None or filename is not None
         for name, method in [
             ("brevo", lambda: self._send_via_brevo(email, subject, body, lead_id, pdf_bytes, filename)),
             ("stalwart", lambda: self._send_via_stalwart(email, subject, body, pdf_bytes, filename)),
             ("gog", lambda: self._send_via_gog(email, subject, body)),
             ("himalaya", lambda: self._send_via_himalaya(email, subject, body)),
-            ("queue", lambda: self._send_via_queue(email, subject, body)),
+            ("queue", lambda: self._send_via_queue(email, subject, body, pdf_bytes, filename)),
         ]:
+            if attachment_required and name in {"gog", "himalaya"}:
+                print(f"Skip {name}: PDF attachment required but this method cannot attach files")
+                continue
             try:
                 if method():
                     return True
@@ -147,7 +150,6 @@ class EmailSender:
                 "htmlContent": self._make_html_body(body),
             }
 
-            # Add PDF attachment if provided
             if pdf_bytes and filename:
                 msg_payload["attachment"] = [
                     {
@@ -196,7 +198,6 @@ class EmailSender:
             msg.attach(MIMEText(body, "plain", "utf-8"))
             msg.attach(MIMEText(self._make_html_body(body), "html", "utf-8"))
 
-            # Add PDF attachment if provided
             if pdf_bytes and filename:
                 part = MIMEBase("application", "pdf")
                 part.set_payload(pdf_bytes)
@@ -302,7 +303,7 @@ class EmailSender:
             print(f"❌ Himalaya failed: {e}")
             return False
 
-    def _send_via_queue(self, email: str, subject: str, body: str) -> bool:
+    def _send_via_queue(self, email: str, subject: str, body: str, pdf_bytes: Optional[bytes] = None, filename: Optional[str] = None) -> bool:
         """Queue email to file for manual review (last resort)."""
         print(f"[QUEUE] Email logged for {email} — review at {self.queue_log_path}")
 
@@ -310,7 +311,13 @@ class EmailSender:
             os.makedirs(os.path.dirname(self.queue_log_path), exist_ok=True)
             with open(self.queue_log_path, "a") as f:
                 f.write(f"\n---\nTo: {email}\nSubject: {subject}\nBody: {body}\n")
-            return True
+                if pdf_bytes and filename:
+                    attachment_dir = Path(self.queue_log_path).parent / "email_attachments"
+                    attachment_dir.mkdir(parents=True, exist_ok=True)
+                    attachment_path = attachment_dir / filename
+                    attachment_path.write_bytes(pdf_bytes)
+                    f.write(f"Attachment: {attachment_path}\n")
+            return not (pdf_bytes and filename)
         except Exception as e:
             print(f"❌ Queue failed: {e}")
             return False

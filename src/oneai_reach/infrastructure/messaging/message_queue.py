@@ -5,7 +5,7 @@ Manages email queue with status tracking (pending, sent, failed, retry).
 
 import json
 import os
-from datetime import datetime
+from datetime import datetime, timezone
 from pathlib import Path
 from typing import Dict, List, Optional
 
@@ -78,8 +78,8 @@ class MessageQueue:
             "body": body,
             "status": status,
             "error": error,
-            "created_at": datetime.utcnow().isoformat(),
-            "updated_at": datetime.utcnow().isoformat(),
+            "created_at": datetime.now(timezone.utc).isoformat(),
+            "updated_at": datetime.now(timezone.utc).isoformat(),
             "retry_count": 0,
         }
 
@@ -127,7 +127,7 @@ class MessageQueue:
         for msg in messages:
             if msg.get("id") == message_id:
                 msg["status"] = "sent"
-                msg["updated_at"] = datetime.utcnow().isoformat()
+                msg["updated_at"] = datetime.now(timezone.utc).isoformat()
                 updated = True
                 break
 
@@ -153,7 +153,7 @@ class MessageQueue:
             if msg.get("id") == message_id:
                 msg["status"] = "failed"
                 msg["error"] = error
-                msg["updated_at"] = datetime.utcnow().isoformat()
+                msg["updated_at"] = datetime.now(timezone.utc).isoformat()
                 msg["retry_count"] = msg.get("retry_count", 0) + 1
                 updated = True
                 break

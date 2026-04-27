@@ -381,14 +381,8 @@ class ChannelService:
 
     def _send_whatsapp(self, ch: dict, recipient: str, message: str) -> bool:
         """Send via WAHA API using existing senders.py chain."""
-        import sys
-        import os
-        project_root = os.path.dirname(os.path.dirname(os.path.dirname(os.path.dirname(os.path.dirname(__file__)))))
-        scripts = os.path.join(project_root, "scripts")
-        if scripts not in sys.path:
-            sys.path.insert(0, scripts)
         try:
-            from senders import send_whatsapp
+            from oneai_reach.infrastructure.legacy.senders import send_whatsapp
             ok = send_whatsapp(recipient, message)
             if ok:
                 # Log the message to conversation for display in UI

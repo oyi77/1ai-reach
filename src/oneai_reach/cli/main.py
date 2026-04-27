@@ -10,24 +10,11 @@ Provides command-line interface for:
 
 import json
 import sys
-from pathlib import Path
-from typing import Any, Dict, Optional
+from typing import Any, Optional
 
 import click
 
-# Import agent_control module
-_root = Path(__file__).resolve().parent.parent.parent.parent
-_scripts_dir = _root / "scripts"
-if str(_scripts_dir) not in sys.path:
-    sys.path.insert(0, str(_scripts_dir))
-if str(_root) not in sys.path:
-    sys.path.insert(0, str(_root))
-
-try:
-    import agent_control
-except ImportError as e:
-    click.echo(f"Error: Failed to import agent_control: {e}", err=True)
-    sys.exit(1)
+from oneai_reach.infrastructure.legacy import agent_control
 
 
 def format_json(data: Any) -> str:
@@ -144,8 +131,8 @@ def start(stage: str, args: tuple) -> None:
         sys.exit(1)
 
 
-@stages.command()
-def list() -> None:
+@stages.command(name="list")
+def list_stages() -> None:
     """List available pipeline stages."""
     stages_list = [
         "strategy",
@@ -180,8 +167,8 @@ def jobs() -> None:
     pass
 
 
-@jobs.command()
-def list() -> None:
+@jobs.command(name="list")
+def list_jobs() -> None:
     """List all background jobs."""
     try:
         result = agent_control.list_jobs()
@@ -418,10 +405,10 @@ def kb() -> None:
     pass
 
 
-@kb.command()
+@kb.command(name="list")
 @click.argument("wa_number_id")
 @click.option("--category", default=None, help="Filter by category")
-def list(wa_number_id: str, category: Optional[str]) -> None:
+def list_kb(wa_number_id: str, category: Optional[str]) -> None:
     """List knowledge base entries."""
     try:
         result = agent_control.list_kb_entries(wa_number_id, category=category)

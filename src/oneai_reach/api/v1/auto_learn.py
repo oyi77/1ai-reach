@@ -1,16 +1,10 @@
 """Auto-learn analytics and improvement API endpoints."""
 
-import sys
-from pathlib import Path
 from typing import Optional
 
 from fastapi import APIRouter, Request
 
-_SCRIPT_DIR = Path(__file__).resolve().parent.parent.parent.parent.parent / "scripts"
-if str(_SCRIPT_DIR) not in sys.path:
-    sys.path.insert(0, str(_SCRIPT_DIR))
-
-import state_manager
+from oneai_reach.infrastructure.legacy import state_manager
 
 router = APIRouter(tags=["auto-learn"])
 

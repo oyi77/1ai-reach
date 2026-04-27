@@ -148,17 +148,15 @@ class ProductSearchService:
                 search_term = self._extract_search_keywords(query)
                 products = self.product_repository.search(wa_number_id, search_term, limit)
             
-            # Only return all products as fallback if this is a product inquiry
-            if not products and is_product_inquiry:
-                products = self.get_all_products(wa_number_id, limit)
+            if not products:
                 logger.info(
-                    f"No search results for wa_number_id={wa_number_id}, query='{query}'. Returning all products: {len(products)} results"
+                    f"No search results for wa_number_id={wa_number_id}, query='{query}'"
                 )
-            else:
-                logger.info(
-                    f"Product search for wa_number_id={wa_number_id}, query='{query}': {len(products)} results"
-                )
+                return []
             
+            logger.info(
+                f"Product search for wa_number_id={wa_number_id}, query='{query}': {len(products)} results"
+            )
             return products
         except Exception as e:
             logger.error(f"Product search failed: {e}")

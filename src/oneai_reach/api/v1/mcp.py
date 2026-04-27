@@ -4,21 +4,13 @@ Provides JSON-RPC 2.0 compatible endpoints for AI agents to inspect and control
 the 1ai-reach backend safely. Migrated from mcp_server.py to unified FastAPI app.
 """
 
-import sys
-from pathlib import Path
 from typing import Any, Dict, List, Optional, Union
 
 from fastapi import APIRouter, Depends, HTTPException, Request
 from pydantic import BaseModel, Field
 
 from oneai_reach.api.dependencies import verify_api_key
-
-# Add project root to path for agent_control imports
-PROJECT_ROOT = Path(__file__).resolve().parent.parent.parent.parent.parent
-if str(PROJECT_ROOT) not in sys.path:
-    sys.path.insert(0, str(PROJECT_ROOT))
-
-import agent_control as control
+from oneai_reach.infrastructure.legacy import agent_control as control
 
 router = APIRouter(
     prefix="/api/v1/mcp",

@@ -1,16 +1,10 @@
-import sys
 import time
 from datetime import datetime, timezone
-from pathlib import Path
 
-_SCRIPTS_DIR = Path(__file__).resolve().parents[3] / "scripts"
-if str(_SCRIPTS_DIR) not in sys.path:
-    sys.path.insert(0, str(_SCRIPTS_DIR))
-
-import brain_client
-import llm_client
-from closer_agent import classify_intent
-from conversation_tracker import (
+from oneai_reach.infrastructure.legacy import brain_client
+from oneai_reach.infrastructure.legacy import llm_client
+from oneai_reach.infrastructure.legacy.closer_agent import classify_intent
+from oneai_reach.infrastructure.legacy.conversation_tracker import (
     _is_cold_lead,
     add_message,
     get_conversation_context,
@@ -18,15 +12,15 @@ from conversation_tracker import (
     get_or_create_conversation,
     update_status,
 )
-from senders import send_typing_indicator, send_whatsapp_session
-from state_manager import (
+from oneai_reach.infrastructure.legacy.senders import send_typing_indicator, send_whatsapp_session
+from oneai_reach.infrastructure.legacy.state_manager import (
     _connect,
     add_event_log,
     get_conversation,
     get_lead_by_id,
     update_lead_status,
 )
-from utils import safe_filename
+from oneai_reach.infrastructure.legacy.utils import safe_filename
 
 from oneai_reach.config.settings import Settings
 from oneai_reach.domain.exceptions import ExternalAPIError

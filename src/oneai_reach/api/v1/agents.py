@@ -9,8 +9,6 @@ Provides FastAPI endpoints that wrap agent_control.py functions for:
 """
 
 import logging
-import sys
-from pathlib import Path
 from typing import Any, Dict, List, Optional
 
 from fastapi import APIRouter, Depends, HTTPException
@@ -26,21 +24,16 @@ router = APIRouter(
     dependencies=[Depends(verify_api_key)],
 )
 
-_root = Path(__file__).resolve().parent.parent.parent.parent.parent
-_scripts_dir = _root / "scripts"
-if str(_scripts_dir) not in sys.path:
-    sys.path.insert(0, str(_scripts_dir))
-
 agent_control = None
 state_manager = None
 safe_filename = None
 RESEARCH_DIR = None
 PROPOSALS_DIR = None
 try:
-    import agent_control
-    import state_manager
-    from utils import safe_filename
-    from config import RESEARCH_DIR, PROPOSALS_DIR
+    from oneai_reach.infrastructure.legacy import agent_control
+    from oneai_reach.infrastructure.legacy import state_manager
+    from oneai_reach.infrastructure.legacy.utils import safe_filename
+    from oneai_reach.infrastructure.legacy.config import RESEARCH_DIR, PROPOSALS_DIR
     state_manager.init_db()
 except ImportError:
     pass
@@ -447,8 +440,7 @@ async def get_wa_sessions_status() -> AgentResponse:
     try:
         import requests
         
-        sys.path.insert(0, str(_scripts_dir))
-        from config import WAHA_URL, WAHA_API_KEY, WAHA_DIRECT_URL, WAHA_DIRECT_API_KEY
+        from oneai_reach.infrastructure.legacy.config import WAHA_URL, WAHA_API_KEY, WAHA_DIRECT_URL, WAHA_DIRECT_API_KEY
         
         sessions = []
         
@@ -802,17 +794,9 @@ async def stop_service(key: str) -> AgentResponse:
 @router.get("/leads/{lead_id}/timeline", response_model=AgentResponse)
 async def get_lead_timeline(lead_id: str) -> AgentResponse:
     """Get complete timeline for a lead including research, proposal, and conversation messages."""
-    import sys
-    from pathlib import Path as P
-    
-    _root = P(__file__).resolve().parent.parent.parent.parent.parent
-    _scripts_dir = _root / "scripts"
-    if str(_scripts_dir) not in sys.path:
-        sys.path.insert(0, str(_scripts_dir))
-    
-    import state_manager
-    from utils import safe_filename
-    from config import RESEARCH_DIR, PROPOSALS_DIR, LEADS_FILE
+    from oneai_reach.infrastructure.legacy import state_manager
+    from oneai_reach.infrastructure.legacy.utils import safe_filename
+    from oneai_reach.infrastructure.legacy.config import RESEARCH_DIR, PROPOSALS_DIR, LEADS_FILE
     import pandas as pd
     
     try:

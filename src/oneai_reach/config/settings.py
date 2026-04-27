@@ -9,7 +9,7 @@ from functools import lru_cache
 from pathlib import Path
 from typing import Optional, Set
 
-from pydantic import Field, field_validator
+from pydantic import ConfigDict, Field, field_validator
 import os
 from pydantic_settings import BaseSettings
 
@@ -30,8 +30,7 @@ class DatabaseSettings(BaseSettings):
     )
     logs_dir: str = Field(default="logs", description="Logs directory")
 
-    class Config:
-        env_prefix = "DB_"
+    model_config = ConfigDict(env_prefix="DB_")
 
 
 class PipelineSettings(BaseSettings):
@@ -44,8 +43,7 @@ class PipelineSettings(BaseSettings):
         default=10, description="Minimum new leads to trigger pipeline"
     )
 
-    class Config:
-        env_prefix = "PIPELINE_"
+    model_config = ConfigDict(env_prefix="PIPELINE_")
 
 
 class LLMSettings(BaseSettings):
@@ -58,8 +56,7 @@ class LLMSettings(BaseSettings):
         default="sonnet", description="Model for proposal review"
     )
 
-    class Config:
-        env_prefix = "LLM_"
+    model_config = ConfigDict(env_prefix="LLM_")
 
 
 class BookingSettings(BaseSettings):
@@ -73,8 +70,7 @@ class BookingSettings(BaseSettings):
         description="Calendly booking link",
     )
 
-    class Config:
-        env_prefix = "BOOKING_"
+    model_config = ConfigDict(env_prefix="BOOKING_")
 
 
 class EmailSettings(BaseSettings):
@@ -97,8 +93,7 @@ class EmailSettings(BaseSettings):
     smtp_user: str = Field(default="marketing", description="SMTP username")
     smtp_password: str = Field(default="", description="SMTP password")
 
-    class Config:
-        env_prefix = "SMTP_"
+    model_config = ConfigDict(env_prefix="SMTP_")
 
 
 class GmailSettings(BaseSettings):
@@ -115,8 +110,7 @@ class GmailSettings(BaseSettings):
         description="Google Sheet ID",
     )
 
-    class Config:
-        env_prefix = "GMAIL_"
+    model_config = ConfigDict(env_prefix="GMAIL_")
 
 
 class HubSettings(BaseSettings):
@@ -125,8 +119,7 @@ class HubSettings(BaseSettings):
     url: str = Field(default="http://localhost:9099", description="Hub base URL")
     api_key: str = Field(default="", description="Hub API key (empty = dev mode)")
 
-    class Config:
-        env_prefix = "HUB_"
+    model_config = ConfigDict(env_prefix="HUB_")
 
 
 class WAHASettings(BaseSettings):
@@ -155,8 +148,7 @@ class WAHASettings(BaseSettings):
     )
     webhook_secret: str = Field(default="", description="Webhook secret for WAHA")
 
-    class Config:
-        env_prefix = "WAHA_"
+    model_config = ConfigDict(env_prefix="WAHA_")
 
 
 class CustomerServiceSettings(BaseSettings):
@@ -180,8 +172,7 @@ class CustomerServiceSettings(BaseSettings):
     )
     max_turns: int = Field(default=5, description="Max conversation turns")
 
-    class Config:
-        env_prefix = "CS_"
+    model_config = ConfigDict(env_prefix="CS_")
 
 
 class N8nSettings(BaseSettings):
@@ -193,8 +184,7 @@ class N8nSettings(BaseSettings):
     meeting_wf: str = Field(default="", description="Meeting workflow ID (optional)")
     webhook_url: str = Field(default="", description="n8n webhook URL")
 
-    class Config:
-        env_prefix = "N8N_"
+    model_config = ConfigDict(env_prefix="N8N_")
 
 
 class TelegramSettings(BaseSettings):
@@ -203,8 +193,7 @@ class TelegramSettings(BaseSettings):
     bot_token: str = Field(default="", description="Telegram bot token")
     chat_id: str = Field(default="", description="Telegram chat ID")
 
-    class Config:
-        env_prefix = "TELEGRAM_"
+    model_config = ConfigDict(env_prefix="TELEGRAM_")
 
 
 class ExternalAPISettings(BaseSettings):
@@ -216,8 +205,7 @@ class ExternalAPISettings(BaseSettings):
         description="AiTradePulse API key",
     )
 
-    class Config:
-        env_prefix = ""
+    model_config = ConfigDict(env_prefix="")
 
 
 class PaperClipSettings(BaseSettings):
@@ -231,8 +219,7 @@ class PaperClipSettings(BaseSettings):
         default="ea3bb337-656a-4158-804d-fa1f7fab6dbc", description="CMO agent ID"
     )
 
-    class Config:
-        env_prefix = "PAPERCLIP_"
+    model_config = ConfigDict(env_prefix="PAPERCLIP_")
 
 
 class ScraperSettings(BaseSettings):
@@ -291,8 +278,7 @@ class ScraperSettings(BaseSettings):
         description="Default verticals for autonomous scraping",
     )
 
-    class Config:
-        env_prefix = "SCRAPER_"
+    model_config = ConfigDict(env_prefix="SCRAPER_")
 
 
 class APISettings(BaseSettings):
@@ -307,8 +293,7 @@ class APISettings(BaseSettings):
     )
     rate_limit_enabled: bool = Field(default=True, description="Enable rate limiting")
 
-    class Config:
-        env_prefix = "API_"
+    model_config = ConfigDict(env_prefix="API_")
 
     def get_valid_keys(self) -> Set[str]:
         """Parse comma-separated API keys into a set."""
@@ -336,11 +321,12 @@ class Settings(BaseSettings):
     scraper: ScraperSettings = Field(default_factory=ScraperSettings)
     api: APISettings = Field(default_factory=APISettings)
 
-    class Config:
-        env_file = ".env"
-        env_file_encoding = "utf-8"
-        case_sensitive = False
-        extra = "ignore"
+    model_config = ConfigDict(
+        env_file=".env",
+        env_file_encoding="utf-8",
+        case_sensitive=False,
+        extra="ignore",
+    )
 
 
 @lru_cache(maxsize=1)

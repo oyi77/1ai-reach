@@ -111,9 +111,9 @@ def temp_db() -> Generator[Path, None, None]:
         )
     """)
 
-    # Create messages table
+    # Create conversation_messages table
     conn.execute("""
-        CREATE TABLE IF NOT EXISTS messages (
+        CREATE TABLE IF NOT EXISTS conversation_messages (
             id INTEGER PRIMARY KEY AUTOINCREMENT,
             conversation_id INTEGER NOT NULL,
             direction TEXT NOT NULL,
@@ -355,26 +355,26 @@ class TestProductSearch:
         product_search_service: ProductSearchService,
         sample_products: dict,
     ):
-        """Test search returns all products as fallback when no specific match found."""
+        """Test search returns empty list when no specific match found."""
         wa_number = sample_products["wa_number"]
         results = product_search_service.search_products(
             wa_number, "nonexistent", limit=5
         )
 
-        assert len(results) > 0
+        assert len(results) == 0
 
 
 class TestCSEngineProductIntegration:
     """Test CS engine with product search integration."""
 
-    @patch("capi_tracker.track_lead", create=True)
+    @patch("oneai_reach.infrastructure.legacy.capi_tracker.track_lead", create=True)
     @patch("oneai_reach.application.customer_service.cs_engine_service._should_throttle_response")
     @patch("oneai_reach.api.v1.admin.get_pause_flag")
-    @patch("state_manager.get_wa_number_by_session")
-    @patch("llm_client.generate")
-    @patch("senders.send_whatsapp_session")
-    @patch("senders.send_typing_indicator")
-    @patch("n8n_client.notify_conversation_started")
+    @patch("oneai_reach.infrastructure.legacy.state_manager.get_wa_number_by_session")
+    @patch("oneai_reach.infrastructure.legacy.llm_client.generate")
+    @patch("oneai_reach.infrastructure.legacy.senders.send_whatsapp_session")
+    @patch("oneai_reach.infrastructure.legacy.senders.send_typing_indicator")
+    @patch("oneai_reach.infrastructure.legacy.n8n_client.notify_conversation_started")
     def test_product_inquiry_includes_product_info(
         self,
         mock_notify,
@@ -427,14 +427,14 @@ class TestCSEngineProductIntegration:
         has_product_context = "kopi" in llm_prompt.lower() or "product" in llm_prompt.lower()
         assert has_product_context, f"No product context in prompt: {llm_prompt[:200]}"
 
-    @patch("capi_tracker.track_lead", create=True)
+    @patch("oneai_reach.infrastructure.legacy.capi_tracker.track_lead", create=True)
     @patch("oneai_reach.application.customer_service.cs_engine_service._should_throttle_response")
     @patch("oneai_reach.api.v1.admin.get_pause_flag")
-    @patch("state_manager.get_wa_number_by_session")
-    @patch("llm_client.generate")
-    @patch("senders.send_whatsapp_session")
-    @patch("senders.send_typing_indicator")
-    @patch("n8n_client.notify_conversation_started")
+    @patch("oneai_reach.infrastructure.legacy.state_manager.get_wa_number_by_session")
+    @patch("oneai_reach.infrastructure.legacy.llm_client.generate")
+    @patch("oneai_reach.infrastructure.legacy.senders.send_whatsapp_session")
+    @patch("oneai_reach.infrastructure.legacy.senders.send_typing_indicator")
+    @patch("oneai_reach.infrastructure.legacy.n8n_client.notify_conversation_started")
     def test_out_of_stock_product_mentioned(
         self,
         mock_notify,
@@ -480,14 +480,14 @@ class TestCSEngineProductIntegration:
         has_unavailable = "tidak tersedia" in llm_prompt.lower() or "teh" in llm_prompt.lower()
         assert has_unavailable, f"No out-of-stock context in prompt: {llm_prompt[:200]}"
 
-    @patch("capi_tracker.track_lead", create=True)
+    @patch("oneai_reach.infrastructure.legacy.capi_tracker.track_lead", create=True)
     @patch("oneai_reach.application.customer_service.cs_engine_service._should_throttle_response")
     @patch("oneai_reach.api.v1.admin.get_pause_flag")
-    @patch("state_manager.get_wa_number_by_session")
-    @patch("llm_client.generate")
-    @patch("senders.send_whatsapp_session")
-    @patch("senders.send_typing_indicator")
-    @patch("n8n_client.notify_conversation_started")
+    @patch("oneai_reach.infrastructure.legacy.state_manager.get_wa_number_by_session")
+    @patch("oneai_reach.infrastructure.legacy.llm_client.generate")
+    @patch("oneai_reach.infrastructure.legacy.senders.send_whatsapp_session")
+    @patch("oneai_reach.infrastructure.legacy.senders.send_typing_indicator")
+    @patch("oneai_reach.infrastructure.legacy.n8n_client.notify_conversation_started")
     def test_variant_listing_in_response(
         self,
         mock_notify,
@@ -532,14 +532,14 @@ class TestCSEngineProductIntegration:
         has_variant_context = "varian" in llm_prompt.lower() or "kopi" in llm_prompt.lower() or "gram" in llm_prompt.lower()
         assert has_variant_context, f"No variant context in prompt: {llm_prompt[:200]}"
 
-    @patch("capi_tracker.track_lead", create=True)
+    @patch("oneai_reach.infrastructure.legacy.capi_tracker.track_lead", create=True)
     @patch("oneai_reach.application.customer_service.cs_engine_service._should_throttle_response")
     @patch("oneai_reach.api.v1.admin.get_pause_flag")
-    @patch("state_manager.get_wa_number_by_session")
-    @patch("llm_client.generate")
-    @patch("senders.send_whatsapp_session")
-    @patch("senders.send_typing_indicator")
-    @patch("n8n_client.notify_conversation_started")
+    @patch("oneai_reach.infrastructure.legacy.state_manager.get_wa_number_by_session")
+    @patch("oneai_reach.infrastructure.legacy.llm_client.generate")
+    @patch("oneai_reach.infrastructure.legacy.senders.send_whatsapp_session")
+    @patch("oneai_reach.infrastructure.legacy.senders.send_typing_indicator")
+    @patch("oneai_reach.infrastructure.legacy.n8n_client.notify_conversation_started")
     def test_non_product_inquiry_skips_product_search(
         self,
         mock_notify,

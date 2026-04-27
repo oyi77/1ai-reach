@@ -2,9 +2,6 @@
 
 import hashlib
 import json
-import sqlite3
-from datetime import datetime, timedelta
-from typing import Optional
 
 from oneai_reach.config.settings import Settings
 from oneai_reach.infrastructure.logging import get_logger
@@ -204,7 +201,7 @@ class OutcomesService:
                         total_value = ?,
                         escalation_reason = ?,
                         converted_to_purchase = ?,
-                        message_count = (SELECT COUNT(*) FROM conversation_messages WHERE conversation_id = ?)
+                        total_messages = (SELECT COUNT(*) FROM response_outcomes WHERE conversation_id = ?)
                     WHERE conversation_id = ?""",
                 (
                     status,

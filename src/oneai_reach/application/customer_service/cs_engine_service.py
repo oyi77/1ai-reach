@@ -3,13 +3,23 @@
 import re
 import time
 from collections import defaultdict
-from typing import Optional
+from collections.abc import Iterable
 
 from oneai_reach.config.settings import Settings
-from oneai_reach.domain.exceptions import ExternalAPIError
 from oneai_reach.infrastructure.logging import get_logger
 
 logger = get_logger(__name__)
+
+
+def _normalize_kb_results(kb_results: object) -> list[dict]:
+    if not isinstance(kb_results, Iterable) or isinstance(kb_results, (str, bytes)):
+        return []
+
+    normalized = []
+    for result in kb_results:
+        if isinstance(result, dict):
+            normalized.append(result)
+    return normalized
 
 # Response throttling to prevent rapid back-and-forth conversation loops
 _LAST_RESPONSE_TIME: dict[str, float] = {}
@@ -108,15 +118,7 @@ class CSEngineService:
         if not clean:
             return []
         try:
-            import sys
-            from pathlib import Path
-            
-            # Add scripts directory to path for state_manager import
-            scripts_dir = Path(__file__).resolve().parent.parent.parent.parent.parent / "scripts"
-            if str(scripts_dir) not in sys.path:
-                sys.path.insert(0, str(scripts_dir))
-            
-            from state_manager import search_kb
+            from oneai_reach.infrastructure.legacy.state_manager import search_kb
 
             return search_kb(wa_number_id, clean, limit)
         except Exception as e:
@@ -210,6 +212,7 @@ class CSEngineService:
     def should_escalate(
         self, message: str, kb_results: list[dict], conversation: dict
     ) -> bool:
+        kb_results = _normalize_kb_results(kb_results)
         if kb_results:
             return False
 
@@ -242,6 +245,7 @@ class CSEngineService:
         user_type: str = "normal",
         product_results: list = None,
     ) -> str:
+        kb_results = _normalize_kb_results(kb_results)
         lang = self._detect_language(message)
         lang_instruction = (
             "Respond ENTIRELY in Bahasa Indonesia."
@@ -324,7 +328,7 @@ class CSEngineService:
 
         full_prompt = "\n".join(prompt_parts)
 
-        import llm_client
+        from oneai_reach.infrastructure.legacy import llm_client
 
         response = llm_client.generate(full_prompt)
         if response:
@@ -360,7 +364,7 @@ class CSEngineService:
                 "reason": "CS engine paused by admin",
             }
 
-        from state_manager import get_wa_number_by_session
+        from oneai_reach.infrastructure.legacy.state_manager import get_wa_number_by_session
 
         wa_num_rec = get_wa_number_by_session(session_name)
         if wa_num_rec:
@@ -406,7 +410,7 @@ class CSEngineService:
         conv_id = conv["id"]
 
         if conv.get("message_count", 0) <= 1:
-            from n8n_client import notify_conversation_started
+            from oneai_reach.infrastructure.legacy.n8n_client import notify_conversation_started
 
             notify_conversation_started(contact_phone, session_name, wa_number_id)
 
@@ -416,24 +420,26 @@ class CSEngineService:
 
         current_msg_count = conv.get("message_count", 0) + 1
         if current_msg_count >= 3:
-            from n8n_client import notify_hot_lead
+            from oneai_reach.infrastructure.legacy.n8n_client import notify_hot_lead
 
             notify_hot_lead(contact_phone, current_msg_count, conv_id)
 
-        import capi_tracker
+        from oneai_reach.infrastructure.legacy import capi_tracker
 
         capi_tracker.track_lead(contact_phone)
 
         if self._is_purchase_signal(message_text):
             capi_tracker.track_purchase(contact_phone)
-            from n8n_client import notify_purchase_signal
+            from oneai_reach.infrastructure.legacy.n8n_client import notify_purchase_signal
 
             notify_purchase_signal(contact_phone, message_text, conv_id)
 
         if self._is_shipping_complaint(message_text):
             capi_tracker.track_atc(contact_phone)
 
-        kb_results = self.kb_search(wa_number_id, message_text, limit=5)
+        kb_results = _normalize_kb_results(
+            self.kb_search(wa_number_id, message_text, limit=5)
+        )
 
         product_results = []
         is_product_inquiry = self.product_search_service and self.product_search_service.detect_product_inquiry(message_text)
@@ -446,7 +452,7 @@ class CSEngineService:
             reason = "No KB match + repeated unclear turns"
             self.conversation_service.escalate(conv_id, reason=reason)
 
-            from n8n_client import notify_escalation
+            from oneai_reach.infrastructure.legacy.n8n_client import notify_escalation
 
             notify_escalation(contact_phone, reason, conv_id)
 
@@ -463,7 +469,7 @@ class CSEngineService:
                 )
 
             if source_channel == "whatsapp":
-                from senders import send_typing_indicator, send_whatsapp_session
+                from oneai_reach.infrastructure.legacy.senders import send_typing_indicator, send_whatsapp_session
 
                 send_typing_indicator(session_name, contact_phone, typing=True)
                 time.sleep(self.config.cs.reply_delay_seconds)
@@ -531,14 +537,14 @@ class CSEngineService:
 
         if not skip_send:
             if source_channel == "whatsapp":
-                from senders import send_typing_indicator, send_whatsapp_session
+                from oneai_reach.infrastructure.legacy.senders import send_typing_indicator, send_whatsapp_session
 
                 send_typing_indicator(session_name, contact_phone, typing=True)
                 time.sleep(self.config.cs.reply_delay_seconds)
 
                 if voice_reply:
                     try:
-                        from voice_pipeline import generate_voice_reply
+                        from oneai_reach.infrastructure.legacy.voice_pipeline import generate_voice_reply
 
                         voice_sent = generate_voice_reply(
                             response_text, session_name, contact_phone

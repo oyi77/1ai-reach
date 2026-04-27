@@ -10,6 +10,9 @@ SCRIPTS_DIR = str(Path(__file__).parent.parent / "scripts")
 sys.path.insert(0, SCRIPTS_DIR)
 
 
+@pytest.mark.filterwarnings("ignore:scripts/cs_self_improve.py is deprecated:DeprecationWarning")
+
+
 def _seed_feedback(db_path, conv_id, message_id, rating, corrected=""):
     conn = sqlite3.connect(db_path)
     conn.execute(

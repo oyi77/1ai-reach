@@ -1,0 +1,2580 @@
+diff --git a/agent_control.py b/agent_control.py
+index d21e725..2a2483b 100644
+--- a/agent_control.py
++++ b/agent_control.py
+@@ -636,10 +636,14 @@ def escalate_conversation(conversation_id: int, reason: str) -> dict[str, Any]:
+ # Warm call (warmcall_engine — may not exist yet)
+ # ---------------------------------------------------------------------------
+ 
+-try:
+-    import warmcall_engine as _warmcall_engine
+-except ImportError:
+-    _warmcall_engine = None  # type: ignore[assignment]
++import warnings
++
++with warnings.catch_warnings():
++    warnings.filterwarnings("ignore", message="scripts/warmcall_engine.py is deprecated", category=DeprecationWarning)
++    try:
++        import warmcall_engine as _warmcall_engine
++    except ImportError:
++        _warmcall_engine = None  # type: ignore[assignment]
+ 
+ 
+ def start_warmcall(
+diff --git a/pyproject.toml b/pyproject.toml
+index b7455d2..579df8c 100644
+--- a/pyproject.toml
++++ b/pyproject.toml
+@@ -13,22 +13,29 @@ dependencies = [
+   "pydantic-settings>=2.0",
+   "pandas>=2.0",
+   "requests>=2.31.0",
++  "beautifulsoup4>=4.12.0",
++  "Pillow>=10.0.0",
++  "PyYAML>=6.0.0",
+   "streamlit>=1.28.0",
+   "fastapi>=0.104.0",
+   "uvicorn>=0.24.0",
+   "starlette>=0.27.0",
+   "email-validator>=2.0",
++  "weasyprint>=68.0",
+ ]
+ 
+ [project.optional-dependencies]
+ dev = [
+   "pytest>=7.0",
++  "pytest-asyncio>=0.23.0",
+   "pytest-playwright>=0.4.0",
+ ]
+ 
+ [project.scripts]
+ engage-mcp = "mcp_server:main"
+ 
+-[tool.setuptools.packages.find]
+-where = ["src"]
+-include = ["oneai_reach*"]
++[tool.pytest.ini_options]
++filterwarnings = [
++    "ignore:scripts/cs_outcomes.py is deprecated:DeprecationWarning",
++    "ignore:scripts/cs_self_improve.py is deprecated:DeprecationWarning",
++]
+diff --git a/scripts/blaster.py b/scripts/blaster.py
+index fdeaace..4e0ae73 100644
+--- a/scripts/blaster.py
++++ b/scripts/blaster.py
+@@ -15,6 +15,12 @@ import pandas as pd
+ from leads import load_leads, save_leads
+ from senders import send_email, send_whatsapp, send_instagram, send_twitter
+ from utils import draft_path, is_empty, parse_display_name
++from oneai_reach.application.outreach.proposal_pdf import (
++    ProposalPdfError,
++    generate_proposal_pdf,
++    persist_proposal_pdf,
++    proposal_pdf_filename,
++)
+ 
+ PROPOSAL_SUBJECT = "Collaboration Proposal from BerkahKarya"
+ COOLDOWN_DAYS = 30  # don't re-contact the same lead within this window
+@@ -85,7 +91,16 @@ def blast() -> None:
+         wa_draft = parts[1].strip() if len(parts) > 1 else proposal
+ 
+         print(f"\nProcessing: {name}")
+-        any_sent = blast_lead(phone, email, ig_handle, tw_handle, proposal, wa_draft)
++        any_sent = blast_lead(
++            phone,
++            email,
++            ig_handle,
++            tw_handle,
++            proposal,
++            wa_draft,
++            lead_name=name,
++            lead_index=index,
++        )
+ 
+         if any_sent:
+             df.at[index, "status"] = "contacted"
+@@ -93,14 +108,14 @@ def blast() -> None:
+             sent += 1
+ 
+     save_leads(df)
+-    print(f"\n--- Blast complete ---")
++    print("\n--- Blast complete ---")
+     print(f"  Sent:              {sent}")
+     print(f"  Skipped (cooldown): {skipped_cooldown}")
+     print(f"  Skipped (no draft): {skipped_no_draft}")
+ 
+ 
+ def blast_lead(phone: str, email: str, ig_handle: str, tw_handle: str,
+-               proposal: str, wa_draft: str) -> bool:
++               proposal: str, wa_draft: str, lead_name: str = "Business", lead_index=None) -> bool:
+     """Send proposal to a lead via all available channels."""
+     wa_sent = email_sent = ig_sent = tw_sent = False
+ 
+@@ -108,7 +123,27 @@ def blast_lead(phone: str, email: str, ig_handle: str, tw_handle: str,
+         wa_sent = send_whatsapp(phone, wa_draft)
+ 
+     if email:
+-        email_sent = send_email(email, PROPOSAL_SUBJECT, proposal)
++        try:
++            pdf_bytes = generate_proposal_pdf(proposal, lead_name)
++        except ProposalPdfError as exc:
++            print(f"  [skip email] {lead_name} — {exc}")
++            pdf_bytes = None
++        if pdf_bytes is None:
++            email_sent = False
++        else:
++            email_sent = send_email(
++                email,
++                PROPOSAL_SUBJECT,
++                proposal,
++                pdf_bytes=pdf_bytes,
++                filename=proposal_pdf_filename(lead_name),
++            )
++        if email_sent and lead_index is not None and pdf_bytes:
++            from config import PROPOSALS_DIR
++
++            pdf_path = persist_proposal_pdf(pdf_bytes, PROPOSALS_DIR, lead_index, lead_name)
++            print(f"  Saved proposal PDF: {pdf_path}")
++
+ 
+     if ig_handle:
+         ig_sent = send_instagram(ig_handle, wa_draft)
+@@ -146,7 +181,7 @@ def blast_via_channels(phone: str, email: str, ig_handle: str, tw_handle: str,
+             if platform == "whatsapp" and phone:
+                 any_sent |= svc.send_message(ch_id, phone, wa_draft)
+             elif platform == "email" and email:
+-                any_sent |= svc.send_message(ch_id, email, proposal, subject=PROPOSAL_SUBJECT)
++                any_sent |= blast_lead("", email, "", "", proposal, wa_draft)
+             elif platform == "instagram" and ig_handle:
+                 any_sent |= svc.send_message(ch_id, ig_handle, wa_draft)
+             elif platform == "twitter" and tw_handle:
+diff --git a/scripts/conversation_tracker.py b/scripts/conversation_tracker.py
+index a1fe7bd..201e9ee 100755
+--- a/scripts/conversation_tracker.py
++++ b/scripts/conversation_tracker.py
+@@ -12,7 +12,7 @@ _src = _root / "src"
+ if str(_src) not in sys.path:
+     sys.path.insert(0, str(_src))
+ 
+-from oneai_reach.infrastructure.database.sqlite_conversation_repository import (
++from oneai_reach.infrastructure.database.sqlite_conversation_repository import (  # noqa: E402
+     SQLiteConversationRepository,
+ )
+ 
+@@ -50,3 +50,84 @@ def update_status(conversation_id: int, status: str) -> bool:
+         return True
+     except Exception:
+         return False
++
++
++def _connect():
++    import sqlite3
++    import config
++
++    conn = sqlite3.connect(str(config.DB_FILE))
++    conn.row_factory = sqlite3.Row
++    return conn
++
++
++def get_or_create_conversation(
++    wa_number_id: str,
++    contact_phone: str,
++    engine_mode: str = "cs",
++    contact_name: str = "",
++    lead_id: str | None = None,
++) -> dict:
++    conn = _connect()
++    try:
++        row = conn.execute(
++            """SELECT * FROM conversations
++                WHERE wa_number_id = ? AND contact_phone = ? AND status = 'active'""",
++            (wa_number_id, contact_phone),
++        ).fetchone()
++        if row:
++            return dict(row)
++
++        columns = {row[1] for row in conn.execute("PRAGMA table_info(conversations)")}
++        if "stage" in columns:
++            cursor = conn.execute(
++                """INSERT INTO conversations
++                    (wa_number_id, contact_phone, engine_mode, stage, status, message_count)
++                    VALUES (?, ?, ?, 'awareness', 'active', 0)""",
++                (wa_number_id, contact_phone, engine_mode),
++            )
++        else:
++            cursor = conn.execute(
++                """INSERT INTO conversations
++                    (wa_number_id, contact_phone, contact_name, lead_id, engine_mode, status, message_count)
++                    VALUES (?, ?, ?, ?, ?, 'active', 0)""",
++                (wa_number_id, contact_phone, contact_name, lead_id, engine_mode),
++            )
++        conn.commit()
++        row = conn.execute(
++            "SELECT * FROM conversations WHERE id = ?", (cursor.lastrowid,)
++        ).fetchone()
++        return dict(row)
++    finally:
++        conn.close()
++
++
++def add_message(conversation_id: int, direction: str, message_text: str) -> int:
++    conn = _connect()
++    try:
++        tables = {row[0] for row in conn.execute("SELECT name FROM sqlite_master WHERE type='table'")}
++        if "messages" in tables:
++            cursor = conn.execute(
++                """INSERT INTO messages
++                    (conversation_id, direction, message_text, created_at)
++                    VALUES (?, ?, ?, datetime('now'))""",
++                (conversation_id, direction, message_text),
++            )
++        else:
++            cursor = conn.execute(
++                """INSERT INTO conversation_messages
++                    (conversation_id, direction, message_text, timestamp)
++                    VALUES (?, ?, ?, datetime('now'))""",
++                (conversation_id, direction, message_text),
++            )
++        conn.execute(
++            """UPDATE conversations
++                SET message_count = COALESCE(message_count, 0) + 1,
++                    updated_at = datetime('now')
++                WHERE id = ?""",
++            (conversation_id,),
++        )
++        conn.commit()
++        return cursor.lastrowid
++    finally:
++        conn.close()
+diff --git a/scripts/cs_outcomes.py b/scripts/cs_outcomes.py
+index 29a7044..fdeab5d 100755
+--- a/scripts/cs_outcomes.py
++++ b/scripts/cs_outcomes.py
+@@ -6,6 +6,7 @@ Backward compatibility shim for cs_outcomes.py
+ """
+ import sys
+ import warnings
++from importlib import import_module
+ from pathlib import Path
+ 
+ # Show deprecation warning
+@@ -21,8 +22,155 @@ _src = _root / "src"
+ if str(_src) not in sys.path:
+     sys.path.insert(0, str(_src))
+ 
+-# Import and call new CLI
+-from oneai_reach.cli.main import cli
++def init_outcomes_db() -> None:
++    from config import DB_FILE
++
++    import sqlite3
++
++    conn = sqlite3.connect(str(DB_FILE))
++    try:
++        conn.execute(
++            """CREATE TABLE IF NOT EXISTS conversation_outcomes (
++                id INTEGER PRIMARY KEY AUTOINCREMENT,
++                conversation_id INTEGER UNIQUE NOT NULL,
++                wa_number_id TEXT,
++                contact_phone TEXT,
++                final_status TEXT DEFAULT 'engaged',
++                started_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
++                ended_at TIMESTAMP,
++                total_messages INTEGER DEFAULT 0,
++                total_value REAL DEFAULT 0,
++                escalation_reason TEXT,
++                converted_to_purchase INTEGER DEFAULT 0,
++                duration_seconds INTEGER,
++                outcome_value REAL DEFAULT 0
++            )"""
++        )
++        conn.execute(
++            """CREATE TABLE IF NOT EXISTS response_outcomes (
++                id INTEGER PRIMARY KEY AUTOINCREMENT,
++                conversation_id INTEGER NOT NULL,
++                wa_number_id TEXT,
++                response_hash TEXT NOT NULL,
++                response_text TEXT NOT NULL,
++                kb_entry_ids TEXT DEFAULT '[]',
++                pattern_used TEXT,
++                user_type TEXT DEFAULT 'normal',
++                sales_stage TEXT DEFAULT 'ENTRY',
++                sent_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
++                user_replied INTEGER DEFAULT 0,
++                reply_text TEXT,
++                reply_sentiment TEXT,
++                time_to_reply_seconds INTEGER,
++                was_effective INTEGER DEFAULT 0,
++                outcome_score REAL DEFAULT 0,
++                next_user_action TEXT,
++                reply_time_seconds INTEGER
++            )"""
++        )
++        conn.execute(
++            """CREATE TABLE IF NOT EXISTS user_journey (
++                id INTEGER PRIMARY KEY AUTOINCREMENT,
++                conversation_id INTEGER NOT NULL,
++                wa_number_id TEXT,
++                step_name TEXT NOT NULL,
++                step_order INTEGER NOT NULL,
++                reached_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
++            )"""
++        )
++        conn.execute(
++            """CREATE TABLE IF NOT EXISTS learning_queue (
++                id INTEGER PRIMARY KEY AUTOINCREMENT,
++                conversation_id INTEGER NOT NULL,
++                winning_responses TEXT NOT NULL,
++                scenario_type TEXT DEFAULT 'general',
++                priority INTEGER DEFAULT 5,
++                status TEXT DEFAULT 'pending',
++                created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
++            )"""
++        )
++        conn.execute(
++            """CREATE TABLE IF NOT EXISTS pattern_effectiveness (
++                id INTEGER PRIMARY KEY AUTOINCREMENT,
++                pattern_id TEXT NOT NULL,
++                pattern_text TEXT NOT NULL,
++                scenario TEXT NOT NULL,
++                times_used INTEGER DEFAULT 0,
++                times_successful INTEGER DEFAULT 0,
++                success_rate REAL DEFAULT 0,
++                last_used TIMESTAMP,
++                UNIQUE(pattern_id, scenario)
++            )"""
++        )
++        conn.commit()
++    finally:
++        conn.close()
++
++
++def _outcomes_service():
++    from config import DB_FILE
++    import sqlite3
++    from oneai_reach.config.settings import get_settings
++    from oneai_reach.application.customer_service.outcomes_service import OutcomesService
++
++    def connect():
++        conn = sqlite3.connect(str(DB_FILE))
++        conn.row_factory = sqlite3.Row
++        return conn
++
++    init_outcomes_db()
++    return OutcomesService(get_settings(), connect)
++
++
++def record_conversation_start(conversation_id: int, wa_number_id: str, contact_phone: str) -> None:
++    _outcomes_service().record_conversation_start(conversation_id, wa_number_id, contact_phone)
++
++
++def record_response_sent(
++    conversation_id: int,
++    response_text: str,
++    kb_entry_ids: list[int] = None,
++    pattern_used: str = None,
++    user_type: str = "normal",
++    sales_stage: str = "ENTRY",
++    wa_number_id: str = None,
++) -> int:
++    return _outcomes_service().record_response_sent(
++        conversation_id,
++        response_text,
++        kb_entry_ids=kb_entry_ids,
++        pattern_used=pattern_used,
++        user_type=user_type,
++        sales_stage=sales_stage,
++        wa_number_id=wa_number_id,
++    )
++
++
++def record_user_reply(
++    conversation_id: int,
++    response_text: str,
++    user_reply: str,
++    time_to_reply_seconds: int = None,
++) -> None:
++    _outcomes_service().record_user_reply(
++        conversation_id,
++        response_text,
++        user_reply,
++        time_to_reply_seconds=time_to_reply_seconds,
++    )
++
++
++def record_final_outcome(conversation_id: int, status: str, total_value: float = 0) -> None:
++    _outcomes_service().record_final_outcome(
++        conversation_id,
++        status,
++        total_value=total_value,
++    )
++
++
++def get_conversation_metrics(conversation_id: int) -> dict:
++    return _outcomes_service().get_conversation_metrics(conversation_id)
+ 
+ if __name__ == "__main__":
++    cli = import_module("oneai_reach.cli.main").cli
+     sys.exit(cli())
+diff --git a/scripts/cs_playbook.py b/scripts/cs_playbook.py
+index 067274b..13d31a4 100755
+--- a/scripts/cs_playbook.py
++++ b/scripts/cs_playbook.py
+@@ -6,6 +6,7 @@ Backward compatibility shim for cs_playbook.py
+ """
+ import sys
+ import warnings
++from importlib import import_module
+ from pathlib import Path
+ 
+ # Show deprecation warning
+@@ -21,8 +22,10 @@ _src = _root / "src"
+ if str(_src) not in sys.path:
+     sys.path.insert(0, str(_src))
+ 
+-# Import and call new CLI
+-from oneai_reach.cli.main import cli
++CSPlaybook = import_module(
++    "oneai_reach.application.customer_service.playbook_service"
++).PlaybookService
+ 
+ if __name__ == "__main__":
++    cli = import_module("oneai_reach.cli.main").cli
+     sys.exit(cli())
+diff --git a/scripts/cs_self_improve.py b/scripts/cs_self_improve.py
+index aabbdda..def82f0 100755
+--- a/scripts/cs_self_improve.py
++++ b/scripts/cs_self_improve.py
+@@ -6,6 +6,7 @@ Backward compatibility shim for cs_self_improve.py
+ """
+ import sys
+ import warnings
++from importlib import import_module
+ from pathlib import Path
+ 
+ # Show deprecation warning
+@@ -21,8 +22,40 @@ _src = _root / "src"
+ if str(_src) not in sys.path:
+     sys.path.insert(0, str(_src))
+ 
+-# Import and call new CLI
+-from oneai_reach.cli.main import cli
++def _connect():
++    from config import DB_FILE
++    import sqlite3
++
++    conn = sqlite3.connect(str(DB_FILE))
++    conn.row_factory = sqlite3.Row
++    return conn
++
++
++class SelfImprovementEngine:
++    def __init__(self, wa_number_id: str = "default"):
++        from oneai_reach.config.settings import get_settings
++        from oneai_reach.application.customer_service.self_improve_service import SelfImproveService
++
++        self.wa_number_id = wa_number_id
++        self._service = SelfImproveService(
++            get_settings(),
++            _connect,
++            analytics_service=None,
++            outcomes_service=import_module("cs_outcomes")._outcomes_service(),
++        )
++
++    def analyze_conversation(self, conversation_id: int) -> dict:
++        return self._service.analyze_conversation(conversation_id)
++
++    def extract_winning_patterns(self, days: int = 7, min_score: float = 0.7) -> list[dict]:
++        return self._service.extract_winning_patterns(days=days, min_score=min_score)
++
++    def _get_admin_feedback_summary(self) -> dict:
++        return self._service._get_admin_feedback_summary()
++
++    def apply_learnings(self, dry_run: bool = True) -> dict:
++        return self._service.apply_learnings(dry_run=dry_run)
+ 
+ if __name__ == "__main__":
++    cli = import_module("oneai_reach.cli.main").cli
+     sys.exit(cli())
+diff --git a/scripts/senders.py b/scripts/senders.py
+index bc77352..3b3afbc 100644
+--- a/scripts/senders.py
++++ b/scripts/senders.py
+@@ -1,21 +1,12 @@
+ import logging
+ import os
++import smtplib
+ import subprocess
+ import sys
+-
+-_wa_logger = logging.getLogger("waha")
+-_email_logger = logging.getLogger("email")
+-
+-try:
+-    import requests as _req
+-
+-    _HTTP_OK = True
+-except ImportError:
+-    _HTTP_OK = False
+-
+-import smtplib
+-from email.mime.text import MIMEText
+ from email.mime.multipart import MIMEMultipart
++from email.mime.text import MIMEText
++from pathlib import Path
++from typing import Optional
+ 
+ from config import (
+     GMAIL_ACCOUNT,
+@@ -35,6 +26,16 @@ from config import (
+ )
+ from utils import is_empty
+ 
++_wa_logger = logging.getLogger("waha")
++_email_logger = logging.getLogger("email")
++
++try:
++    import requests as _req
++
++    _HTTP_OK = True
++except ImportError:
++    _HTTP_OK = False
++
+ # ---------------------------------------------------------------------------
+ # Multi-channel (Instagram / Twitter) integration
+ # ---------------------------------------------------------------------------
+@@ -497,7 +498,6 @@ def _send_via_brevo(email: str, subject: str, body: str, pdf_bytes: Optional[byt
+ 
+ def _send_via_stalwart(email: str, subject: str, body: str, pdf_bytes: Optional[bytes] = None, filename: Optional[str] = None) -> bool:
+     """Fallback: send via Stalwart SMTP as marketing@berkahkarya.org."""
+-    import base64
+     from email.mime.base import MIMEBase
+     from email import encoders
+     from email.utils import parseaddr
+@@ -590,26 +590,36 @@ def _send_via_himalaya(email: str, subject: str, body: str) -> bool:
+         return False
+ 
+ 
+-def _send_via_mock(email: str, subject: str, body: str) -> bool:
++def _send_via_mock(email: str, subject: str, body: str, pdf_bytes: Optional[bytes] = None, filename: Optional[str] = None) -> bool:
+     """Last resort: queue email locally for manual review (free, no send)."""
+     print(f"[QUEUE] Email logged for {email} — review at {EMAIL_QUEUE_LOG}")
+     os.makedirs(os.path.dirname(EMAIL_QUEUE_LOG), exist_ok=True)
+     with open(EMAIL_QUEUE_LOG, "a") as f:
+         f.write(f"\n---\nTo: {email}\nSubject: {subject}\nBody: {body}\n")
+-    return True
++        if pdf_bytes and filename:
++            attachment_dir = Path(EMAIL_QUEUE_LOG).parent / "email_attachments"
++            attachment_dir.mkdir(parents=True, exist_ok=True)
++            attachment_path = attachment_dir / filename
++            attachment_path.write_bytes(pdf_bytes)
++            f.write(f"Attachment: {attachment_path}\n")
++    return not (pdf_bytes and filename)
+ 
+ 
+ def send_email(email: str, subject: str, body: str, pdf_bytes: Optional[bytes] = None, filename: Optional[str] = None) -> bool:
+     if is_empty(email):
+         print("Skip Email: No email address.")
+         return False
++    attachment_required = pdf_bytes is not None or filename is not None
+     for name, method in [
+         ("brevo", lambda: _send_via_brevo(email, subject, body, pdf_bytes, filename)),
+         ("stalwart", lambda: _send_via_stalwart(email, subject, body, pdf_bytes, filename)),
+         ("gog", lambda: _send_via_gog(email, subject, body)),
+         ("himalaya", lambda: _send_via_himalaya(email, subject, body)),
+-        ("queue", lambda: _send_via_mock(email, subject, body)),
++        ("queue", lambda: _send_via_mock(email, subject, body, pdf_bytes, filename)),
+     ]:
++        if attachment_required and name in {"gog", "himalaya"}:
++            print(f"Skip {name}: PDF attachment required but this method cannot attach files")
++            continue
+         try:
+             if method():
+                 return True
+diff --git a/src/oneai_reach/api/models.py b/src/oneai_reach/api/models.py
+index a7a0f6c..282d170 100644
+--- a/src/oneai_reach/api/models.py
++++ b/src/oneai_reach/api/models.py
+@@ -3,7 +3,7 @@
+ Common models used across API endpoints for validation and serialization.
+ """
+ 
+-from datetime import datetime
++from datetime import datetime, timezone
+ from typing import Any, Dict, Optional
+ 
+ from pydantic import BaseModel, Field
+@@ -14,7 +14,7 @@ class HealthResponse(BaseModel):
+ 
+     status: str = Field(..., description="Health status (healthy/degraded/unhealthy)")
+     timestamp: datetime = Field(
+-        default_factory=datetime.utcnow, description="Response timestamp"
++        default_factory=lambda: datetime.now(timezone.utc), description="Response timestamp"
+     )
+     version: str = Field(default="1.0.0", description="API version")
+ 
+@@ -29,7 +29,7 @@ class ErrorResponse(BaseModel):
+         default=None, description="Additional error context"
+     )
+     timestamp: datetime = Field(
+-        default_factory=datetime.utcnow, description="Error timestamp"
++        default_factory=lambda: datetime.now(timezone.utc), description="Error timestamp"
+     )
+ 
+ 
+diff --git a/src/oneai_reach/api/v1/admin.py b/src/oneai_reach/api/v1/admin.py
+index c360ba4..e91828f 100644
+--- a/src/oneai_reach/api/v1/admin.py
++++ b/src/oneai_reach/api/v1/admin.py
+@@ -181,16 +181,7 @@ async def list_conversations() -> List[ConversationInfo]:
+     for monitoring and debugging purposes.
+     """
+     try:
+-        import sys
+-        from pathlib import Path
+-
+-        scripts_dir = (
+-            Path(__file__).resolve().parent.parent.parent.parent.parent / "scripts"
+-        )
+-        if str(scripts_dir) not in sys.path:
+-            sys.path.insert(0, str(scripts_dir))
+-
+-        import conversation_tracker
++        from oneai_reach.infrastructure.legacy import conversation_tracker
+ 
+         convs = conversation_tracker.get_active_conversations()
+ 
+@@ -232,16 +223,7 @@ async def stop_conversation(conv_id: int) -> AdminResponse:
+         conv_id: Conversation ID to stop
+     """
+     try:
+-        import sys
+-        from pathlib import Path
+-
+-        scripts_dir = (
+-            Path(__file__).resolve().parent.parent.parent.parent.parent / "scripts"
+-        )
+-        if str(scripts_dir) not in sys.path:
+-            sys.path.insert(0, str(scripts_dir))
+-
+-        import conversation_tracker
++        from oneai_reach.infrastructure.legacy import conversation_tracker
+ 
+         success = conversation_tracker.update_status(conv_id, "resolved")
+ 
+@@ -316,18 +298,8 @@ async def get_status() -> Dict[str, Any]:
+     """
+     try:
+         import subprocess
+-        import sys
+-        from pathlib import Path
+ 
+-        root = Path(__file__).resolve().parent.parent.parent.parent.parent
+-        if str(root) not in sys.path:
+-            sys.path.insert(0, str(root))
+-        
+-        try:
+-            import agent_control
+-        except ImportError:
+-            # Fallback if agent_control not available
+-            agent_control = None
++        from oneai_reach.infrastructure.legacy import agent_control
+ 
+         services = []
+         
+diff --git a/src/oneai_reach/api/v1/agents.py b/src/oneai_reach/api/v1/agents.py
+index 57ff141..f898de7 100644
+--- a/src/oneai_reach/api/v1/agents.py
++++ b/src/oneai_reach/api/v1/agents.py
+@@ -9,8 +9,6 @@ Provides FastAPI endpoints that wrap agent_control.py functions for:
+ """
+ 
+ import logging
+-import sys
+-from pathlib import Path
+ from typing import Any, Dict, List, Optional
+ 
+ from fastapi import APIRouter, Depends, HTTPException
+@@ -26,21 +24,16 @@ router = APIRouter(
+     dependencies=[Depends(verify_api_key)],
+ )
+ 
+-_root = Path(__file__).resolve().parent.parent.parent.parent.parent
+-_scripts_dir = _root / "scripts"
+-if str(_scripts_dir) not in sys.path:
+-    sys.path.insert(0, str(_scripts_dir))
+-
+ agent_control = None
+ state_manager = None
+ safe_filename = None
+ RESEARCH_DIR = None
+ PROPOSALS_DIR = None
+ try:
+-    import agent_control
+-    import state_manager
+-    from utils import safe_filename
+-    from config import RESEARCH_DIR, PROPOSALS_DIR
++    from oneai_reach.infrastructure.legacy import agent_control
++    from oneai_reach.infrastructure.legacy import state_manager
++    from oneai_reach.infrastructure.legacy.utils import safe_filename
++    from oneai_reach.infrastructure.legacy.config import RESEARCH_DIR, PROPOSALS_DIR
+     state_manager.init_db()
+ except ImportError:
+     pass
+@@ -447,8 +440,7 @@ async def get_wa_sessions_status() -> AgentResponse:
+     try:
+         import requests
+         
+-        sys.path.insert(0, str(_scripts_dir))
+-        from config import WAHA_URL, WAHA_API_KEY, WAHA_DIRECT_URL, WAHA_DIRECT_API_KEY
++        from oneai_reach.infrastructure.legacy.config import WAHA_URL, WAHA_API_KEY, WAHA_DIRECT_URL, WAHA_DIRECT_API_KEY
+         
+         sessions = []
+         
+@@ -802,17 +794,9 @@ async def stop_service(key: str) -> AgentResponse:
+ @router.get("/leads/{lead_id}/timeline", response_model=AgentResponse)
+ async def get_lead_timeline(lead_id: str) -> AgentResponse:
+     """Get complete timeline for a lead including research, proposal, and conversation messages."""
+-    import sys
+-    from pathlib import Path as P
+-    
+-    _root = P(__file__).resolve().parent.parent.parent.parent.parent
+-    _scripts_dir = _root / "scripts"
+-    if str(_scripts_dir) not in sys.path:
+-        sys.path.insert(0, str(_scripts_dir))
+-    
+-    import state_manager
+-    from utils import safe_filename
+-    from config import RESEARCH_DIR, PROPOSALS_DIR, LEADS_FILE
++    from oneai_reach.infrastructure.legacy import state_manager
++    from oneai_reach.infrastructure.legacy.utils import safe_filename
++    from oneai_reach.infrastructure.legacy.config import RESEARCH_DIR, PROPOSALS_DIR, LEADS_FILE
+     import pandas as pd
+     
+     try:
+diff --git a/src/oneai_reach/api/v1/auto_learn.py b/src/oneai_reach/api/v1/auto_learn.py
+index 4d8f5c9..8fef3e0 100644
+--- a/src/oneai_reach/api/v1/auto_learn.py
++++ b/src/oneai_reach/api/v1/auto_learn.py
+@@ -1,16 +1,10 @@
+ """Auto-learn analytics and improvement API endpoints."""
+ 
+-import sys
+-from pathlib import Path
+ from typing import Optional
+ 
+ from fastapi import APIRouter, Request
+ 
+-_SCRIPT_DIR = Path(__file__).resolve().parent.parent.parent.parent.parent / "scripts"
+-if str(_SCRIPT_DIR) not in sys.path:
+-    sys.path.insert(0, str(_SCRIPT_DIR))
+-
+-import state_manager
++from oneai_reach.infrastructure.legacy import state_manager
+ 
+ router = APIRouter(tags=["auto-learn"])
+ 
+diff --git a/src/oneai_reach/api/v1/channels.py b/src/oneai_reach/api/v1/channels.py
+index a4fecd0..e73fb2e 100644
+--- a/src/oneai_reach/api/v1/channels.py
++++ b/src/oneai_reach/api/v1/channels.py
+@@ -390,12 +390,7 @@ async def poll_dms(wa_number_id: str):
+ 
+ @router.post("/poll-all")
+ async def poll_all_dms():
+-    import sys, os
+-    _project = os.path.dirname(os.path.dirname(os.path.dirname(os.path.dirname(os.path.dirname(__file__)))))
+-    _scripts = os.path.join(_project, "scripts")
+-    if _scripts not in sys.path:
+-        sys.path.insert(0, _scripts)
+-    from state_manager import get_wa_numbers
++    from oneai_reach.infrastructure.legacy.state_manager import get_wa_numbers
+     numbers = get_wa_numbers()
+     wa_ids = [n.get("id", "") or n.get("session_name", "") for n in numbers]
+     from oneai_reach.infrastructure.messaging.channels.dm_poller import poll_all
+diff --git a/src/oneai_reach/api/v1/conversations.py b/src/oneai_reach/api/v1/conversations.py
+index e698597..6a38fca 100644
+--- a/src/oneai_reach/api/v1/conversations.py
++++ b/src/oneai_reach/api/v1/conversations.py
+@@ -10,16 +10,7 @@ from fastapi import APIRouter, HTTPException, Request
+ from fastapi.responses import JSONResponse
+ 
+ from oneai_reach.config.settings import get_settings
+-
+-import sys
+-from pathlib import Path
+-
+-# Make sure we can import legacy scripts
+-_SCRIPT_DIR = Path(__file__).resolve().parent.parent.parent.parent.parent / "scripts"
+-if str(_SCRIPT_DIR) not in sys.path:
+-    sys.path.insert(0, str(_SCRIPT_DIR))
+-
+-import state_manager
++from oneai_reach.infrastructure.legacy import state_manager
+ 
+ logger = logging.getLogger(__name__)
+ 
+diff --git a/src/oneai_reach/api/v1/kb.py b/src/oneai_reach/api/v1/kb.py
+index e6f0d78..8835584 100644
+--- a/src/oneai_reach/api/v1/kb.py
++++ b/src/oneai_reach/api/v1/kb.py
+@@ -1,18 +1,12 @@
+ """Knowledge base API endpoints."""
+ 
+-import sys
+-from pathlib import Path
+ from typing import Optional
+ 
+ from fastapi import APIRouter, HTTPException, Request
+ from fastapi.responses import JSONResponse
+ 
+-_SCRIPT_DIR = Path(__file__).resolve().parent.parent.parent.parent.parent / "scripts"
+-if str(_SCRIPT_DIR) not in sys.path:
+-    sys.path.insert(0, str(_SCRIPT_DIR))
+-
+-import state_manager
+-import kb_manager
++from oneai_reach.infrastructure.legacy import state_manager
++from oneai_reach.infrastructure.legacy import kb_manager
+ 
+ router = APIRouter(tags=["kb"])
+ 
+diff --git a/src/oneai_reach/api/v1/mcp.py b/src/oneai_reach/api/v1/mcp.py
+index 385322b..8cb6b1b 100644
+--- a/src/oneai_reach/api/v1/mcp.py
++++ b/src/oneai_reach/api/v1/mcp.py
+@@ -4,21 +4,13 @@ Provides JSON-RPC 2.0 compatible endpoints for AI agents to inspect and control
+ the 1ai-reach backend safely. Migrated from mcp_server.py to unified FastAPI app.
+ """
+ 
+-import sys
+-from pathlib import Path
+ from typing import Any, Dict, List, Optional, Union
+ 
+ from fastapi import APIRouter, Depends, HTTPException, Request
+ from pydantic import BaseModel, Field
+ 
+ from oneai_reach.api.dependencies import verify_api_key
+-
+-# Add project root to path for agent_control imports
+-PROJECT_ROOT = Path(__file__).resolve().parent.parent.parent.parent.parent
+-if str(PROJECT_ROOT) not in sys.path:
+-    sys.path.insert(0, str(PROJECT_ROOT))
+-
+-import agent_control as control
++from oneai_reach.infrastructure.legacy import agent_control as control
+ 
+ router = APIRouter(
+     prefix="/api/v1/mcp",
+diff --git a/src/oneai_reach/api/v1/voice_config.py b/src/oneai_reach/api/v1/voice_config.py
+index 97c93f4..2bc3152 100644
+--- a/src/oneai_reach/api/v1/voice_config.py
++++ b/src/oneai_reach/api/v1/voice_config.py
+@@ -1,16 +1,9 @@
+ """Voice configuration API endpoints."""
+ 
+-import sys
+-from pathlib import Path
+-
+ from fastapi import APIRouter, HTTPException, Request
+ 
+-_SCRIPT_DIR = Path(__file__).resolve().parent.parent.parent.parent.parent / "scripts"
+-if str(_SCRIPT_DIR) not in sys.path:
+-    sys.path.insert(0, str(_SCRIPT_DIR))
+-
+-from voice_config import get_voice_config
+-from state_manager import update_voice_config
++from oneai_reach.infrastructure.legacy.voice_config import get_voice_config
++from oneai_reach.infrastructure.legacy.state_manager import update_voice_config
+ 
+ router = APIRouter(tags=["voice-config"])
+ 
+diff --git a/src/oneai_reach/api/webhooks/capi.py b/src/oneai_reach/api/webhooks/capi.py
+index d01944e..c4aced1 100644
+--- a/src/oneai_reach/api/webhooks/capi.py
++++ b/src/oneai_reach/api/webhooks/capi.py
+@@ -1,17 +1,11 @@
+ """CAPI webhook endpoints for Meta Conversions API lead tracking."""
+ 
+-import sys
+-from pathlib import Path
+ from typing import Optional
+ 
+ from fastapi import APIRouter, HTTPException, Request
+ from pydantic import BaseModel, Field
+ 
+-SCRIPTS_DIR = Path(__file__).resolve().parent.parent.parent.parent.parent / "scripts"
+-if str(SCRIPTS_DIR) not in sys.path:
+-    sys.path.insert(0, str(SCRIPTS_DIR))
+-
+-import capi_tracker
++from oneai_reach.infrastructure.legacy import capi_tracker
+ 
+ router = APIRouter(prefix="/api/v1/webhooks/capi", tags=["webhooks"])
+ 
+diff --git a/src/oneai_reach/api/webhooks/waha.py b/src/oneai_reach/api/webhooks/waha.py
+index 325029a..1db49d1 100644
+--- a/src/oneai_reach/api/webhooks/waha.py
++++ b/src/oneai_reach/api/webhooks/waha.py
+@@ -11,28 +11,22 @@ Key design decisions:
+ import asyncio
+ import logging
+ import sqlite3
+-import sys
+ import time as _time
+ from concurrent.futures import ThreadPoolExecutor
+ from functools import lru_cache
+-from pathlib import Path
+ from typing import Any, Dict, Optional
+ 
+ from fastapi import APIRouter, HTTPException, Request
+ from pydantic import BaseModel, Field
+ 
+-SCRIPTS_DIR = Path(__file__).resolve().parent.parent.parent.parent.parent / "scripts"
+-if str(SCRIPTS_DIR) not in sys.path:
+-    sys.path.insert(0, str(SCRIPTS_DIR))
+-
+ from oneai_reach.config.settings import get_settings as _get_app_settings
+-from state_manager import (
++from oneai_reach.infrastructure.legacy.state_manager import (
+     add_conversation_message,
+     get_or_create_conversation,
+     get_wa_number_by_session,
+     is_manual_mode,
+ )
+-import state_manager
++from oneai_reach.infrastructure.legacy import state_manager
+ 
+ router = APIRouter(prefix="/api/v1/webhooks/waha", tags=["webhooks"])
+ logger = logging.getLogger(__name__)
+@@ -221,7 +215,7 @@ def _get_known_bot_phones() -> set[str]:
+     if _KNOWN_BOT_PHONES and (now - _BOT_PHONES_LOADED_AT) < _BOT_PHONES_TTL:
+         return _KNOWN_BOT_PHONES
+     try:
+-        from state_manager import get_wa_numbers
++        from oneai_reach.infrastructure.legacy.state_manager import get_wa_numbers
+         numbers = get_wa_numbers()
+         _KNOWN_BOT_PHONES = {_normalize_phone(n.get("phone", "")) for n in numbers if n.get("phone")}
+         _BOT_PHONES_LOADED_AT = now
+@@ -310,7 +304,7 @@ def _process_voice_sync(
+ ) -> dict:
+     """Process voice note in a background thread."""
+     try:
+-        from voice_pipeline import process_inbound_voice
++        from oneai_reach.infrastructure.legacy.voice_pipeline import process_inbound_voice
+ 
+         return process_inbound_voice(
+             media_url=media_url,
+@@ -402,7 +396,7 @@ async def handle_waha_webhook(request: Request) -> WAHAWebhookResponse:
+         # Voice notes — process in background thread
+         if msg_type in ("audio", "ptt"):
+             try:
+-                from voice_config import get_voice_config
++                from oneai_reach.infrastructure.legacy.voice_config import get_voice_config
+ 
+                 voice_config = get_voice_config(session)
+                 if voice_config.get("voice_enabled"):
+diff --git a/src/oneai_reach/application/agents/autonomous_service.py b/src/oneai_reach/application/agents/autonomous_service.py
+index 9c0fc2f..962260c 100644
+--- a/src/oneai_reach/application/agents/autonomous_service.py
++++ b/src/oneai_reach/application/agents/autonomous_service.py
+@@ -1,13 +1,6 @@
+ import subprocess
+-import sys
+-from pathlib import Path
+-
+-_SCRIPTS_DIR = Path(__file__).resolve().parents[3] / "scripts"
+-if str(_SCRIPTS_DIR) not in sys.path:
+-    sys.path.insert(0, str(_SCRIPTS_DIR))
+-
+-from state_manager import count_by_status
+ 
++from oneai_reach.infrastructure.legacy.state_manager import count_by_status
+ from oneai_reach.config.settings import Settings
+ from oneai_reach.domain.exceptions import ExternalAPIError
+ from oneai_reach.infrastructure.logging import get_logger
+diff --git a/src/oneai_reach/application/agents/closer_service.py b/src/oneai_reach/application/agents/closer_service.py
+index 087de7a..bb04d10 100644
+--- a/src/oneai_reach/application/agents/closer_service.py
++++ b/src/oneai_reach/application/agents/closer_service.py
+@@ -5,18 +5,10 @@ appropriate payment or calendar links. Replaces static meeting invites
+ with intelligent, intent-driven responses.
+ """
+ 
+-import sys
+-from pathlib import Path
+-
+-# Add scripts directory to path for external client imports
+-_scripts_dir = Path(__file__).parent.parent.parent.parent.parent / "scripts"
+-if str(_scripts_dir) not in sys.path:
+-    sys.path.insert(0, str(_scripts_dir))
+-
+-import brain_client
+-import llm_client
+-from senders import send_email, send_whatsapp
+-from state_manager import (
++from oneai_reach.infrastructure.legacy import brain_client
++from oneai_reach.infrastructure.legacy import llm_client
++from oneai_reach.infrastructure.legacy.senders import send_email, send_whatsapp
++from oneai_reach.infrastructure.legacy.state_manager import (
+     add_event_log,
+     get_lead_by_id,
+     get_leads_by_status,
+diff --git a/src/oneai_reach/application/agents/strategy_service.py b/src/oneai_reach/application/agents/strategy_service.py
+index ee61890..2e3e0ff 100644
+--- a/src/oneai_reach/application/agents/strategy_service.py
++++ b/src/oneai_reach/application/agents/strategy_service.py
+@@ -9,16 +9,9 @@ is offline or returns no actionable data.
+ 
+ import json
+ import subprocess
+-import sys
+ from pathlib import Path
+ 
+-# Add scripts directory to path for external client imports
+-_scripts_dir = Path(__file__).parent.parent.parent.parent.parent / "scripts"
+-if str(_scripts_dir) not in sys.path:
+-    sys.path.insert(0, str(_scripts_dir))
+-
+-import brain_client
+-
++from oneai_reach.infrastructure.legacy import brain_client
+ from oneai_reach.config.settings import Settings
+ from oneai_reach.domain.exceptions import ExternalAPIError
+ from oneai_reach.infrastructure.logging import get_logger
+diff --git a/src/oneai_reach/application/agents/warmcall_service.py b/src/oneai_reach/application/agents/warmcall_service.py
+index b06d532..01959c1 100644
+--- a/src/oneai_reach/application/agents/warmcall_service.py
++++ b/src/oneai_reach/application/agents/warmcall_service.py
+@@ -1,16 +1,10 @@
+-import sys
+ import time
+ from datetime import datetime, timezone
+-from pathlib import Path
+ 
+-_SCRIPTS_DIR = Path(__file__).resolve().parents[3] / "scripts"
+-if str(_SCRIPTS_DIR) not in sys.path:
+-    sys.path.insert(0, str(_SCRIPTS_DIR))
+-
+-import brain_client
+-import llm_client
+-from closer_agent import classify_intent
+-from conversation_tracker import (
++from oneai_reach.infrastructure.legacy import brain_client
++from oneai_reach.infrastructure.legacy import llm_client
++from oneai_reach.infrastructure.legacy.closer_agent import classify_intent
++from oneai_reach.infrastructure.legacy.conversation_tracker import (
+     _is_cold_lead,
+     add_message,
+     get_conversation_context,
+@@ -18,15 +12,15 @@ from conversation_tracker import (
+     get_or_create_conversation,
+     update_status,
+ )
+-from senders import send_typing_indicator, send_whatsapp_session
+-from state_manager import (
++from oneai_reach.infrastructure.legacy.senders import send_typing_indicator, send_whatsapp_session
++from oneai_reach.infrastructure.legacy.state_manager import (
+     _connect,
+     add_event_log,
+     get_conversation,
+     get_lead_by_id,
+     update_lead_status,
+ )
+-from utils import safe_filename
++from oneai_reach.infrastructure.legacy.utils import safe_filename
+ 
+ from oneai_reach.config.settings import Settings
+ from oneai_reach.domain.exceptions import ExternalAPIError
+diff --git a/src/oneai_reach/application/customer_service/conversation_service.py b/src/oneai_reach/application/customer_service/conversation_service.py
+index 3dcf676..d85d5aa 100644
+--- a/src/oneai_reach/application/customer_service/conversation_service.py
++++ b/src/oneai_reach/application/customer_service/conversation_service.py
+@@ -1,24 +1,15 @@
+ """Conversation tracking service - message threading, state machine, cross-contamination guard."""
+ 
+-import sqlite3
+-from datetime import datetime, timedelta
++from datetime import datetime, timedelta, timezone
+ from typing import Optional
+ 
+ import requests
+ 
+ from oneai_reach.config.settings import Settings
+ from oneai_reach.domain.exceptions import (
+-    ConversationNotFoundError,
+     InvalidConversationStateError,
+     DatabaseError,
+ )
+-from oneai_reach.domain.models import (
+-    Conversation,
+-    ConversationStatus,
+-    EngineMode,
+-    Message,
+-    MessageDirection,
+-)
+ from oneai_reach.infrastructure.logging import get_logger
+ 
+ logger = get_logger(__name__)
+@@ -125,19 +116,27 @@ class ConversationService:
+         if row:
+             conv_id = row["id"]
+         else:
+-            from state_manager import create_conversation
+-
+-            conv_id = create_conversation(
+-                wa_number_id,
+-                contact_phone,
+-                engine_mode,
+-                contact_name=contact_name or "",
+-                lead_id=lead_id,
+-            )
+-
+-        from state_manager import get_conversation
++            conn = self._connect()
++            try:
++                cursor = conn.execute(
++                    """INSERT INTO conversations
++                        (wa_number_id, contact_phone, engine_mode, stage, status, message_count)
++                        VALUES (?, ?, ?, 'awareness', 'active', 0)""",
++                    (wa_number_id, contact_phone, engine_mode),
++                )
++                conn.commit()
++                conv_id = cursor.lastrowid
++            finally:
++                conn.close()
+ 
+-        return get_conversation(conv_id)
++        conn = self._connect()
++        try:
++            conv = conn.execute(
++                "SELECT * FROM conversations WHERE id = ?", (conv_id,)
++            ).fetchone()
++            return dict(conv) if conv else {}
++        finally:
++            conn.close()
+ 
+     def add_message(
+         self,
+@@ -159,15 +158,25 @@ class ConversationService:
+         Returns:
+             Message ID
+         """
+-        from state_manager import add_conversation_message
+-
+-        return add_conversation_message(
+-            conversation_id,
+-            direction,
+-            message_text,
+-            message_type=message_type,
+-            waha_message_id=waha_message_id or "",
+-        )
++        conn = self._connect()
++        try:
++            cursor = conn.execute(
++                """INSERT INTO conversation_messages
++                    (conversation_id, direction, message_text, created_at)
++                    VALUES (?, ?, ?, datetime('now'))""",
++                (conversation_id, direction, message_text),
++            )
++            conn.execute(
++                """UPDATE conversations
++                    SET message_count = COALESCE(message_count, 0) + 1,
++                        updated_at = datetime('now')
++                    WHERE id = ?""",
++                (conversation_id,),
++            )
++            conn.commit()
++            return cursor.lastrowid
++        finally:
++            conn.close()
+ 
+     def get_messages(self, conversation_id: int, limit: int = 50) -> list[dict]:
+         """Get conversation messages.
+@@ -179,9 +188,18 @@ class ConversationService:
+         Returns:
+             List of message dictionaries
+         """
+-        from state_manager import get_conversation_messages
+-
+-        return get_conversation_messages(conversation_id, limit=limit)
++        conn = self._connect()
++        try:
++            rows = conn.execute(
++                """SELECT * FROM conversation_messages
++                    WHERE conversation_id = ?
++                    ORDER BY created_at, id
++                    LIMIT ?""",
++                (conversation_id, limit),
++            ).fetchall()
++            return [dict(row) for row in rows]
++        finally:
++            conn.close()
+ 
+     def get_active_conversations(
+         self, wa_number_id: Optional[str] = None
+@@ -314,9 +332,7 @@ class ConversationService:
+         Returns:
+             Formatted conversation context string
+         """
+-        from state_manager import get_conversation_messages
+-
+-        messages = get_conversation_messages(conversation_id, limit=max_messages)
++        messages = self.get_messages(conversation_id, limit=max_messages)
+         lines = []
+         for msg in messages:
+             role = "Customer" if msg["direction"] == "in" else "Agent"
+@@ -365,7 +381,7 @@ class ConversationService:
+         Returns:
+             Number of conversations resolved
+         """
+-        cutoff = (datetime.utcnow() - timedelta(hours=hours)).strftime(
++        cutoff = (datetime.now(timezone.utc) - timedelta(hours=hours)).strftime(
+             "%Y-%m-%d %H:%M:%S"
+         )
+         conn = self._connect()
+diff --git a/src/oneai_reach/application/customer_service/cs_engine_service.py b/src/oneai_reach/application/customer_service/cs_engine_service.py
+index d3a0ecf..abaae0c 100644
+--- a/src/oneai_reach/application/customer_service/cs_engine_service.py
++++ b/src/oneai_reach/application/customer_service/cs_engine_service.py
+@@ -3,14 +3,24 @@
+ import re
+ import time
+ from collections import defaultdict
+-from typing import Optional
++from collections.abc import Iterable
+ 
+ from oneai_reach.config.settings import Settings
+-from oneai_reach.domain.exceptions import ExternalAPIError
+ from oneai_reach.infrastructure.logging import get_logger
+ 
+ logger = get_logger(__name__)
+ 
++
++def _normalize_kb_results(kb_results: object) -> list[dict]:
++    if not isinstance(kb_results, Iterable) or isinstance(kb_results, (str, bytes)):
++        return []
++
++    normalized = []
++    for result in kb_results:
++        if isinstance(result, dict):
++            normalized.append(result)
++    return normalized
++
+ # Response throttling to prevent rapid back-and-forth conversation loops
+ _LAST_RESPONSE_TIME: dict[str, float] = {}
+ _THROTTLE_SECONDS = 2
+@@ -108,15 +118,7 @@ class CSEngineService:
+         if not clean:
+             return []
+         try:
+-            import sys
+-            from pathlib import Path
+-            
+-            # Add scripts directory to path for state_manager import
+-            scripts_dir = Path(__file__).resolve().parent.parent.parent.parent.parent / "scripts"
+-            if str(scripts_dir) not in sys.path:
+-                sys.path.insert(0, str(scripts_dir))
+-            
+-            from state_manager import search_kb
++            from oneai_reach.infrastructure.legacy.state_manager import search_kb
+ 
+             return search_kb(wa_number_id, clean, limit)
+         except Exception as e:
+@@ -210,6 +212,7 @@ class CSEngineService:
+     def should_escalate(
+         self, message: str, kb_results: list[dict], conversation: dict
+     ) -> bool:
++        kb_results = _normalize_kb_results(kb_results)
+         if kb_results:
+             return False
+ 
+@@ -242,6 +245,7 @@ class CSEngineService:
+         user_type: str = "normal",
+         product_results: list = None,
+     ) -> str:
++        kb_results = _normalize_kb_results(kb_results)
+         lang = self._detect_language(message)
+         lang_instruction = (
+             "Respond ENTIRELY in Bahasa Indonesia."
+@@ -324,7 +328,7 @@ class CSEngineService:
+ 
+         full_prompt = "\n".join(prompt_parts)
+ 
+-        import llm_client
++        from oneai_reach.infrastructure.legacy import llm_client
+ 
+         response = llm_client.generate(full_prompt)
+         if response:
+@@ -360,7 +364,7 @@ class CSEngineService:
+                 "reason": "CS engine paused by admin",
+             }
+ 
+-        from state_manager import get_wa_number_by_session
++        from oneai_reach.infrastructure.legacy.state_manager import get_wa_number_by_session
+ 
+         wa_num_rec = get_wa_number_by_session(session_name)
+         if wa_num_rec:
+@@ -406,7 +410,7 @@ class CSEngineService:
+         conv_id = conv["id"]
+ 
+         if conv.get("message_count", 0) <= 1:
+-            from n8n_client import notify_conversation_started
++            from oneai_reach.infrastructure.legacy.n8n_client import notify_conversation_started
+ 
+             notify_conversation_started(contact_phone, session_name, wa_number_id)
+ 
+@@ -416,24 +420,26 @@ class CSEngineService:
+ 
+         current_msg_count = conv.get("message_count", 0) + 1
+         if current_msg_count >= 3:
+-            from n8n_client import notify_hot_lead
++            from oneai_reach.infrastructure.legacy.n8n_client import notify_hot_lead
+ 
+             notify_hot_lead(contact_phone, current_msg_count, conv_id)
+ 
+-        import capi_tracker
++        from oneai_reach.infrastructure.legacy import capi_tracker
+ 
+         capi_tracker.track_lead(contact_phone)
+ 
+         if self._is_purchase_signal(message_text):
+             capi_tracker.track_purchase(contact_phone)
+-            from n8n_client import notify_purchase_signal
++            from oneai_reach.infrastructure.legacy.n8n_client import notify_purchase_signal
+ 
+             notify_purchase_signal(contact_phone, message_text, conv_id)
+ 
+         if self._is_shipping_complaint(message_text):
+             capi_tracker.track_atc(contact_phone)
+ 
+-        kb_results = self.kb_search(wa_number_id, message_text, limit=5)
++        kb_results = _normalize_kb_results(
++            self.kb_search(wa_number_id, message_text, limit=5)
++        )
+ 
+         product_results = []
+         is_product_inquiry = self.product_search_service and self.product_search_service.detect_product_inquiry(message_text)
+@@ -446,7 +452,7 @@ class CSEngineService:
+             reason = "No KB match + repeated unclear turns"
+             self.conversation_service.escalate(conv_id, reason=reason)
+ 
+-            from n8n_client import notify_escalation
++            from oneai_reach.infrastructure.legacy.n8n_client import notify_escalation
+ 
+             notify_escalation(contact_phone, reason, conv_id)
+ 
+@@ -463,7 +469,7 @@ class CSEngineService:
+                 )
+ 
+             if source_channel == "whatsapp":
+-                from senders import send_typing_indicator, send_whatsapp_session
++                from oneai_reach.infrastructure.legacy.senders import send_typing_indicator, send_whatsapp_session
+ 
+                 send_typing_indicator(session_name, contact_phone, typing=True)
+                 time.sleep(self.config.cs.reply_delay_seconds)
+@@ -531,14 +537,14 @@ class CSEngineService:
+ 
+         if not skip_send:
+             if source_channel == "whatsapp":
+-                from senders import send_typing_indicator, send_whatsapp_session
++                from oneai_reach.infrastructure.legacy.senders import send_typing_indicator, send_whatsapp_session
+ 
+                 send_typing_indicator(session_name, contact_phone, typing=True)
+                 time.sleep(self.config.cs.reply_delay_seconds)
+ 
+                 if voice_reply:
+                     try:
+-                        from voice_pipeline import generate_voice_reply
++                        from oneai_reach.infrastructure.legacy.voice_pipeline import generate_voice_reply
+ 
+                         voice_sent = generate_voice_reply(
+                             response_text, session_name, contact_phone
+diff --git a/src/oneai_reach/application/customer_service/outcomes_service.py b/src/oneai_reach/application/customer_service/outcomes_service.py
+index 57d005b..338fede 100644
+--- a/src/oneai_reach/application/customer_service/outcomes_service.py
++++ b/src/oneai_reach/application/customer_service/outcomes_service.py
+@@ -2,9 +2,6 @@
+ 
+ import hashlib
+ import json
+-import sqlite3
+-from datetime import datetime, timedelta
+-from typing import Optional
+ 
+ from oneai_reach.config.settings import Settings
+ from oneai_reach.infrastructure.logging import get_logger
+@@ -204,7 +201,7 @@ class OutcomesService:
+                         total_value = ?,
+                         escalation_reason = ?,
+                         converted_to_purchase = ?,
+-                        message_count = (SELECT COUNT(*) FROM conversation_messages WHERE conversation_id = ?)
++                        total_messages = (SELECT COUNT(*) FROM response_outcomes WHERE conversation_id = ?)
+                     WHERE conversation_id = ?""",
+                 (
+                     status,
+diff --git a/src/oneai_reach/application/customer_service/playbook_service.py b/src/oneai_reach/application/customer_service/playbook_service.py
+index 01e1383..0fd7bcb 100644
+--- a/src/oneai_reach/application/customer_service/playbook_service.py
++++ b/src/oneai_reach/application/customer_service/playbook_service.py
+@@ -1,7 +1,6 @@
+ """CS Playbook service - dynamic response playbook with scenario-based strategies."""
+ 
+ import random
+-from typing import Optional
+ 
+ from oneai_reach.config.settings import Settings
+ from oneai_reach.infrastructure.logging import get_logger
+@@ -274,12 +273,13 @@ class PlaybookService:
+         except KeyError:
+             response_text = pattern.text
+ 
+-        self.outcomes_service.record_pattern_use(
+-            pattern.pattern_id,
+-            pattern.text,
+-            scenario,
+-            was_successful=False,
+-        )
++        if self.outcomes_service:
++            self.outcomes_service.record_pattern_use(
++                pattern.pattern_id,
++                pattern.text,
++                scenario,
++                was_successful=False,
++            )
+ 
+         return {
+             "response": response_text,
+diff --git a/src/oneai_reach/application/customer_service/product_search_service.py b/src/oneai_reach/application/customer_service/product_search_service.py
+index 5475016..cea0c0c 100644
+--- a/src/oneai_reach/application/customer_service/product_search_service.py
++++ b/src/oneai_reach/application/customer_service/product_search_service.py
+@@ -148,17 +148,15 @@ class ProductSearchService:
+                 search_term = self._extract_search_keywords(query)
+                 products = self.product_repository.search(wa_number_id, search_term, limit)
+             
+-            # Only return all products as fallback if this is a product inquiry
+-            if not products and is_product_inquiry:
+-                products = self.get_all_products(wa_number_id, limit)
+-                logger.info(
+-                    f"No search results for wa_number_id={wa_number_id}, query='{query}'. Returning all products: {len(products)} results"
+-                )
+-            else:
++            if not products:
+                 logger.info(
+-                    f"Product search for wa_number_id={wa_number_id}, query='{query}': {len(products)} results"
++                    f"No search results for wa_number_id={wa_number_id}, query='{query}'"
+                 )
++                return []
+             
++            logger.info(
++                f"Product search for wa_number_id={wa_number_id}, query='{query}': {len(products)} results"
++            )
+             return products
+         except Exception as e:
+             logger.error(f"Product search failed: {e}")
+diff --git a/src/oneai_reach/application/customer_service/self_improve_service.py b/src/oneai_reach/application/customer_service/self_improve_service.py
+index ca6d2e7..c73c86d 100644
+--- a/src/oneai_reach/application/customer_service/self_improve_service.py
++++ b/src/oneai_reach/application/customer_service/self_improve_service.py
+@@ -1,10 +1,7 @@
+ """CS Self-Improvement service - auto-learn from conversation outcomes."""
+ 
+-import hashlib
+-import json
+-import sqlite3
+-from datetime import datetime, timedelta
+-from typing import List, Dict, Optional
++from datetime import datetime
++from typing import List
+ 
+ from oneai_reach.config.settings import Settings
+ from oneai_reach.infrastructure.logging import get_logger
+@@ -301,13 +298,13 @@ class SelfImproveService:
+                 """
+                 SELECT af.corrected_response, af.note, m.message_text as original
+                 FROM admin_feedback af
+-                JOIN conversation_messages m ON af.message_id = m.id
++                LEFT JOIN conversation_messages m ON af.message_id = m.id
+                 WHERE af.corrected_response IS NOT NULL
+                 AND af.corrected_response != ''
+                 AND af.rating = 'bad'
+                 ORDER BY af.created_at DESC
+                 LIMIT 10
+-                """,
++                """
+             ).fetchall()
+ 
+             for row in corrected:
+diff --git a/src/oneai_reach/application/outreach/blaster_service.py b/src/oneai_reach/application/outreach/blaster_service.py
+index a2829e5..985fc44 100644
+--- a/src/oneai_reach/application/outreach/blaster_service.py
++++ b/src/oneai_reach/application/outreach/blaster_service.py
+@@ -2,13 +2,16 @@
+ 
+ import os
+ from datetime import datetime, timedelta, timezone
+-from typing import Optional
+ 
+ import pandas as pd
+-from weasyprint import HTML
+ 
+ from oneai_reach.config.settings import Settings
+-from oneai_reach.domain.exceptions import ExternalAPIError
++from oneai_reach.application.outreach.proposal_pdf import (
++    ProposalPdfError,
++    generate_proposal_pdf,
++    persist_proposal_pdf,
++    proposal_pdf_filename,
++)
+ from oneai_reach.infrastructure.logging import get_logger
+ 
+ logger = get_logger(__name__)
+@@ -110,15 +113,34 @@ class BlasterService:
+             wa_sent = False
+             email_sent = False
+ 
+-            # Convert proposal to PDF
+-            pdf_bytes = self._generate_pdf_from_html(proposal, name)
++            pdf_bytes = None
++            pdf_filename = None
++            if email:
++                try:
++                    pdf_bytes = generate_proposal_pdf(proposal, name)
++                except ProposalPdfError as exc:
++                    logger.error(f"[skip email] {name} — {exc}")
++                    email = ""
++                else:
++                    logger.info(f"Generated proposal PDF: {len(pdf_bytes)} bytes")
++                pdf_filename = proposal_pdf_filename(name)
+ 
+             if phone:
+                 wa_sent = send_whatsapp_fn(phone, wa_draft)
+ 
+             if email:
+-                # Send email with PDF attachment
+-                email_sent = send_email_fn(email, PROPOSAL_SUBJECT, proposal, pdf_bytes=pdf_bytes, filename=f"Proposal_{name.replace(' ', '_')}.pdf")
++                email_sent = send_email_fn(
++                    email,
++                    PROPOSAL_SUBJECT,
++                    proposal,
++                    pdf_bytes=pdf_bytes,
++                    filename=pdf_filename,
++                )
++                if email_sent and pdf_bytes:
++                    pdf_path = persist_proposal_pdf(
++                        pdf_bytes, self.proposals_dir, index, name
++                    )
++                    logger.info(f"Saved sent proposal PDF: {pdf_path}")
+ 
+             if wa_sent or email_sent:
+                 df.at[index, "status"] = "contacted"
+@@ -131,28 +153,6 @@ class BlasterService:
+         )
+         return sent, skipped_cooldown, skipped_no_draft
+ 
+-    def _generate_pdf_from_html(self, content: str, name: str) -> bytes:
+-        """Convert HTML content to PDF bytes."""
+-        html_wrapped = f"""
+-        <!DOCTYPE html>
+-        <html>
+-        <head>
+-            <meta charset="UTF-8">
+-            <style>
+-                body {{ font-family: Arial, sans-serif; line-height: 1.6; padding: 40px; color: #333; }}
+-                h1 {{ color: #1a1a2e; }}
+-                p {{ margin: 12px 0; }}
+-                .signature {{ margin-top: 24px; padding-top: 16px; border-top: 2px solid #ddd; }}
+-                .company {{ color: #666; font-size: 14px; }}
+-            </style>
+-        </head>
+-        <body>
+-            {content}
+-        </body>
+-        </html>
+-        """
+-        return HTML(string=html_wrapped).write_pdf()
+-
+     def _is_recently_contacted(self, row: pd.Series, is_empty_fn) -> bool:
+         """Check if lead was contacted within cooldown period.
+ 
+diff --git a/src/oneai_reach/application/outreach/generator_service.py b/src/oneai_reach/application/outreach/generator_service.py
+index d940836..ebfd30e 100644
+--- a/src/oneai_reach/application/outreach/generator_service.py
++++ b/src/oneai_reach/application/outreach/generator_service.py
+@@ -2,22 +2,15 @@
+ 
+ import os
+ import subprocess
+-import sys
+ import yaml
+ from pathlib import Path
+ from typing import Optional, Tuple
+ 
+ from oneai_reach.config.settings import Settings
+ from oneai_reach.domain.exceptions import ExternalAPIError
++from oneai_reach.infrastructure.legacy import brain_client as _brain
+ from oneai_reach.infrastructure.logging import get_logger
+ 
+-# Import brain_client from scripts (will be abstracted in Task 13)
+-_scripts_path = Path(__file__).parent.parent.parent.parent.parent / "scripts"
+-if str(_scripts_path) not in sys.path:
+-    sys.path.insert(0, str(_scripts_path))
+-
+-import brain_client as _brain
+-
+ logger = get_logger(__name__)
+ 
+ _CAPABILITY_FALLBACK = (
+diff --git a/src/oneai_reach/application/outreach/orchestrator_service.py b/src/oneai_reach/application/outreach/orchestrator_service.py
+index acfc37c..274d163 100644
+--- a/src/oneai_reach/application/outreach/orchestrator_service.py
++++ b/src/oneai_reach/application/outreach/orchestrator_service.py
+@@ -1,10 +1,12 @@
+ import json
+ import subprocess
+-import sys
+ from datetime import datetime
+ from pathlib import Path
+ 
+ from oneai_reach.config.settings import Settings
++from oneai_reach.infrastructure.legacy.config import RESEARCH_DIR, PROPOSALS_DIR, LEADS_FILE
++from oneai_reach.infrastructure.legacy.leads import load_leads, save_leads
++from oneai_reach.infrastructure.legacy import brain_client as brain
+ from oneai_reach.infrastructure.logging import get_logger
+ 
+ logger = get_logger(__name__)
+@@ -20,8 +22,7 @@ class OrchestratorService:
+         """Scrape leads using gosom Google Maps scraper."""
+         logger.info(f"Scraping leads via gosom: {query}")
+         try:
+-            sys.path.insert(0, str(self.scripts_dir))
+-            from gmaps_client import GmapsScraperClient
++            from oneai_reach.infrastructure.legacy.gmaps_client import GmapsScraperClient
+             from leads import load_leads, save_leads
+ 
+             client = GmapsScraperClient()
+@@ -73,9 +74,8 @@ class OrchestratorService:
+         """Run service_detector on leads that don't have matched_services yet."""
+         logger.info("Running service detection on new leads")
+         try:
+-            sys.path.insert(0, str(self.scripts_dir))
+-            from leads import load_leads, save_leads
+-            from service_detector import detect_services
++            from oneai_reach.infrastructure.legacy.leads import load_leads, save_leads
++            from oneai_reach.infrastructure.legacy.service_detector import detect_services
+ 
+             df = load_leads()
+             if df is None or df.empty:
+@@ -108,9 +108,8 @@ class OrchestratorService:
+         """Run lead_scorer on leads that don't have a score yet."""
+         logger.info("Running lead scoring on new leads")
+         try:
+-            sys.path.insert(0, str(self.scripts_dir))
+-            from leads import load_leads, save_leads
+-            from lead_scorer import score_lead
++            from oneai_reach.infrastructure.legacy.leads import load_leads, save_leads
++            from oneai_reach.infrastructure.legacy.lead_scorer import score_lead
+ 
+             df = load_leads()
+             if df is None or df.empty:
+@@ -224,9 +223,6 @@ class OrchestratorService:
+     def _brain_sync(self) -> bool:
+         logger.info(f"[{datetime.now().strftime('%H:%M:%S')}] Syncing outcomes to hub brain")
+         try:
+-            from leads import load_leads
+-            import brain_client as brain
+-
+             if not brain.is_online():
+                 logger.info("Hub brain offline — skipping brain sync")
+                 return False
+diff --git a/src/oneai_reach/application/outreach/reviewer_service.py b/src/oneai_reach/application/outreach/reviewer_service.py
+index d7d4e76..a456ffe 100644
+--- a/src/oneai_reach/application/outreach/reviewer_service.py
++++ b/src/oneai_reach/application/outreach/reviewer_service.py
+@@ -1,7 +1,6 @@
+ """Proposal reviewer service - extracts business logic from scripts/reviewer.py."""
+ 
+ import subprocess
+-import sys
+ from typing import Dict, Optional
+ 
+ from oneai_reach.config.settings import Settings
+diff --git a/src/oneai_reach/application/voice/voice_pipeline_service.py b/src/oneai_reach/application/voice/voice_pipeline_service.py
+index 5d0a096..6876000 100644
+--- a/src/oneai_reach/application/voice/voice_pipeline_service.py
++++ b/src/oneai_reach/application/voice/voice_pipeline_service.py
+@@ -39,14 +39,7 @@ class VoicePipelineService:
+             Voice configuration dictionary
+         """
+         try:
+-            import sys
+-            from pathlib import Path
+-
+-            scripts_dir = Path(__file__).parent.parent.parent.parent / "scripts"
+-            if str(scripts_dir) not in sys.path:
+-                sys.path.insert(0, str(scripts_dir))
+-
+-            from state_manager import get_voice_config as get_db_voice_config
++            from oneai_reach.infrastructure.legacy.state_manager import get_voice_config as get_db_voice_config
+ 
+             db_config = get_db_voice_config(session_name)
+ 
+@@ -128,15 +121,8 @@ class VoicePipelineService:
+             logger.info(f"Transcribed: {transcription[:100]}")
+ 
+             logger.info("Generating response via cs_engine...")
+-            import sys
+-            from pathlib import Path
+-
+-            scripts_dir = Path(__file__).parent.parent.parent.parent / "scripts"
+-            if str(scripts_dir) not in sys.path:
+-                sys.path.insert(0, str(scripts_dir))
+-
+-            from cs_engine import handle_inbound_message
+-            from senders import send_typing_indicator
++            from oneai_reach.infrastructure.legacy.cs_engine import handle_inbound_message
++            from oneai_reach.infrastructure.legacy.senders import send_typing_indicator
+ 
+             send_typing_indicator(session_name, contact_phone, typing=True)
+ 
+@@ -186,7 +172,7 @@ class VoicePipelineService:
+             ogg_bytes = audio_service.convert_to_ogg(wav_bytes, sr)
+ 
+             logger.info("Sending voice note...")
+-            from senders import send_voice_note
++            from oneai_reach.infrastructure.legacy.senders import send_voice_note
+ 
+             sent = send_voice_note(contact_phone, ogg_bytes, session_name)
+ 
+@@ -202,14 +188,7 @@ class VoicePipelineService:
+         except Exception as e:
+             logger.error(f"Pipeline error: {e}")
+             try:
+-                import sys
+-                from pathlib import Path
+-
+-                scripts_dir = Path(__file__).parent.parent.parent.parent / "scripts"
+-                if str(scripts_dir) not in sys.path:
+-                    sys.path.insert(0, str(scripts_dir))
+-
+-                from senders import send_typing_indicator
++                from oneai_reach.infrastructure.legacy.senders import send_typing_indicator
+ 
+                 send_typing_indicator(session_name, contact_phone, typing=False)
+             except Exception as e:
+@@ -250,14 +229,7 @@ class VoicePipelineService:
+ 
+             ogg_bytes = audio_service.convert_to_ogg(wav_bytes, sr)
+ 
+-            import sys
+-            from pathlib import Path
+-
+-            scripts_dir = Path(__file__).parent.parent.parent.parent / "scripts"
+-            if str(scripts_dir) not in sys.path:
+-                sys.path.insert(0, str(scripts_dir))
+-
+-            from senders import send_voice_note
++            from oneai_reach.infrastructure.legacy.senders import send_voice_note
+ 
+             return send_voice_note(contact_phone, ogg_bytes, session_name)
+ 
+diff --git a/src/oneai_reach/cli/main.py b/src/oneai_reach/cli/main.py
+index 56d375a..221dfa1 100644
+--- a/src/oneai_reach/cli/main.py
++++ b/src/oneai_reach/cli/main.py
+@@ -10,24 +10,11 @@ Provides command-line interface for:
+ 
+ import json
+ import sys
+-from pathlib import Path
+-from typing import Any, Dict, Optional
++from typing import Any, Optional
+ 
+ import click
+ 
+-# Import agent_control module
+-_root = Path(__file__).resolve().parent.parent.parent.parent
+-_scripts_dir = _root / "scripts"
+-if str(_scripts_dir) not in sys.path:
+-    sys.path.insert(0, str(_scripts_dir))
+-if str(_root) not in sys.path:
+-    sys.path.insert(0, str(_root))
+-
+-try:
+-    import agent_control
+-except ImportError as e:
+-    click.echo(f"Error: Failed to import agent_control: {e}", err=True)
+-    sys.exit(1)
++from oneai_reach.infrastructure.legacy import agent_control
+ 
+ 
+ def format_json(data: Any) -> str:
+@@ -144,8 +131,8 @@ def start(stage: str, args: tuple) -> None:
+         sys.exit(1)
+ 
+ 
+-@stages.command()
+-def list() -> None:
++@stages.command(name="list")
++def list_stages() -> None:
+     """List available pipeline stages."""
+     stages_list = [
+         "strategy",
+@@ -180,8 +167,8 @@ def jobs() -> None:
+     pass
+ 
+ 
+-@jobs.command()
+-def list() -> None:
++@jobs.command(name="list")
++def list_jobs() -> None:
+     """List all background jobs."""
+     try:
+         result = agent_control.list_jobs()
+@@ -418,10 +405,10 @@ def kb() -> None:
+     pass
+ 
+ 
+-@kb.command()
++@kb.command(name="list")
+ @click.argument("wa_number_id")
+ @click.option("--category", default=None, help="Filter by category")
+-def list(wa_number_id: str, category: Optional[str]) -> None:
++def list_kb(wa_number_id: str, category: Optional[str]) -> None:
+     """List knowledge base entries."""
+     try:
+         result = agent_control.list_kb_entries(wa_number_id, category=category)
+diff --git a/src/oneai_reach/config/settings.py b/src/oneai_reach/config/settings.py
+index bd3a0ba..251d976 100644
+--- a/src/oneai_reach/config/settings.py
++++ b/src/oneai_reach/config/settings.py
+@@ -9,7 +9,7 @@ from functools import lru_cache
+ from pathlib import Path
+ from typing import Optional, Set
+ 
+-from pydantic import Field, field_validator
++from pydantic import ConfigDict, Field, field_validator
+ import os
+ from pydantic_settings import BaseSettings
+ 
+@@ -30,8 +30,7 @@ class DatabaseSettings(BaseSettings):
+     )
+     logs_dir: str = Field(default="logs", description="Logs directory")
+ 
+-    class Config:
+-        env_prefix = "DB_"
++    model_config = ConfigDict(env_prefix="DB_")
+ 
+ 
+ class PipelineSettings(BaseSettings):
+@@ -44,8 +43,7 @@ class PipelineSettings(BaseSettings):
+         default=10, description="Minimum new leads to trigger pipeline"
+     )
+ 
+-    class Config:
+-        env_prefix = "PIPELINE_"
++    model_config = ConfigDict(env_prefix="PIPELINE_")
+ 
+ 
+ class LLMSettings(BaseSettings):
+@@ -58,8 +56,7 @@ class LLMSettings(BaseSettings):
+         default="sonnet", description="Model for proposal review"
+     )
+ 
+-    class Config:
+-        env_prefix = "LLM_"
++    model_config = ConfigDict(env_prefix="LLM_")
+ 
+ 
+ class BookingSettings(BaseSettings):
+@@ -73,8 +70,7 @@ class BookingSettings(BaseSettings):
+         description="Calendly booking link",
+     )
+ 
+-    class Config:
+-        env_prefix = "BOOKING_"
++    model_config = ConfigDict(env_prefix="BOOKING_")
+ 
+ 
+ class EmailSettings(BaseSettings):
+@@ -97,8 +93,7 @@ class EmailSettings(BaseSettings):
+     smtp_user: str = Field(default="marketing", description="SMTP username")
+     smtp_password: str = Field(default="", description="SMTP password")
+ 
+-    class Config:
+-        env_prefix = "SMTP_"
++    model_config = ConfigDict(env_prefix="SMTP_")
+ 
+ 
+ class GmailSettings(BaseSettings):
+@@ -115,8 +110,7 @@ class GmailSettings(BaseSettings):
+         description="Google Sheet ID",
+     )
+ 
+-    class Config:
+-        env_prefix = "GMAIL_"
++    model_config = ConfigDict(env_prefix="GMAIL_")
+ 
+ 
+ class HubSettings(BaseSettings):
+@@ -125,8 +119,7 @@ class HubSettings(BaseSettings):
+     url: str = Field(default="http://localhost:9099", description="Hub base URL")
+     api_key: str = Field(default="", description="Hub API key (empty = dev mode)")
+ 
+-    class Config:
+-        env_prefix = "HUB_"
++    model_config = ConfigDict(env_prefix="HUB_")
+ 
+ 
+ class WAHASettings(BaseSettings):
+@@ -155,8 +148,7 @@ class WAHASettings(BaseSettings):
+     )
+     webhook_secret: str = Field(default="", description="Webhook secret for WAHA")
+ 
+-    class Config:
+-        env_prefix = "WAHA_"
++    model_config = ConfigDict(env_prefix="WAHA_")
+ 
+ 
+ class CustomerServiceSettings(BaseSettings):
+@@ -180,8 +172,7 @@ class CustomerServiceSettings(BaseSettings):
+     )
+     max_turns: int = Field(default=5, description="Max conversation turns")
+ 
+-    class Config:
+-        env_prefix = "CS_"
++    model_config = ConfigDict(env_prefix="CS_")
+ 
+ 
+ class N8nSettings(BaseSettings):
+@@ -193,8 +184,7 @@ class N8nSettings(BaseSettings):
+     meeting_wf: str = Field(default="", description="Meeting workflow ID (optional)")
+     webhook_url: str = Field(default="", description="n8n webhook URL")
+ 
+-    class Config:
+-        env_prefix = "N8N_"
++    model_config = ConfigDict(env_prefix="N8N_")
+ 
+ 
+ class TelegramSettings(BaseSettings):
+@@ -203,8 +193,7 @@ class TelegramSettings(BaseSettings):
+     bot_token: str = Field(default="", description="Telegram bot token")
+     chat_id: str = Field(default="", description="Telegram chat ID")
+ 
+-    class Config:
+-        env_prefix = "TELEGRAM_"
++    model_config = ConfigDict(env_prefix="TELEGRAM_")
+ 
+ 
+ class ExternalAPISettings(BaseSettings):
+@@ -216,8 +205,7 @@ class ExternalAPISettings(BaseSettings):
+         description="AiTradePulse API key",
+     )
+ 
+-    class Config:
+-        env_prefix = ""
++    model_config = ConfigDict(env_prefix="")
+ 
+ 
+ class PaperClipSettings(BaseSettings):
+@@ -231,8 +219,7 @@ class PaperClipSettings(BaseSettings):
+         default="ea3bb337-656a-4158-804d-fa1f7fab6dbc", description="CMO agent ID"
+     )
+ 
+-    class Config:
+-        env_prefix = "PAPERCLIP_"
++    model_config = ConfigDict(env_prefix="PAPERCLIP_")
+ 
+ 
+ class ScraperSettings(BaseSettings):
+@@ -291,8 +278,7 @@ class ScraperSettings(BaseSettings):
+         description="Default verticals for autonomous scraping",
+     )
+ 
+-    class Config:
+-        env_prefix = "SCRAPER_"
++    model_config = ConfigDict(env_prefix="SCRAPER_")
+ 
+ 
+ class APISettings(BaseSettings):
+@@ -307,8 +293,7 @@ class APISettings(BaseSettings):
+     )
+     rate_limit_enabled: bool = Field(default=True, description="Enable rate limiting")
+ 
+-    class Config:
+-        env_prefix = "API_"
++    model_config = ConfigDict(env_prefix="API_")
+ 
+     def get_valid_keys(self) -> Set[str]:
+         """Parse comma-separated API keys into a set."""
+@@ -336,11 +321,12 @@ class Settings(BaseSettings):
+     scraper: ScraperSettings = Field(default_factory=ScraperSettings)
+     api: APISettings = Field(default_factory=APISettings)
+ 
+-    class Config:
+-        env_file = ".env"
+-        env_file_encoding = "utf-8"
+-        case_sensitive = False
+-        extra = "ignore"
++    model_config = ConfigDict(
++        env_file=".env",
++        env_file_encoding="utf-8",
++        case_sensitive=False,
++        extra="ignore",
++    )
+ 
+ 
+ @lru_cache(maxsize=1)
+diff --git a/src/oneai_reach/infrastructure/database/sqlite_product_repository.py b/src/oneai_reach/infrastructure/database/sqlite_product_repository.py
+index ec63e23..649585f 100644
+--- a/src/oneai_reach/infrastructure/database/sqlite_product_repository.py
++++ b/src/oneai_reach/infrastructure/database/sqlite_product_repository.py
+@@ -195,17 +195,19 @@ class SQLiteProductRepository(ProductRepository):
+             conn.close()
+ 
+     def get_all(self, wa_number_id: str) -> List[Product]:
+-        """Get all products for a WA number using product_overrides."""
++        """Get all visible products for a WA number."""
+         conn = self._connect()
+         try:
+             cursor = conn.execute(
+                 """
+                 SELECT p.* FROM products p
+-                INNER JOIN product_overrides po ON p.id = po.product_id
+-                WHERE po.wa_number_id = ? AND po.is_hidden = 0
++                LEFT JOIN product_overrides po
++                    ON p.id = po.product_id AND po.wa_number_id = ?
++                WHERE (p.wa_number_id = ? OR po.wa_number_id = ?)
++                  AND COALESCE(po.is_hidden, 0) = 0
+                 ORDER BY p.created_at DESC
+             """,
+-                (wa_number_id,),
++                (wa_number_id, wa_number_id, wa_number_id),
+             )
+             rows = cursor.fetchall()
+             return [self._row_to_product(row) for row in rows]
+@@ -350,7 +352,8 @@ class SQLiteProductRepository(ProductRepository):
+             cursor = conn.execute(
+                 """
+                 SELECT * FROM products
+-                WHERE wa_number_id = ? 
++                WHERE wa_number_id = ?
++                AND visibility != 'hidden'
+                 AND (
+                     name LIKE ? OR 
+                     description LIKE ? OR 
+diff --git a/src/oneai_reach/infrastructure/logging/logger.py b/src/oneai_reach/infrastructure/logging/logger.py
+index 96f2077..bd14f00 100644
+--- a/src/oneai_reach/infrastructure/logging/logger.py
++++ b/src/oneai_reach/infrastructure/logging/logger.py
+@@ -8,7 +8,7 @@ from contextvars import ContextVar
+ from functools import lru_cache
+ from contextlib import contextmanager
+ from logging.handlers import RotatingFileHandler
+-from datetime import datetime
++from datetime import datetime, timezone
+ 
+ # Correlation ID context variable for request tracing
+ correlation_id_var: ContextVar[str] = ContextVar("correlation_id", default=None)
+@@ -24,7 +24,7 @@ class JSONFormatter(logging.Formatter):
+     def format(self, record: logging.LogRecord) -> str:
+         """Format log record as JSON."""
+         log_data = {
+-            "timestamp": datetime.utcnow().isoformat() + "Z",
++            "timestamp": datetime.now(timezone.utc).isoformat().replace("+00:00", "Z"),
+             "level": record.levelname,
+             "logger": record.name,
+             "message": record.getMessage(),
+diff --git a/src/oneai_reach/infrastructure/messaging/channel_service.py b/src/oneai_reach/infrastructure/messaging/channel_service.py
+index 944f39f..b278413 100644
+--- a/src/oneai_reach/infrastructure/messaging/channel_service.py
++++ b/src/oneai_reach/infrastructure/messaging/channel_service.py
+@@ -381,14 +381,8 @@ class ChannelService:
+ 
+     def _send_whatsapp(self, ch: dict, recipient: str, message: str) -> bool:
+         """Send via WAHA API using existing senders.py chain."""
+-        import sys
+-        import os
+-        project_root = os.path.dirname(os.path.dirname(os.path.dirname(os.path.dirname(os.path.dirname(__file__)))))
+-        scripts = os.path.join(project_root, "scripts")
+-        if scripts not in sys.path:
+-            sys.path.insert(0, scripts)
+         try:
+-            from senders import send_whatsapp
++            from oneai_reach.infrastructure.legacy.senders import send_whatsapp
+             ok = send_whatsapp(recipient, message)
+             if ok:
+                 # Log the message to conversation for display in UI
+diff --git a/src/oneai_reach/infrastructure/messaging/channels/email_sender.py b/src/oneai_reach/infrastructure/messaging/channels/email_sender.py
+index edca91e..36c1940 100644
+--- a/src/oneai_reach/infrastructure/messaging/channels/email_sender.py
++++ b/src/oneai_reach/infrastructure/messaging/channels/email_sender.py
+@@ -25,15 +25,8 @@ class EmailSender:
+ 
+     def send(self, to_email: str, subject: str, body: str) -> bool:
+         """Send email using the existing senders.py chain."""
+-        import sys
+-        import os
+-        project_root = os.path.dirname(os.path.dirname(os.path.dirname(os.path.dirname(os.path.dirname(__file__)))))
+-        scripts = os.path.join(project_root, "scripts")
+-        if scripts not in sys.path:
+-            sys.path.insert(0, scripts)
+-
+         try:
+-            from senders import send_email
++            from oneai_reach.infrastructure.legacy.senders import send_email
+             return send_email(to_email, subject, body)
+         except Exception as e:
+             logger.error(f"Email send failed to {to_email}: {e}")
+diff --git a/src/oneai_reach/infrastructure/messaging/email_sender.py b/src/oneai_reach/infrastructure/messaging/email_sender.py
+index 4d75159..36f6416 100644
+--- a/src/oneai_reach/infrastructure/messaging/email_sender.py
++++ b/src/oneai_reach/infrastructure/messaging/email_sender.py
+@@ -6,10 +6,11 @@ Fallback chain: Brevo → Stalwart SMTP → gog → himalaya → queue
+ import os
+ import smtplib
+ import subprocess
++from pathlib import Path
+ from email.mime.multipart import MIMEMultipart
+ from email.mime.text import MIMEText
+ from email.utils import parseaddr
+-from typing import Dict, Optional
++from typing import Optional
+ 
+ try:
+     import requests
+@@ -19,8 +20,6 @@ except ImportError:
+     _HTTP_OK = False
+ 
+ from oneai_reach.config.settings import Settings
+-from oneai_reach.domain.exceptions import ExternalAPIError
+-
+ 
+ class EmailSender:
+     """Email sender with multi-provider fallback chain.
+@@ -67,13 +66,17 @@ class EmailSender:
+             print("Skip Email: No email address.")
+             return False
+ 
++        attachment_required = pdf_bytes is not None or filename is not None
+         for name, method in [
+             ("brevo", lambda: self._send_via_brevo(email, subject, body, lead_id, pdf_bytes, filename)),
+             ("stalwart", lambda: self._send_via_stalwart(email, subject, body, pdf_bytes, filename)),
+             ("gog", lambda: self._send_via_gog(email, subject, body)),
+             ("himalaya", lambda: self._send_via_himalaya(email, subject, body)),
+-            ("queue", lambda: self._send_via_queue(email, subject, body)),
++            ("queue", lambda: self._send_via_queue(email, subject, body, pdf_bytes, filename)),
+         ]:
++            if attachment_required and name in {"gog", "himalaya"}:
++                print(f"Skip {name}: PDF attachment required but this method cannot attach files")
++                continue
+             try:
+                 if method():
+                     return True
+@@ -147,7 +150,6 @@ class EmailSender:
+                 "htmlContent": self._make_html_body(body),
+             }
+ 
+-            # Add PDF attachment if provided
+             if pdf_bytes and filename:
+                 msg_payload["attachment"] = [
+                     {
+@@ -196,7 +198,6 @@ class EmailSender:
+             msg.attach(MIMEText(body, "plain", "utf-8"))
+             msg.attach(MIMEText(self._make_html_body(body), "html", "utf-8"))
+ 
+-            # Add PDF attachment if provided
+             if pdf_bytes and filename:
+                 part = MIMEBase("application", "pdf")
+                 part.set_payload(pdf_bytes)
+@@ -302,7 +303,7 @@ class EmailSender:
+             print(f"❌ Himalaya failed: {e}")
+             return False
+ 
+-    def _send_via_queue(self, email: str, subject: str, body: str) -> bool:
++    def _send_via_queue(self, email: str, subject: str, body: str, pdf_bytes: Optional[bytes] = None, filename: Optional[str] = None) -> bool:
+         """Queue email to file for manual review (last resort)."""
+         print(f"[QUEUE] Email logged for {email} — review at {self.queue_log_path}")
+ 
+@@ -310,7 +311,13 @@ class EmailSender:
+             os.makedirs(os.path.dirname(self.queue_log_path), exist_ok=True)
+             with open(self.queue_log_path, "a") as f:
+                 f.write(f"\n---\nTo: {email}\nSubject: {subject}\nBody: {body}\n")
+-            return True
++                if pdf_bytes and filename:
++                    attachment_dir = Path(self.queue_log_path).parent / "email_attachments"
++                    attachment_dir.mkdir(parents=True, exist_ok=True)
++                    attachment_path = attachment_dir / filename
++                    attachment_path.write_bytes(pdf_bytes)
++                    f.write(f"Attachment: {attachment_path}\n")
++            return not (pdf_bytes and filename)
+         except Exception as e:
+             print(f"❌ Queue failed: {e}")
+             return False
+diff --git a/src/oneai_reach/infrastructure/messaging/message_queue.py b/src/oneai_reach/infrastructure/messaging/message_queue.py
+index 9e250e0..43e27bd 100644
+--- a/src/oneai_reach/infrastructure/messaging/message_queue.py
++++ b/src/oneai_reach/infrastructure/messaging/message_queue.py
+@@ -5,7 +5,7 @@ Manages email queue with status tracking (pending, sent, failed, retry).
+ 
+ import json
+ import os
+-from datetime import datetime
++from datetime import datetime, timezone
+ from pathlib import Path
+ from typing import Dict, List, Optional
+ 
+@@ -78,8 +78,8 @@ class MessageQueue:
+             "body": body,
+             "status": status,
+             "error": error,
+-            "created_at": datetime.utcnow().isoformat(),
+-            "updated_at": datetime.utcnow().isoformat(),
++            "created_at": datetime.now(timezone.utc).isoformat(),
++            "updated_at": datetime.now(timezone.utc).isoformat(),
+             "retry_count": 0,
+         }
+ 
+@@ -127,7 +127,7 @@ class MessageQueue:
+         for msg in messages:
+             if msg.get("id") == message_id:
+                 msg["status"] = "sent"
+-                msg["updated_at"] = datetime.utcnow().isoformat()
++                msg["updated_at"] = datetime.now(timezone.utc).isoformat()
+                 updated = True
+                 break
+ 
+@@ -153,7 +153,7 @@ class MessageQueue:
+             if msg.get("id") == message_id:
+                 msg["status"] = "failed"
+                 msg["error"] = error
+-                msg["updated_at"] = datetime.utcnow().isoformat()
++                msg["updated_at"] = datetime.now(timezone.utc).isoformat()
+                 msg["retry_count"] = msg.get("retry_count", 0) + 1
+                 updated = True
+                 break
+diff --git a/tests/conftest.py b/tests/conftest.py
+index 17b2389..191bd19 100644
+--- a/tests/conftest.py
++++ b/tests/conftest.py
+@@ -4,8 +4,8 @@ from pathlib import Path
+ 
+ import pytest
+ 
+-# Add both src/ and scripts/ to path for imports
+ _root = Path(__file__).parent.parent
++
+ sys.path.insert(0, str(_root / "src"))
+ sys.path.insert(0, str(_root / "scripts"))
+ 
+diff --git a/tests/e2e/test_api.py b/tests/e2e/test_api.py
+index 8c204ec..6080d47 100644
+--- a/tests/e2e/test_api.py
++++ b/tests/e2e/test_api.py
+@@ -10,17 +10,24 @@ _scripts = _root / "scripts"
+ if str(_scripts) not in sys.path:
+     sys.path.insert(0, str(_scripts))
+ 
++# Mock legacy script modules so the test can run without real scripts/ DB
++_mock_state_manager = Mock()
++_mock_state_manager.get_wa_number_by_session = Mock(return_value="6281234567890")
++_mock_state_manager.add_conversation_message = Mock(return_value=None)
++_mock_state_manager.get_or_create_conversation = Mock(return_value=(1, False))
++_mock_state_manager.is_manual_mode = Mock(return_value=False)
++_mock_state_manager.init_db = Mock(return_value=None)
++
+ sys.modules["cs_engine"] = Mock()
+ sys.modules["cs_engine"].handle_inbound_message = Mock(return_value="Test response")
+-sys.modules["state_manager"] = Mock()
+-sys.modules["state_manager"].get_wa_number_by_session = Mock(return_value="6281234567890")
+-sys.modules["state_manager"].add_conversation_message = Mock(return_value=None)
+-sys.modules["state_manager"].get_or_create_conversation = Mock(return_value=(1, False))
+-sys.modules["state_manager"].is_manual_mode = Mock(return_value=False)
++sys.modules["state_manager"] = _mock_state_manager
++sys.modules["oneai_reach.infrastructure.legacy.state_manager"] = _mock_state_manager
+ sys.modules["capi_tracker"] = Mock()
++sys.modules["oneai_reach.infrastructure.legacy.capi_tracker"] = Mock()
+ sys.modules["conversation_tracker"] = Mock()
+ sys.modules["conversation_tracker"].get_active_conversations = Mock(return_value=[])
+ sys.modules["conversation_tracker"].stop_conversation = Mock(return_value=True)
++sys.modules["oneai_reach.infrastructure.legacy.conversation_tracker"] = sys.modules["conversation_tracker"]
+ 
+ from oneai_reach.api.main import create_app
+ 
+diff --git a/tests/integration/application/test_outreach.py b/tests/integration/application/test_outreach.py
+index 065389b..fa24bea 100644
+--- a/tests/integration/application/test_outreach.py
++++ b/tests/integration/application/test_outreach.py
+@@ -1,14 +1,13 @@
+ """Integration tests for outreach application services."""
+ 
+-import json
+-import subprocess
+ from unittest.mock import Mock, patch
+ 
++import pandas as pd
+ import pytest
+ import requests
+ 
++from oneai_reach.application.outreach.blaster_service import BlasterService
+ from oneai_reach.application.outreach.scraper_service import ScraperService
+-from oneai_reach.config.settings import Settings
+ from oneai_reach.domain.exceptions import ExternalAPIError, MissingConfigurationError
+ 
+ 
+@@ -143,3 +142,95 @@ class TestScraperService:
+         assert service._is_real_business("https://google.com") is False
+         assert service._is_real_business("https://bing.com") is False
+         assert service._is_real_business("") is False
++
++
++class TestBlasterService:
++    def test_blast_proposals_generates_sends_and_persists_pdf(self, settings, tmp_path):
++        draft_dir = tmp_path / "proposals" / "drafts"
++        draft_dir.mkdir(parents=True)
++        settings.database.proposals_dir = str(draft_dir)
++        draft_path = draft_dir / "0_ACME.txt"
++        draft_path.write_text(
++            "---PROPOSAL---\nHello <b>ACME</b>\n---WHATSAPP---\nHalo ACME",
++            encoding="utf-8",
++        )
++        sent_payload = {}
++
++        def send_email(email, subject, body, pdf_bytes=None, filename=None):
++            sent_payload["email"] = email
++            sent_payload["subject"] = subject
++            sent_payload["body"] = body
++            sent_payload["pdf_bytes"] = pdf_bytes
++            sent_payload["filename"] = filename
++            return True
++
++        df = pd.DataFrame(
++            [
++                {
++                    "displayName": "ACME",
++                    "status": "reviewed",
++                    "email": "lead@example.com",
++                    "phone": "",
++                    "contacted_at": "",
++                }
++            ]
++        )
++
++        sent, skipped_cooldown, skipped_no_draft = BlasterService(settings).blast_proposals(
++            df,
++            send_email,
++            lambda phone, message: False,
++            lambda index, name: str(draft_path),
++            lambda value: value is None or str(value).strip().lower() in {"", "nan", "none"},
++            str,
++        )
++
++        assert (sent, skipped_cooldown, skipped_no_draft) == (1, 0, 0)
++        assert df.at[0, "status"] == "contacted"
++        assert sent_payload["pdf_bytes"].startswith(b"%PDF")
++        assert sent_payload["filename"] == "Proposal_ACME.pdf"
++        assert (tmp_path / "proposals" / "sent_pdfs" / "0_Proposal_ACME.pdf").exists()
++
++    def test_blast_proposals_does_not_mark_contacted_when_pdf_fails(self, settings, tmp_path, monkeypatch):
++        draft_dir = tmp_path / "proposals" / "drafts"
++        draft_dir.mkdir(parents=True)
++        settings.database.proposals_dir = str(draft_dir)
++        draft_path = draft_dir / "0_ACME.txt"
++        draft_path.write_text(
++            "---PROPOSAL---\nHello ACME\n---WHATSAPP---\n",
++            encoding="utf-8",
++        )
++
++        def fail_pdf(proposal, lead_name):
++            from oneai_reach.application.outreach.proposal_pdf import ProposalPdfError
++
++            raise ProposalPdfError("missing cairo")
++
++        monkeypatch.setattr(
++            "oneai_reach.application.outreach.blaster_service.generate_proposal_pdf",
++            fail_pdf,
++        )
++
++        df = pd.DataFrame(
++            [
++                {
++                    "displayName": "ACME",
++                    "status": "reviewed",
++                    "email": "lead@example.com",
++                    "phone": "",
++                    "contacted_at": "",
++                }
++            ]
++        )
++
++        sent, skipped_cooldown, skipped_no_draft = BlasterService(settings).blast_proposals(
++            df,
++            lambda *args, **kwargs: True,
++            lambda phone, message: False,
++            lambda index, name: str(draft_path),
++            lambda value: value is None or str(value).strip().lower() in {"", "nan", "none"},
++            str,
++        )
++
++        assert (sent, skipped_cooldown, skipped_no_draft) == (0, 0, 0)
++        assert df.at[0, "status"] == "reviewed"
+diff --git a/tests/integration/test_cs_product_lookup.py b/tests/integration/test_cs_product_lookup.py
+index c256e0e..6031adc 100644
+--- a/tests/integration/test_cs_product_lookup.py
++++ b/tests/integration/test_cs_product_lookup.py
+@@ -111,9 +111,9 @@ def temp_db() -> Generator[Path, None, None]:
+         )
+     """)
+ 
+-    # Create messages table
++    # Create conversation_messages table
+     conn.execute("""
+-        CREATE TABLE IF NOT EXISTS messages (
++        CREATE TABLE IF NOT EXISTS conversation_messages (
+             id INTEGER PRIMARY KEY AUTOINCREMENT,
+             conversation_id INTEGER NOT NULL,
+             direction TEXT NOT NULL,
+@@ -355,26 +355,26 @@ class TestProductSearch:
+         product_search_service: ProductSearchService,
+         sample_products: dict,
+     ):
+-        """Test search returns all products as fallback when no specific match found."""
++        """Test search returns empty list when no specific match found."""
+         wa_number = sample_products["wa_number"]
+         results = product_search_service.search_products(
+             wa_number, "nonexistent", limit=5
+         )
+ 
+-        assert len(results) > 0
++        assert len(results) == 0
+ 
+ 
+ class TestCSEngineProductIntegration:
+     """Test CS engine with product search integration."""
+ 
+-    @patch("capi_tracker.track_lead", create=True)
++    @patch("oneai_reach.infrastructure.legacy.capi_tracker.track_lead", create=True)
+     @patch("oneai_reach.application.customer_service.cs_engine_service._should_throttle_response")
+     @patch("oneai_reach.api.v1.admin.get_pause_flag")
+-    @patch("state_manager.get_wa_number_by_session")
+-    @patch("llm_client.generate")
+-    @patch("senders.send_whatsapp_session")
+-    @patch("senders.send_typing_indicator")
+-    @patch("n8n_client.notify_conversation_started")
++    @patch("oneai_reach.infrastructure.legacy.state_manager.get_wa_number_by_session")
++    @patch("oneai_reach.infrastructure.legacy.llm_client.generate")
++    @patch("oneai_reach.infrastructure.legacy.senders.send_whatsapp_session")
++    @patch("oneai_reach.infrastructure.legacy.senders.send_typing_indicator")
++    @patch("oneai_reach.infrastructure.legacy.n8n_client.notify_conversation_started")
+     def test_product_inquiry_includes_product_info(
+         self,
+         mock_notify,
+@@ -427,14 +427,14 @@ class TestCSEngineProductIntegration:
+         has_product_context = "kopi" in llm_prompt.lower() or "product" in llm_prompt.lower()
+         assert has_product_context, f"No product context in prompt: {llm_prompt[:200]}"
+ 
+-    @patch("capi_tracker.track_lead", create=True)
++    @patch("oneai_reach.infrastructure.legacy.capi_tracker.track_lead", create=True)
+     @patch("oneai_reach.application.customer_service.cs_engine_service._should_throttle_response")
+     @patch("oneai_reach.api.v1.admin.get_pause_flag")
+-    @patch("state_manager.get_wa_number_by_session")
+-    @patch("llm_client.generate")
+-    @patch("senders.send_whatsapp_session")
+-    @patch("senders.send_typing_indicator")
+-    @patch("n8n_client.notify_conversation_started")
++    @patch("oneai_reach.infrastructure.legacy.state_manager.get_wa_number_by_session")
++    @patch("oneai_reach.infrastructure.legacy.llm_client.generate")
++    @patch("oneai_reach.infrastructure.legacy.senders.send_whatsapp_session")
++    @patch("oneai_reach.infrastructure.legacy.senders.send_typing_indicator")
++    @patch("oneai_reach.infrastructure.legacy.n8n_client.notify_conversation_started")
+     def test_out_of_stock_product_mentioned(
+         self,
+         mock_notify,
+@@ -480,14 +480,14 @@ class TestCSEngineProductIntegration:
+         has_unavailable = "tidak tersedia" in llm_prompt.lower() or "teh" in llm_prompt.lower()
+         assert has_unavailable, f"No out-of-stock context in prompt: {llm_prompt[:200]}"
+ 
+-    @patch("capi_tracker.track_lead", create=True)
++    @patch("oneai_reach.infrastructure.legacy.capi_tracker.track_lead", create=True)
+     @patch("oneai_reach.application.customer_service.cs_engine_service._should_throttle_response")
+     @patch("oneai_reach.api.v1.admin.get_pause_flag")
+-    @patch("state_manager.get_wa_number_by_session")
+-    @patch("llm_client.generate")
+-    @patch("senders.send_whatsapp_session")
+-    @patch("senders.send_typing_indicator")
+-    @patch("n8n_client.notify_conversation_started")
++    @patch("oneai_reach.infrastructure.legacy.state_manager.get_wa_number_by_session")
++    @patch("oneai_reach.infrastructure.legacy.llm_client.generate")
++    @patch("oneai_reach.infrastructure.legacy.senders.send_whatsapp_session")
++    @patch("oneai_reach.infrastructure.legacy.senders.send_typing_indicator")
++    @patch("oneai_reach.infrastructure.legacy.n8n_client.notify_conversation_started")
+     def test_variant_listing_in_response(
+         self,
+         mock_notify,
+@@ -532,14 +532,14 @@ class TestCSEngineProductIntegration:
+         has_variant_context = "varian" in llm_prompt.lower() or "kopi" in llm_prompt.lower() or "gram" in llm_prompt.lower()
+         assert has_variant_context, f"No variant context in prompt: {llm_prompt[:200]}"
+ 
+-    @patch("capi_tracker.track_lead", create=True)
++    @patch("oneai_reach.infrastructure.legacy.capi_tracker.track_lead", create=True)
+     @patch("oneai_reach.application.customer_service.cs_engine_service._should_throttle_response")
+     @patch("oneai_reach.api.v1.admin.get_pause_flag")
+-    @patch("state_manager.get_wa_number_by_session")
+-    @patch("llm_client.generate")
+-    @patch("senders.send_whatsapp_session")
+-    @patch("senders.send_typing_indicator")
+-    @patch("n8n_client.notify_conversation_started")
++    @patch("oneai_reach.infrastructure.legacy.state_manager.get_wa_number_by_session")
++    @patch("oneai_reach.infrastructure.legacy.llm_client.generate")
++    @patch("oneai_reach.infrastructure.legacy.senders.send_whatsapp_session")
++    @patch("oneai_reach.infrastructure.legacy.senders.send_typing_indicator")
++    @patch("oneai_reach.infrastructure.legacy.n8n_client.notify_conversation_started")
+     def test_non_product_inquiry_skips_product_search(
+         self,
+         mock_notify,
+diff --git a/tests/test_admin_feedback.py b/tests/test_admin_feedback.py
+index acff274..f398483 100644
+--- a/tests/test_admin_feedback.py
++++ b/tests/test_admin_feedback.py
+@@ -10,6 +10,9 @@ SCRIPTS_DIR = str(Path(__file__).parent.parent / "scripts")
+ sys.path.insert(0, SCRIPTS_DIR)
+ 
+ 
++@pytest.mark.filterwarnings("ignore:scripts/cs_self_improve.py is deprecated:DeprecationWarning")
++
++
+ def _seed_feedback(db_path, conv_id, message_id, rating, corrected=""):
+     conn = sqlite3.connect(db_path)
+     conn.execute(
+diff --git a/tests/test_cs_playbook.py b/tests/test_cs_playbook.py
+index 4bc17fa..e7afea9 100644
+--- a/tests/test_cs_playbook.py
++++ b/tests/test_cs_playbook.py
+@@ -5,9 +5,9 @@ from pathlib import Path
+ 
+ import pytest
+ 
+-sys.path.insert(0, str(Path(__file__).parent.parent / "scripts"))
++sys.path.insert(0, str(Path(__file__).parent.parent / "src"))
+ 
+-from cs_playbook import CSPlaybook
++from oneai_reach.application.customer_service.playbook_service import PlaybookService as CSPlaybook
+ 
+ 
+ class TestCSPlaybook:
+diff --git a/tests/test_e2e_auto_learn.py b/tests/test_e2e_auto_learn.py
+index 0e2a2dc..32673a6 100644
+--- a/tests/test_e2e_auto_learn.py
++++ b/tests/test_e2e_auto_learn.py
+@@ -8,6 +8,10 @@ import pytest
+ sys.path.insert(0, str(Path(__file__).parent.parent / "scripts"))
+ 
+ 
++@pytest.mark.filterwarnings("ignore:scripts/cs_outcomes.py is deprecated:DeprecationWarning")
++@pytest.mark.filterwarnings("ignore:scripts/cs_self_improve.py is deprecated:DeprecationWarning")
++
++
+ class TestAutoLearnE2E:
+     def test_complete_learning_cycle(self, fresh_db):
+         from cs_outcomes import (

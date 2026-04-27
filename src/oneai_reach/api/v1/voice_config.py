@@ -1,16 +1,9 @@
 """Voice configuration API endpoints."""
 
-import sys
-from pathlib import Path
-
 from fastapi import APIRouter, HTTPException, Request
 
-_SCRIPT_DIR = Path(__file__).resolve().parent.parent.parent.parent.parent / "scripts"
-if str(_SCRIPT_DIR) not in sys.path:
-    sys.path.insert(0, str(_SCRIPT_DIR))
-
-from voice_config import get_voice_config
-from state_manager import update_voice_config
+from oneai_reach.infrastructure.legacy.voice_config import get_voice_config
+from oneai_reach.infrastructure.legacy.state_manager import update_voice_config
 
 router = APIRouter(tags=["voice-config"])
 

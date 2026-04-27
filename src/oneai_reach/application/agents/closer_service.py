@@ -5,18 +5,10 @@ appropriate payment or calendar links. Replaces static meeting invites
 with intelligent, intent-driven responses.
 """
 
-import sys
-from pathlib import Path
-
-# Add scripts directory to path for external client imports
-_scripts_dir = Path(__file__).parent.parent.parent.parent.parent / "scripts"
-if str(_scripts_dir) not in sys.path:
-    sys.path.insert(0, str(_scripts_dir))
-
-import brain_client
-import llm_client
-from senders import send_email, send_whatsapp
-from state_manager import (
+from oneai_reach.infrastructure.legacy import brain_client
+from oneai_reach.infrastructure.legacy import llm_client
+from oneai_reach.infrastructure.legacy.senders import send_email, send_whatsapp
+from oneai_reach.infrastructure.legacy.state_manager import (
     add_event_log,
     get_lead_by_id,
     get_leads_by_status,

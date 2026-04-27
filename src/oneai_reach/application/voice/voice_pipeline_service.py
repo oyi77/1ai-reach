@@ -39,14 +39,7 @@ class VoicePipelineService:
             Voice configuration dictionary
         """
         try:
-            import sys
-            from pathlib import Path
-
-            scripts_dir = Path(__file__).parent.parent.parent.parent / "scripts"
-            if str(scripts_dir) not in sys.path:
-                sys.path.insert(0, str(scripts_dir))
-
-            from state_manager import get_voice_config as get_db_voice_config
+            from oneai_reach.infrastructure.legacy.state_manager import get_voice_config as get_db_voice_config
 
             db_config = get_db_voice_config(session_name)
 
@@ -128,15 +121,8 @@ class VoicePipelineService:
             logger.info(f"Transcribed: {transcription[:100]}")
 
             logger.info("Generating response via cs_engine...")
-            import sys
-            from pathlib import Path
-
-            scripts_dir = Path(__file__).parent.parent.parent.parent / "scripts"
-            if str(scripts_dir) not in sys.path:
-                sys.path.insert(0, str(scripts_dir))
-
-            from cs_engine import handle_inbound_message
-            from senders import send_typing_indicator
+            from oneai_reach.infrastructure.legacy.cs_engine import handle_inbound_message
+            from oneai_reach.infrastructure.legacy.senders import send_typing_indicator
 
             send_typing_indicator(session_name, contact_phone, typing=True)
 
@@ -186,7 +172,7 @@ class VoicePipelineService:
             ogg_bytes = audio_service.convert_to_ogg(wav_bytes, sr)
 
             logger.info("Sending voice note...")
-            from senders import send_voice_note
+            from oneai_reach.infrastructure.legacy.senders import send_voice_note
 
             sent = send_voice_note(contact_phone, ogg_bytes, session_name)
 
@@ -202,14 +188,7 @@ class VoicePipelineService:
         except Exception as e:
             logger.error(f"Pipeline error: {e}")
             try:
-                import sys
-                from pathlib import Path
-
-                scripts_dir = Path(__file__).parent.parent.parent.parent / "scripts"
-                if str(scripts_dir) not in sys.path:
-                    sys.path.insert(0, str(scripts_dir))
-
-                from senders import send_typing_indicator
+                from oneai_reach.infrastructure.legacy.senders import send_typing_indicator
 
                 send_typing_indicator(session_name, contact_phone, typing=False)
             except Exception as e:
@@ -250,14 +229,7 @@ class VoicePipelineService:
 
             ogg_bytes = audio_service.convert_to_ogg(wav_bytes, sr)
 
-            import sys
-            from pathlib import Path
-
-            scripts_dir = Path(__file__).parent.parent.parent.parent / "scripts"
-            if str(scripts_dir) not in sys.path:
-                sys.path.insert(0, str(scripts_dir))
-
-            from senders import send_voice_note
+            from oneai_reach.infrastructure.legacy.senders import send_voice_note
 
             return send_voice_note(contact_phone, ogg_bytes, session_name)
 

@@ -4,8 +4,8 @@ from pathlib import Path
 
 import pytest
 
-# Add both src/ and scripts/ to path for imports
 _root = Path(__file__).parent.parent
+
 sys.path.insert(0, str(_root / "src"))
 sys.path.insert(0, str(_root / "scripts"))
 
