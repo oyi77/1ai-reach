@@ -1,21 +1,12 @@
 import logging
 import os
+import smtplib
 import subprocess
 import sys
-
-_wa_logger = logging.getLogger("waha")
-_email_logger = logging.getLogger("email")
-
-try:
-    import requests as _req
-
-    _HTTP_OK = True
-except ImportError:
-    _HTTP_OK = False
-
-import smtplib
-from email.mime.text import MIMEText
 from email.mime.multipart import MIMEMultipart
+from email.mime.text import MIMEText
+from pathlib import Path
+from typing import Optional
 
 from config import (
     GMAIL_ACCOUNT,
@@ -34,6 +25,16 @@ from config import (
     BREVO_API_KEY,
 )
 from utils import is_empty
+
+_wa_logger = logging.getLogger("waha")
+_email_logger = logging.getLogger("email")
+
+try:
+    import requests as _req
+
+    _HTTP_OK = True
+except ImportError:
+    _HTTP_OK = False
 
 # ---------------------------------------------------------------------------
 # Multi-channel (Instagram / Twitter) integration
@@ -497,7 +498,6 @@ def _send_via_brevo(email: str, subject: str, body: str, pdf_bytes: Optional[byt
 
 def _send_via_stalwart(email: str, subject: str, body: str, pdf_bytes: Optional[bytes] = None, filename: Optional[str] = None) -> bool:
     """Fallback: send via Stalwart SMTP as marketing@berkahkarya.org."""
-    import base64
     from email.mime.base import MIMEBase
     from email import encoders
     from email.utils import parseaddr
@@ -590,26 +590,36 @@ def _send_via_himalaya(email: str, subject: str, body: str) -> bool:
         return False
 
 
-def _send_via_mock(email: str, subject: str, body: str) -> bool:
+def _send_via_mock(email: str, subject: str, body: str, pdf_bytes: Optional[bytes] = None, filename: Optional[str] = None) -> bool:
     """Last resort: queue email locally for manual review (free, no send)."""
     print(f"[QUEUE] Email logged for {email} — review at {EMAIL_QUEUE_LOG}")
     os.makedirs(os.path.dirname(EMAIL_QUEUE_LOG), exist_ok=True)
     with open(EMAIL_QUEUE_LOG, "a") as f:
         f.write(f"\n---\nTo: {email}\nSubject: {subject}\nBody: {body}\n")
-    return True
+        if pdf_bytes and filename:
+            attachment_dir = Path(EMAIL_QUEUE_LOG).parent / "email_attachments"
+            attachment_dir.mkdir(parents=True, exist_ok=True)
+            attachment_path = attachment_dir / filename
+            attachment_path.write_bytes(pdf_bytes)
+            f.write(f"Attachment: {attachment_path}\n")
+    return not (pdf_bytes and filename)
 
 
 def send_email(email: str, subject: str, body: str, pdf_bytes: Optional[bytes] = None, filename: Optional[str] = None) -> bool:
     if is_empty(email):
         print("Skip Email: No email address.")
         return False
+    attachment_required = pdf_bytes is not None or filename is not None
     for name, method in [
         ("brevo", lambda: _send_via_brevo(email, subject, body, pdf_bytes, filename)),
         ("stalwart", lambda: _send_via_stalwart(email, subject, body, pdf_bytes, filename)),
         ("gog", lambda: _send_via_gog(email, subject, body)),
         ("himalaya", lambda: _send_via_himalaya(email, subject, body)),
-        ("queue", lambda: _send_via_mock(email, subject, body)),
+        ("queue", lambda: _send_via_mock(email, subject, body, pdf_bytes, filename)),
     ]:
+        if attachment_required and name in {"gog", "himalaya"}:
+            print(f"Skip {name}: PDF attachment required but this method cannot attach files")
+            continue
         try:
             if method():
                 return True

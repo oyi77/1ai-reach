@@ -15,6 +15,12 @@ import pandas as pd
 from leads import load_leads, save_leads
 from senders import send_email, send_whatsapp, send_instagram, send_twitter
 from utils import draft_path, is_empty, parse_display_name
+from oneai_reach.application.outreach.proposal_pdf import (
+    ProposalPdfError,
+    generate_proposal_pdf,
+    persist_proposal_pdf,
+    proposal_pdf_filename,
+)
 
 PROPOSAL_SUBJECT = "Collaboration Proposal from BerkahKarya"
 COOLDOWN_DAYS = 30  # don't re-contact the same lead within this window
@@ -85,7 +91,16 @@ def blast() -> None:
         wa_draft = parts[1].strip() if len(parts) > 1 else proposal
 
         print(f"\nProcessing: {name}")
-        any_sent = blast_lead(phone, email, ig_handle, tw_handle, proposal, wa_draft)
+        any_sent = blast_lead(
+            phone,
+            email,
+            ig_handle,
+            tw_handle,
+            proposal,
+            wa_draft,
+            lead_name=name,
+            lead_index=index,
+        )
 
         if any_sent:
             df.at[index, "status"] = "contacted"
@@ -93,14 +108,14 @@ def blast() -> None:
             sent += 1
 
     save_leads(df)
-    print(f"\n--- Blast complete ---")
+    print("\n--- Blast complete ---")
     print(f"  Sent:              {sent}")
     print(f"  Skipped (cooldown): {skipped_cooldown}")
     print(f"  Skipped (no draft): {skipped_no_draft}")
 
 
 def blast_lead(phone: str, email: str, ig_handle: str, tw_handle: str,
-               proposal: str, wa_draft: str) -> bool:
+               proposal: str, wa_draft: str, lead_name: str = "Business", lead_index=None) -> bool:
     """Send proposal to a lead via all available channels."""
     wa_sent = email_sent = ig_sent = tw_sent = False
 
@@ -108,7 +123,27 @@ def blast_lead(phone: str, email: str, ig_handle: str, tw_handle: str,
         wa_sent = send_whatsapp(phone, wa_draft)
 
     if email:
-        email_sent = send_email(email, PROPOSAL_SUBJECT, proposal)
+        try:
+            pdf_bytes = generate_proposal_pdf(proposal, lead_name)
+        except ProposalPdfError as exc:
+            print(f"  [skip email] {lead_name} — {exc}")
+            pdf_bytes = None
+        if pdf_bytes is None:
+            email_sent = False
+        else:
+            email_sent = send_email(
+                email,
+                PROPOSAL_SUBJECT,
+                proposal,
+                pdf_bytes=pdf_bytes,
+                filename=proposal_pdf_filename(lead_name),
+            )
+        if email_sent and lead_index is not None and pdf_bytes:
+            from config import PROPOSALS_DIR
+
+            pdf_path = persist_proposal_pdf(pdf_bytes, PROPOSALS_DIR, lead_index, lead_name)
+            print(f"  Saved proposal PDF: {pdf_path}")
+
 
     if ig_handle:
         ig_sent = send_instagram(ig_handle, wa_draft)
@@ -146,7 +181,7 @@ def blast_via_channels(phone: str, email: str, ig_handle: str, tw_handle: str,
             if platform == "whatsapp" and phone:
                 any_sent |= svc.send_message(ch_id, phone, wa_draft)
             elif platform == "email" and email:
-                any_sent |= svc.send_message(ch_id, email, proposal, subject=PROPOSAL_SUBJECT)
+                any_sent |= blast_lead("", email, "", "", proposal, wa_draft)
             elif platform == "instagram" and ig_handle:
                 any_sent |= svc.send_message(ch_id, ig_handle, wa_draft)
             elif platform == "twitter" and tw_handle:
