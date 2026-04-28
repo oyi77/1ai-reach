@@ -1,10 +1,10 @@
 """Proposal generator service - extracts business logic from scripts/generator.py."""
 
 import os
+import random
 import subprocess
-import yaml
 from pathlib import Path
-from typing import Optional, Tuple
+from typing import Dict, List, Optional, Tuple
 
 from oneai_reach.config.settings import Settings
 from oneai_reach.domain.exceptions import ExternalAPIError
@@ -154,6 +154,7 @@ class GeneratorService:
         capability_matrix: str,
         brain_context: str = "",
         service_context: dict = None,
+        angle: str = "VALUE_FIRST",
     ) -> Tuple[str, str]:
         """Build system and user prompts for proposal generation.
 
@@ -236,8 +237,6 @@ class GeneratorService:
                 f"- Suggested pricing: {service_context.get('price_display', 'Contact for pricing')}\n"
                 f"- Call to action: {service_context.get('cta', {}).get('email', 'Book a free consultation')}\n"
             )
-
-        angle = self.select_ab_test_angle()
 
         user_parts = [
             f"Prospect: {lead_name}",
@@ -344,6 +343,8 @@ class GeneratorService:
             except (json.JSONDecodeError, TypeError):
                 pass
 
+        # Pick the A/B test angle at the service layer so we can record it
+        angle = self.select_ab_test_angle()
         lead["ab_test_angle"] = angle
 
         service_name_for_brain = ""
@@ -353,7 +354,7 @@ class GeneratorService:
 
         # Build prompts
         system_prompt, user_prompt = self.build_prompt(
-            lead, research, capability_matrix, brain_context, service_context=service_context
+            lead, research, capability_matrix, brain_context, service_context=service_context, angle=angle
         )
 
         full_prompt = f"[SYSTEM]\n{system_prompt}\n\n[USER]\n{user_prompt}"
