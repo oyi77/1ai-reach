@@ -9,6 +9,10 @@ import { Loader2, TrendingUp, TrendingDown, Mail, MessageCircle, BarChart3, Zap 
 import { PipelineHealthCard } from "@/components/pipeline-health-card";
 import { DeliverabilityDashboard } from "@/components/deliverability-dashboard";
 import { ComplianceDashboard } from "@/components/compliance-dashboard";
+import { IntentSignalsPanel } from "@/components/intent-signals-panel";
+import { LeadRecyclingQueue } from "@/components/lead-recycling-queue";
+import { ABTestingResults } from "@/components/ab-testing-results";
+import { AutomatedReportsPanel } from "@/components/automated-reports-panel";
 
 const FUNNEL_STAGES = [
   { key: "new", label: "New", color: "bg-blue-600" },
@@ -103,6 +107,10 @@ export default function AnalyticsPage() {
       {/* ── Pipeline Health Widget ── */}
       <DeliverabilityDashboard />
       <ComplianceDashboard />
+      <IntentSignalsPanel />
+      <LeadRecyclingQueue />
+      <ABTestingResults />
+      <AutomatedReportsPanel />
       <PipelineHealthCard />
 
       {/* ── Section 1: KPI Cards ── */}
