@@ -52,56 +52,64 @@ recycling_router = APIRouter(prefix="/api/v1/outreach/recycling", tags=["outreac
 @recycling_router.get("/overview")
 def get_recycling_overview():
     """Get lead recycling queue overview."""
-    recycler = get_lead_recycler(config)
-    
-    # Load leads database
-    from oneai_reach.infrastructure.database.lead_repository import LeadRepository
-    repo = LeadRepository(config)
-    df = repo.get_all_leads()
-    
-    if df.empty:
-        return {"data": {"total_cold_leads": 0, "by_interval": {}, "candidates": []}}
-    
-    # Find cold leads
-    cold_leads = recycler.find_cold_leads(df, days_since_contact=30)
-    
-    # Prioritize
-    prioritized = recycler.prioritize_cold_leads(cold_leads)
-    
-    # Build candidates list
-    candidates = []
-    by_interval = {30: 0, 60: 0, 90: 0}
-    
-    for lead_id, days_since, priority in prioritized[:20]:
-        lead_row = df[df["id"] == lead_id]
-        if lead_row.empty:
-            continue
+    try:
+        recycler = get_lead_recycler(config)
         
-        row = lead_row.iloc[0]
-        candidates.append({
-            "lead_id": lead_id,
-            "company_name": str(row.get("company_name", "Unknown")),
-            "email": str(row.get("email", "")),
-            "phone": str(row.get("internationalPhoneNumber", row.get("phone", ""))),
-            "days_since_contact": days_since,
-            "status": str(row.get("status", "contacted")),
-            "priority": priority,
-            "last_contacted": str(row.get("contacted_at", ""))
-        })
+        # Load leads database
+        import pandas as pd
+        leads_file = Path(config.database.data_dir) / "leads.csv"
         
-        # Count by interval
-        for interval in [30, 60, 90]:
-            if days_since >= interval and days_since < interval + 15:
-                by_interval[interval] += 1
-                break
-    
-    return {
-        "data": {
-            "total_cold_leads": len(cold_leads),
-            "by_interval": by_interval,
-            "candidates": candidates
+        if not leads_file.exists():
+            return {"data": {"total_cold_leads": 0, "by_interval": {30: 0, 60: 0, 90: 0}, "candidates": []}}
+        
+        df = pd.read_csv(leads_file)
+        
+        if df.empty or "contacted_at" not in df.columns:
+            return {"data": {"total_cold_leads": 0, "by_interval": {30: 0, 60: 0, 90: 0}, "candidates": []}}
+        
+        # Find cold leads
+        cold_leads = recycler.find_cold_leads(df, days_since_contact=30)
+        
+        # Prioritize
+        prioritized = recycler.prioritize_cold_leads(cold_leads)
+        
+        # Build candidates list
+        candidates = []
+        by_interval = {30: 0, 60: 0, 90: 0}
+        
+        for lead_id, days_since, priority in prioritized[:20]:
+            lead_row = df[df["id"] == lead_id] if "id" in df.columns else df.iloc[[0]]
+            if lead_row.empty:
+                continue
+            
+            row = lead_row.iloc[0]
+            candidates.append({
+                "lead_id": str(lead_id),
+                "company_name": str(row.get("company_name", "Unknown")),
+                "email": str(row.get("email", "")),
+                "phone": str(row.get("internationalPhoneNumber", row.get("phone", ""))),
+                "days_since_contact": days_since,
+                "status": str(row.get("status", "contacted")),
+                "priority": priority,
+                "last_contacted": str(row.get("contacted_at", ""))
+            })
+            
+            # Count by interval
+            for interval in [30, 60, 90]:
+                if days_since >= interval and days_since < interval + 15:
+                    by_interval[interval] += 1
+                    break
+        
+        return {
+            "data": {
+                "total_cold_leads": len(cold_leads),
+                "by_interval": by_interval,
+                "candidates": candidates
+            }
         }
-    }
+    except Exception as e:
+        logger.error(f"Recycling overview error: {e}")
+        return {"data": {"total_cold_leads": 0, "by_interval": {30: 0, 60: 0, 90: 0}, "candidates": []}}
 
 
 # Reports router

@@ -1,0 +1,96 @@
+{
+  "lead_id": "test",
+  "sequence_name": "Smart Follow-up Sequence",
+  "started_at": "2026-04-28T08:56:28.995566+00:00",
+  "current_day": 0,
+  "next_followup_at": "2026-05-01T08:56:28.995583+00:00",
+  "total_followups": 5,
+  "completed_followups": 0,
+  "status": "active",
+  "templates": [
+    {
+      "day": 0,
+      "name": "Initial Outreach",
+      "subject": "Partnership Opportunity with Test",
+      "body": "Hi [contact_name],\n\nI noticed Test is [pain_point]. We've helped similar companies in [industry] achieve [result].\n\nWould you be open to a quick 15-min call to explore how we can help?\n\nBest regards,\n[sender_name]",
+      "channel": "email",
+      "purpose": "value_proposition",
+      "variables": [
+        "company_name",
+        "contact_name",
+        "pain_point",
+        "industry",
+        "result",
+        "sender_name"
+      ]
+    },
+    {
+      "day": 3,
+      "name": "Value Add - Case Study",
+      "subject": "How [similar_company] increased [metric] by [percentage]%",
+      "body": "Hi [contact_name],\n\nFollowing up on my previous email. I thought you might find this interesting:\n\n[similar_company] (similar to Test) used our service to:\n- [result_1]\n- [result_2]\n- [result_3]\n\nWould love to share how we can achieve similar results for Test.\n\nBest,\n[sender_name]",
+      "channel": "email",
+      "purpose": "value_add",
+      "variables": [
+        "contact_name",
+        "similar_company",
+        "metric",
+        "percentage",
+        "company_name",
+        "result_1",
+        "result_2",
+        "result_3",
+        "sender_name"
+      ]
+    },
+    {
+      "day": 7,
+      "name": "Friendly Check-in",
+      "subject": "Quick question, [contact_name]",
+      "body": "Hi [contact_name],\n\nJust checking in - did you get a chance to review my previous email?\n\nI know you're busy, so I'll keep this brief. We help [industry] companies like Test [value_proposition].\n\nWorth a quick chat?\n\nBest,\n[sender_name]",
+      "channel": "whatsapp",
+      "purpose": "check_in",
+      "variables": [
+        "contact_name",
+        "industry",
+        "company_name",
+        "value_proposition",
+        "sender_name"
+      ]
+    },
+    {
+      "day": 14,
+      "name": "Social Proof",
+      "subject": "[industry] companies trust us",
+      "body": "Hi [contact_name],\n\nI wanted to share some quick wins from our clients in [industry]:\n\n\u2713 [client_1]: [result_1]\n\u2713 [client_2]: [result_2]\n\u2713 [client_3]: [result_3]\n\nThese companies saw results within [timeframe]. Test could too.\n\nStill interested in learning more?\n\nBest,\n[sender_name]",
+      "channel": "email",
+      "purpose": "social_proof",
+      "variables": [
+        "contact_name",
+        "industry",
+        "client_1",
+        "result_1",
+        "client_2",
+        "result_2",
+        "client_3",
+        "result_3",
+        "timeframe",
+        "company_name",
+        "sender_name"
+      ]
+    },
+    {
+      "day": 21,
+      "name": "Breakup Email",
+      "subject": "Should I close your file?",
+      "body": "Hi [contact_name],\n\nI haven't heard back, so I'm assuming now isn't the right time for Test.\n\nI'll stop reaching out, but feel free to contact me if:\n- Your priorities change\n- You want to revisit this later\n- You have any questions\n\nNo hard feelings!\n\nBest regards,\n[sender_name]",
+      "channel": "email",
+      "purpose": "breakup",
+      "variables": [
+        "contact_name",
+        "company_name",
+        "sender_name"
+      ]
+    }
+  ]
+}

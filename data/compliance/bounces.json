@@ -1,0 +1,23 @@
+[
+  {
+    "email": "test@example.com",
+    "lead_id": "lead_1",
+    "bounce_type": "hard",
+    "message": "user unknown",
+    "timestamp": "2026-04-28T08:51:34.116771+00:00"
+  },
+  {
+    "email": "bounce@e.com",
+    "lead_id": "l3",
+    "bounce_type": "hard",
+    "message": "user unknown",
+    "timestamp": "2026-04-28T08:56:29.037556+00:00"
+  },
+  {
+    "email": "b@e.com",
+    "lead_id": "l3",
+    "bounce_type": "hard",
+    "message": "user unknown",
+    "timestamp": "2026-04-28T08:59:20.370894+00:00"
+  }
+]

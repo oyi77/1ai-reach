@@ -1,0 +1,12 @@
+{
+  "blocked@example.com": {
+    "email": "blocked@example.com",
+    "reason": "test",
+    "added_date": "2026-04-28T08:44:46.439135+00:00"
+  },
+  "test@example.com": {
+    "email": "test@example.com",
+    "reason": "test withdrawal",
+    "added_date": "2026-04-28T08:44:46.441910+00:00"
+  }
+}

@@ -1,0 +1,22 @@
+{
+  "report_type": "weekly",
+  "period": "2026-04-21 to 2026-04-28",
+  "generated_at": "2026-04-28T08:59:20.385322+00:00",
+  "pipeline": {
+    "total_leads": 1,
+    "contacted": 1,
+    "replied": 0,
+    "meeting_booked": 0,
+    "won": 0
+  },
+  "conversion_rates": {
+    "contact_rate": "100.0%",
+    "reply_rate": "0.0%",
+    "meeting_rate": "0.0%",
+    "win_rate": "0.0%"
+  },
+  "channel_performance": {
+    "email_sent": 0,
+    "whatsapp_sent": 0
+  }
+}

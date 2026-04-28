@@ -1,0 +1,29 @@
+{
+  "55502f40dc8b7c769880b10874abc9d0": {
+    "email": "test@example.com",
+    "lead_id": "lead_1",
+    "reasons": [
+      "bounce_hard"
+    ],
+    "added_at": "2026-04-28T08:51:34.116920+00:00",
+    "updated_at": "2026-04-28T08:51:34.116925+00:00"
+  },
+  "539d68eff8af1f563547b10ef811ad14": {
+    "email": "bounce@e.com",
+    "lead_id": "l3",
+    "reasons": [
+      "bounce_hard"
+    ],
+    "added_at": "2026-04-28T08:56:29.038295+00:00",
+    "updated_at": "2026-04-28T08:56:29.038304+00:00"
+  },
+  "d2fa7965bdc0f8eb4e6a66426acf0574": {
+    "email": "b@e.com",
+    "lead_id": "l3",
+    "reasons": [
+      "bounce_hard"
+    ],
+    "added_at": "2026-04-28T08:59:20.371158+00:00",
+    "updated_at": "2026-04-28T08:59:20.371164+00:00"
+  }
+}

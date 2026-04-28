@@ -1,0 +1,131 @@
+[
+  {
+    "timestamp": "2026-04-28T08:43:22.229008+00:00",
+    "action": "consent",
+    "subject": "test_lead_1",
+    "details": {
+      "type": "email_marketing",
+      "given": true
+    }
+  },
+  {
+    "timestamp": "2026-04-28T08:43:22.229271+00:00",
+    "action": "dnc_add",
+    "subject": "blocked@example.com",
+    "details": {
+      "reason": "test"
+    }
+  },
+  {
+    "timestamp": "2026-04-28T08:43:22.230307+00:00",
+    "action": "consent",
+    "subject": "test_lead_2",
+    "details": {
+      "type": "email_marketing",
+      "given": true
+    }
+  },
+  {
+    "timestamp": "2026-04-28T08:43:22.230791+00:00",
+    "action": "consent",
+    "subject": "test_lead_3",
+    "details": {
+      "type": "whatsapp_marketing",
+      "given": true
+    }
+  },
+  {
+    "timestamp": "2026-04-28T08:43:22.231306+00:00",
+    "action": "withdraw",
+    "subject": "test_lead_1",
+    "details": {
+      "type": "email_marketing"
+    }
+  },
+  {
+    "timestamp": "2026-04-28T08:43:22.231680+00:00",
+    "action": "dnc_add",
+    "subject": "test@example.com",
+    "details": {
+      "reason": "test withdrawal"
+    }
+  },
+  {
+    "timestamp": "2026-04-28T08:44:46.438852+00:00",
+    "action": "consent",
+    "subject": "test_lead_1",
+    "details": {
+      "type": "email_marketing",
+      "given": true
+    }
+  },
+  {
+    "timestamp": "2026-04-28T08:44:46.439293+00:00",
+    "action": "dnc_add",
+    "subject": "blocked@example.com",
+    "details": {
+      "reason": "test"
+    }
+  },
+  {
+    "timestamp": "2026-04-28T08:44:46.441684+00:00",
+    "action": "withdraw",
+    "subject": "test_lead_1",
+    "details": {
+      "type": "email_marketing"
+    }
+  },
+  {
+    "timestamp": "2026-04-28T08:44:46.442039+00:00",
+    "action": "dnc_add",
+    "subject": "test@example.com",
+    "details": {
+      "reason": "test withdrawal"
+    }
+  },
+  {
+    "timestamp": "2026-04-28T08:51:34.114132+00:00",
+    "action": "consent",
+    "subject": "test1",
+    "details": {
+      "type": "email",
+      "given": true
+    }
+  },
+  {
+    "timestamp": "2026-04-28T08:51:34.115165+00:00",
+    "action": "consent",
+    "subject": "test2",
+    "details": {
+      "type": "email_marketing",
+      "given": true
+    }
+  },
+  {
+    "timestamp": "2026-04-28T08:56:29.030321+00:00",
+    "action": "consent",
+    "subject": "l1",
+    "details": {
+      "type": "email",
+      "given": true
+    }
+  },
+  {
+    "timestamp": "2026-04-28T08:56:29.031273+00:00",
+    "action": "consent",
+    "subject": "l2",
+    "details": {
+      "type": "email_marketing",
+      "given": true
+    }
+  },
+  {
+    "timestamp": "2026-04-28T08:59:20.369976+00:00",
+    "action": "consent",
+    "subject": "l1",
+    "details": {
+      "type": "email",
+      "given": true
+    }
+  }
+]

@@ -1,0 +1,92 @@
+[
+  {
+    "lead_id": "test_lead_1",
+    "email": "test@example.com",
+    "consent_type": "email_marketing",
+    "consent_given": false,
+    "consent_date": "2026-04-28T08:43:22.228831+00:00",
+    "consent_method": "test",
+    "ip_address": null,
+    "withdrawn_date": "2026-04-28T08:43:22.231145+00:00"
+  },
+  {
+    "lead_id": "test_lead_2",
+    "email": "test2@example.com",
+    "consent_type": "email_marketing",
+    "consent_given": true,
+    "consent_date": "2026-04-28T08:43:22.230074+00:00",
+    "consent_method": "import",
+    "ip_address": null,
+    "withdrawn_date": null
+  },
+  {
+    "lead_id": "test_lead_3",
+    "email": "628123456789",
+    "consent_type": "whatsapp_marketing",
+    "consent_given": true,
+    "consent_date": "2026-04-28T08:43:22.230588+00:00",
+    "consent_method": "import",
+    "ip_address": null,
+    "withdrawn_date": null
+  },
+  {
+    "lead_id": "test_lead_1",
+    "email": "test@example.com",
+    "consent_type": "email_marketing",
+    "consent_given": false,
+    "consent_date": "2026-04-28T08:44:46.438485+00:00",
+    "consent_method": "test",
+    "ip_address": null,
+    "withdrawn_date": "2026-04-28T08:44:46.441494+00:00"
+  },
+  {
+    "lead_id": "test1",
+    "email": "test@example.com",
+    "consent_type": "email",
+    "consent_given": true,
+    "consent_date": "2026-04-28T08:51:34.113480+00:00",
+    "consent_method": "test",
+    "ip_address": null,
+    "withdrawn_date": null
+  },
+  {
+    "lead_id": "test2",
+    "email": "test2@example.com",
+    "consent_type": "email_marketing",
+    "consent_given": true,
+    "consent_date": "2026-04-28T08:51:34.114792+00:00",
+    "consent_method": "import",
+    "ip_address": null,
+    "withdrawn_date": null
+  },
+  {
+    "lead_id": "l1",
+    "email": "t@e.com",
+    "consent_type": "email",
+    "consent_given": true,
+    "consent_date": "2026-04-28T08:56:29.029468+00:00",
+    "consent_method": "test",
+    "ip_address": null,
+    "withdrawn_date": null
+  },
+  {
+    "lead_id": "l2",
+    "email": "t2@e.com",
+    "consent_type": "email_marketing",
+    "consent_given": true,
+    "consent_date": "2026-04-28T08:56:29.030952+00:00",
+    "consent_method": "import",
+    "ip_address": null,
+    "withdrawn_date": null
+  },
+  {
+    "lead_id": "l1",
+    "email": "t@e.com",
+    "consent_type": "email",
+    "consent_given": true,
+    "consent_date": "2026-04-28T08:59:20.369397+00:00",
+    "consent_method": "test",
+    "ip_address": null,
+    "withdrawn_date": null
+  }
+]

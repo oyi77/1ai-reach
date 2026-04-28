@@ -1,0 +1,26 @@
+{
+  "id": "test_20260428_155628",
+  "name": "Test",
+  "test_type": "TestType.SUBJECT_LINE",
+  "status": "TestStatus.DRAFT",
+  "variants": [
+    {
+      "id": "test_0",
+      "name": "A",
+      "content": "A",
+      "traffic_allocation": 1.0,
+      "sent_count": 0,
+      "open_count": 0,
+      "click_count": 0,
+      "reply_count": 0,
+      "conversion_count": 0
+    }
+  ],
+  "created_at": "2026-04-28T08:56:28.999871+00:00",
+  "started_at": null,
+  "completed_at": null,
+  "min_sample_size": 100,
+  "confidence_level": 0.95,
+  "winner_id": null,
+  "results": {}
+}
