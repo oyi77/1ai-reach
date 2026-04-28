@@ -20,6 +20,7 @@ from pydantic import BaseModel
 
 from oneai_reach.config.settings import Settings
 from oneai_reach.infrastructure.logging import get_logger
+from oneai_reach.infrastructure.email.deliverability import get_deliverability_service
 
 logger = get_logger(__name__)
 
@@ -189,6 +190,14 @@ async def track_email_open(lead_id: str, message_id: str):
             event_type="email_opened_pixel",
             details={"message_id": message_id, "method": "pixel"}
         )
+        
+        # Track for email warm-up
+        try:
+            from_email = _settings.email.smtp_from.split("<")[-1].strip(">") if "<" in _settings.email.smtp_from else _settings.email.smtp_from
+            deliverability = get_deliverability_service()
+            deliverability.record_event(from_email, "opened")
+        except Exception:
+            pass
         
         from oneai_reach.infrastructure.database.sqlite_lead_repository import SQLiteLeadRepository
         from pathlib import Path

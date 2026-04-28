@@ -49,7 +49,7 @@ class EmailSender:
         )
 
     def send(self, email: str, subject: str, body: str, lead_id: Optional[str] = None, pdf_bytes: Optional[bytes] = None, filename: Optional[str] = None) -> bool:
-        """Send email with fallback chain.
+        """Send email with fallback chain and deliverability checks.
 
         Args:
             email: Recipient email address
@@ -65,6 +65,21 @@ class EmailSender:
         if not email or not email.strip():
             print("Skip Email: No email address.")
             return False
+
+        # Deliverability pre-check
+        try:
+            deliverability = get_deliverability_service()
+            from_email = self.config.email.smtp_from.split('<')[-1].strip('>') if '<' in self.config.email.smtp_from else self.config.email.smtp_from
+            check_result = deliverability.check_before_send(from_email, subject, body)
+            
+            if not check_result["can_send"]:
+                logger.warning(f"Deliverability check failed: {check_result['issues']}")
+                # Log but don't block - just warn
+            elif check_result["deliverability_score"] < 50:
+                logger.warning(f"Low deliverability score: {check_result['deliverability_score']}/100")
+        except Exception as e:
+            logger.error(f"Deliverability check error: {e}")
+            # Don't block sending if check fails
 
         attachment_required = pdf_bytes is not None or filename is not None
         for name, method in [

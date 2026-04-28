@@ -7,6 +7,7 @@ import { Badge } from "@/components/ui/badge";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Loader2, TrendingUp, TrendingDown, Mail, MessageCircle, BarChart3, Zap } from "lucide-react";
 import { PipelineHealthCard } from "@/components/pipeline-health-card";
+import { DeliverabilityDashboard } from "@/components/deliverability-dashboard";
 
 const FUNNEL_STAGES = [
   { key: "new", label: "New", color: "bg-blue-600" },
@@ -99,6 +100,7 @@ export default function AnalyticsPage() {
       </div>
 
       {/* ── Pipeline Health Widget ── */}
+      <DeliverabilityDashboard />
       <PipelineHealthCard />
 
       {/* ── Section 1: KPI Cards ── */}
