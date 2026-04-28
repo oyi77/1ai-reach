@@ -831,3 +831,50 @@ export async function fetchBroadcastSends(params?: { status?: string }): Promise
 export async function getBroadcastStats(): Promise<{ total_lists: number; total_sends: number; total_recipients: number; sends_by_status: Record<string, number> }> {
   return fetcher("/api/v1/broadcasts/stats/overview");
 }
+
+export interface PipelineStats {
+  summary: {
+    total_leads: number;
+    leads_24h: number;
+    leads_7d: number;
+    leads_30d: number;
+  };
+  funnel: {
+    total: number;
+    enriched: number;
+    contacted: number;
+    replied: number;
+    meeting_booked: number;
+    conversion_rates: {
+      enrichment_rate: number;
+      contact_rate: number;
+      reply_rate: number;
+      meeting_rate: number;
+    };
+  };
+  status_breakdown: Record<string, number>;
+  quality_distribution: {
+    hot: number;
+    warm: number;
+    cold: number;
+    dead: number;
+  } | null;
+  daily_activity: Array<{ date: string; count: number }>;
+  top_sources: Record<string, number>;
+  generated_at: string;
+}
+
+export interface PipelineHealth {
+  status: "healthy" | "unhealthy";
+  checks: Array<{ check: string; status: "healthy" | "unhealthy" | "warning"; message: string }>;
+  last_run: string | null;
+  errors_24h: number;
+}
+
+export async function fetchPipelineStats(): Promise<PipelineStats> {
+  return fetcher("/api/v1/pipeline/stats");
+}
+
+export async function fetchPipelineHealth(): Promise<PipelineHealth> {
+  return fetcher("/api/v1/pipeline/health");
+}

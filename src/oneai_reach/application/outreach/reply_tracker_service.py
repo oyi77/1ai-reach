@@ -14,6 +14,7 @@ except ImportError:
 
 from oneai_reach.config.settings import Settings
 from oneai_reach.infrastructure.logging import get_logger
+from oneai_reach.application.outreach.reply_classifier import ReplyClassifier
 
 logger = get_logger(__name__)
 
@@ -29,6 +30,7 @@ class ReplyTrackerService:
         self.waha_api_key = config.waha.api_key
         self.waha_direct_api_key = config.waha.direct_api_key
         self.waha_session = config.waha.session
+        self._classifier = None
 
     def check_replies(
         self,
@@ -84,7 +86,7 @@ class ReplyTrackerService:
             if lead_email in inbox_replies:
                 name = parse_display_name_fn(row.get("displayName"))
                 reply_text = inbox_replies[lead_email]
-                logger.info(f"📬 REPLY from {name} ({lead_email})")
+                category, priority = self._classify_and_log_reply(name, lead_email, reply_text, "EMAIL")
                 df.at[index, "status"] = "replied"
                 df.at[index, "replied_at"] = datetime.now(timezone.utc).isoformat()
                 lead_id = str(row.get("id") or row.name or "")
@@ -274,7 +276,7 @@ class ReplyTrackerService:
             if str(df.at[index, "status"]) == "replied":
                 continue
             name = parse_display_name_fn(row.get("displayName"))
-            logger.info(f"📱 WA REPLY from {name} ({phone}) [via {target_name}/{session_name}]")
+            category, priority = self._classify_and_log_reply(name, phone, body, "WHATSAPP")
             df.at[index, "status"] = "replied"
             df.at[index, "replied_at"] = datetime.now(timezone.utc).isoformat()
             lead_id = str(row.get("id") or row.name or "")
@@ -309,7 +311,7 @@ class ReplyTrackerService:
                 if lead_email in inbox_replies:
                     name = parse_display_name_fn(row.get("displayName"))
                     reply_text = inbox_replies[lead_email]
-                    logger.info(f"📬 REPLY from {name} ({lead_email}) [via himalaya]")
+                    category, priority = self._classify_and_log_reply(name, lead_email, reply_text, "EMAIL")
                     df.at[index, "status"] = "replied"
                     df.at[index, "replied_at"] = datetime.now(timezone.utc).isoformat()
                     lead_id = str(row.get("id") or row.name or "")
@@ -320,3 +322,29 @@ class ReplyTrackerService:
                             logger.error(f"Failed to store reply text for {name}: {e}")
         except Exception as e:
             logger.error(f"Himalaya fallback error: {e}")
+
+    @property
+    def classifier(self) -> ReplyClassifier:
+        if self._classifier is None:
+            self._classifier = ReplyClassifier()
+        return self._classifier
+
+    def _classify_and_log_reply(self, name: str, contact: str, reply_text: str, channel: str) -> Tuple[str, int]:
+        """Classify reply and log with sentiment emoji.
+        
+        Returns (category, priority_score).
+        """
+        category, confidence = self.classifier.classify(reply_text)
+        priority = self.classifier.get_priority_score(category, confidence)
+        
+        emojis = {
+            "positive": "🟢",
+            "inquiry": "🔵",
+            "neutral": "🟡",
+            "negative": "🔴",
+        }
+        emoji = emojis.get(category, "⚪")
+        
+        logger.info(f"{emoji} {channel} REPLY from {name} ({contact}) - {category.upper()} (confidence: {confidence}%, priority: {priority})")
+        
+        return (category, priority)

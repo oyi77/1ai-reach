@@ -6,6 +6,7 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Loader2, TrendingUp, TrendingDown, Mail, MessageCircle, BarChart3, Zap } from "lucide-react";
+import { PipelineHealthCard } from "@/components/pipeline-health-card";
 
 const FUNNEL_STAGES = [
   { key: "new", label: "New", color: "bg-blue-600" },
@@ -96,6 +97,9 @@ export default function AnalyticsPage() {
           auto-refresh 30s
         </Badge>
       </div>
+
+      {/* ── Pipeline Health Widget ── */}
+      <PipelineHealthCard />
 
       {/* ── Section 1: KPI Cards ── */}
       <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-6 gap-3">
