@@ -1,0 +1,41 @@
+---PROPOSAL---
+Subject: Quick win: Turn your website visitors into reservations
+
+Hi Milou Farm House team,
+
+I just visited your website and noticed you're missing something that cafes in Jakarta are losing customers over: no direct way to chat or book via WhatsApp.
+
+Your website has beautiful visuals and clear menu information, but visitors can't easily ask about availability, make reservations, or get quick answers about your signature dishes. That's a missed opportunity—people browsing cafes want instant answers, not email forms.
+
+Here's what I'd propose:
+
+**Solution 1: WhatsApp Business API + Cafe Chatbot**
+Integrate a WhatsApp widget on your site with a chatbot that handles:
+- Table reservations (captures date, time, party size)
+- Menu inquiries and recommendations
+- Operating hours and location details
+- Daily specials and promotions
+- Handoff to staff for complex queries
+
+Deliverables: WhatsApp Business API setup, cafe-specific chatbot flows, website widget integration.
+
+**Solution 2: CTA Optimization + Landing Page Tweaks**
+Add prominent, action-oriented CTAs like "Book Your Table Now" or "Chat with Us on WhatsApp" with sticky buttons and reservation forms above the fold.
+
+Deliverables: A/B-tested CTAs, sticky WhatsApp button, simplified reservation form.
+
+**Expected impact:**
+- Reduce customer response time from hours to seconds (5x faster)
+- Capture 30-40% more reservations from website traffic
+- Higher engagement from mobile visitors (your likely demographic)
+
+I'd love to hop on a 15-minute call to walk through how this would work for Milou Farm House specifically. Alternatively, I can do a free quick audit of your site's conversion flow.
+
+Would you be open to either?
+
+Best regards,
+Vilona
+BerkahKarya
+
+---WHATSAPP---
+Halo Milou Farm House! Aku baru cek website kalian dan kagum sama tampilannya. Kalo ada WhatsApp chat di website, pelanggan bisa lebih gampang reservasi dan nanya-nanya. Aku bisa bantu pasangin widget WhatsApp yang auto-reserve table. Free 15 menit call kalo mau, kirim link aja! 🙌

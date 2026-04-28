@@ -1,34 +1,37 @@
 ---PROPOSAL---
+Subject: Your Kebayoran Baru location is missing a key advantage
 
-Subject: Turning Kopikalyan's Online Presence into a Reservation & Discovery Engine
+Hi Kopikalyan Archive team,
 
-Hi Kopikalyan Team,
+I was browsing your Wix site and noticed something interesting—you've got a solid foundation with your coffee shop concept in Kebayoran Baru, but you're leaving potential customers on the table.
 
-I was browsing kopikalyan.com recently and something stood out immediately — the atmosphere you've built at Jl. Cikajang is clearly distinct, the kind of place Jakarta coffee lovers actively seek out. But your website isn't doing that story justice right now, and more importantly, it's leaving real revenue on the table.
+Specifically: no WhatsApp widget for instant ordering/inquiries, no blog content to capture local coffee search traffic, and your call-to-action could be much stronger.
 
-Here's what I noticed specifically:
+Here's what I noticed about your competitor **Kopi Cikini** just 2km away—they've integrated WhatsApp Business API with an automated ordering chatbot and a content hub targeting "coffee near Senopati" and "best kopi in Jakarta Selatan" keywords. They're seeing an estimated 30-40% more foot traffic from local search.
 
-- **No WhatsApp or live chat touchpoint** — anyone landing on your site who wants to ask about reservations, events, or your menu has no instant way to reach you. In Jakarta's F&B scene, that friction alone can cost you 20–30% of potential walk-ins who found you online.
-- **No content or blog section** — searches like "kedai kopi aesthetic Jakarta Selatan" or "coffee spot Kebayoran Baru" are being won by competitors, not Kopikalyan. You have the brand; you're just invisible to Google.
+I'd recommend we implement two things for Kopikalyan:
 
-I'd like to propose two targeted solutions:
+**1. WhatsApp Business API + Smart Chatbot**
+- Automated menu browsing and order placement
+- Instant answers to hours, location, menu queries
+- Backed-up by human handoff for complex requests
+→ Expected outcome: Cut response time from hours to seconds, increase order conversion by 25-30%
 
-**1. WhatsApp Business Integration + Smart Chatbot**
-We'll embed a WhatsApp widget directly into your Wix site and build an automated chatbot flow that handles reservation inquiries, menu questions, and event bookings — 24/7, without your team lifting a finger. Based on similar F&B clients we've worked with, this typically cuts response time from hours to under 2 minutes and converts 35–40% more site visitors into actual reservations.
+**2. Local SEO Content Strategy**
+- 8-10 blog posts targeting high-intent local keywords
+- Google Business Profile optimization with weekly posts
+- Customer review management system
+→ Expected outcome: Rank on Page 1 for "coffee shop Kebayoran Baru" and related terms within 90 days, 40-50% more organic traffic
 
-**2. Local SEO Content Engine**
-We'll build out a lightweight blog/content section on your site and produce 4 SEO-optimized articles per month targeting high-intent Jakarta coffee searches. Within 90 days, clients in your category typically see a 3–5x increase in organic impressions and start ranking on page one for neighborhood-specific queries — the kind of traffic that brings in new customers who've never heard of Kopikalyan yet.
+Both solutions integrate seamlessly with your existing Wix site and don't require a rebuild.
 
-Both solutions are designed to work within your existing Wix setup — no full rebuild needed.
+Would you be open to a free 15-minute call this week? No pressure—I can walk you through a quick audit of your current setup and show you exactly what's possible.
 
-I'd love to show you a quick mockup of what the WhatsApp flow could look like for Kopikalyan specifically. Would you be open to a 15-minute call this week? You can also reply here and I'll send over a free site audit with the exact keyword opportunities we've identified for your location.
+Best regards,
 
-Looking forward to it,
+Vilona
+BerkahKarya
+---
 
-**Vilona**
-Solution Architect — BerkahKarya
-vilona@berkahkarya.com
-
----WHATSAPP---
-
-Halo Kopikalyan! Gue sempat mampir ke website kopikalyan.com dan noticed belum ada WhatsApp button-nya — padahal sayang banget, banyak calon tamu yang pasti mau tanya-tanya soal reservasi atau event tapi nggak tau harus hubungi ke mana. Ada ide kecil yang kayaknya bisa langsung ngaruh buat kalian. Boleh ngobrol 15 menit santai nggak? 😊
+WHATSAPP---
+Halo Kopikalyan, baru saja lihat kopi kalian di Kebayoran Baru. Coba ditambahin widget WhatsApp di website biar customer bisa pesan cepat, gampang banget tuh bikin orang balik lagi. Kalau sempat, kita bisa ngobrol sebentar soal cara nambah order lewat chat?

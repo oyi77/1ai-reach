@@ -1,0 +1,38 @@
+---PROPOSAL---
+Subject: Missing piece on Djournal Coffee's digital presence
+
+Hi Djournal Coffee team,
+
+I noticed you're running on a solid Next.js + React stack with Google Analytics tracking, yet there's a critical missing piece: no way for customers to connect with you instantly on your site.
+
+When someone lands on djournal.com at 8 PM wanting to reserve a table or ask about your signature blends, they have zero way to reach you. That's lost revenue.
+
+Here's what I'd recommend:
+
+**1. WhatsApp Business API Widget with Intelligent Chatbot**
+Integrate a WhatsApp widget directly on your site with a smart chatbot that handles:
+- Table reservations with instant confirmation
+- Menu inquiries and order placement
+- Location hours and contact info
+- Redirect to human staff for complex requests
+
+*Deliverables:* WhatsApp widget integration, conversational flow design, AI chatbot setup, and analytics dashboard.
+
+**Expected outcome:** Cut response time from hours to seconds, increase reservation conversions by ~40%.
+
+**2. Local SEO + Coffee Content Strategy**
+Create a content hub targeting high-intent search terms like "best cafe Grand Indonesia," "specialty coffee Jakarta," and brewing guides. This would leverage your existing Google Analytics to track organic growth.
+
+*Deliverables:* 8-10 SEO-optimized articles, keyword strategy, on-page optimization, and monthly performance reports.
+
+*Expected outcome:* 30-40% increase in organic traffic within 3 months, capturing customers actively searching for cafes in your area.
+
+Both solutions work with your existing Next.js setup—no rewrites needed.
+
+Would you be open to a 15-minute call this week? I can walk you through a quick demo of how the WhatsApp widget would look on your site.
+
+Best,
+Vilona
+BerkahKarya
+---WHATSAPP---
+Halo Djournal! Barusan liat website kalian—bagus banget pakai Next.js. Cuma kurang satu hal: tombol WhatsApp buat customer yang mau reservasi atau tanya-tanya menu cepet. Aku bisa bantu pasangin widget WhatsApp + chatbot pintar yang jawab otomatis. Minat gak kalo diskusi 15 menit?

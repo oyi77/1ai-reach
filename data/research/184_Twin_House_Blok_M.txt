@@ -1,0 +1,7 @@
+# Prospect Research: Twin House Blok M
+Services detected: SEM, AI
+Tech stack: wordpress, google_analytics
+Observed gaps/pain points:
+  - No live chat / WhatsApp widget on site
+  - Weak or missing call-to-action
+  - No portfolio / 'our work' section

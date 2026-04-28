@@ -32,6 +32,7 @@ CALENDLY_LINK = _settings.booking.calendly_link
 
 # Default verticals for autonomous scraping
 DEFAULT_VERTICALS = _settings.scraper.default_verticals
+TARGET_LOCATIONS = _settings.scraper.target_locations
 
 # API keys
 GOOGLE_API_KEY = _settings.external_api.google_api_key

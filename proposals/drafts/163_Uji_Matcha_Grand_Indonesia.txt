@@ -1,0 +1,31 @@
+---PROPOSAL---
+Subject: Turn Uji Matcha's foot traffic into repeat customers with WhatsApp ordering
+
+Hi Team,
+
+I noticed Uji Matcha is perfectly positioned in Grand Indonesia West Mall — right in the heart of Jakarta's business district where thousands of office workers pass through daily. The challenge: premium cafes like yours lose 40-60% of potential customers when lines get long during peak hours, and there's no easy way to capture those one-time visitors to bring them back.
+
+Here's what I'd propose to fix this gap:
+
+**Solution 1: WhatsApp-Based Ordering System**
+- Build a WhatsApp Business API chatbot that lets customers browse your menu, customize drinks ( sweetness level, toppings), and place orders directly through WhatsApp
+- Integrate with your existing POS for seamless order flow
+- Deliverables: Chatbot script, WhatsApp Business API integration, POS connector, training
+- **Impact**: Reduce wait times by 5x, increase order volume during peak hours by 30%
+
+**Solution 2: Digital Loyalty Program via QR Code**
+- Create a simple mobile web app where customers scan QR codes at checkout to earn points
+- Reward tiers: Free matcha latte after 5 purchases, exclusive seasonal drinks for loyal customers
+- Deliverables: QR code system, customer database, rewards logic, customer notifications via WhatsApp
+- **Impact**: Increase repeat customer rate by 35-45% within 3 months
+
+Both solutions work together seamlessly — customers order on WhatsApp, scan a QR code to earn points, and get notified about rewards automatically.
+
+Would you be open to a 15-minute call next week to walk through how this would work for your specific operations? I can also do a quick free audit of your current customer retention setup.
+
+Best regards,
+Vilona
+BerkahKarya
+
+---WHATSAPP---
+Halo! Gue Vilona dari BerkahKarya. Gue perhatian Uji Matcha di Grand Indonesia tuenya rame banget pas jam lunch. Mau coba bantu bikin sistem pemesanan lewat WhatsApp biar antrian gak numpuk dan pelanggan bisa repeat order lebih gampang? Ada waktu 15 menit besok buat ngobrol singkat?

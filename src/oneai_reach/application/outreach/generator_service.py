@@ -35,6 +35,12 @@ class GeneratorService:
     (claude → gemini → oracle) for proposal generation.
     """
 
+    ANGLES = ["FOMO", "VALUE_FIRST", "DIRECT_OFFER"]
+
+    def select_ab_test_angle(self) -> str:
+        """Randomly or intelligently pick an A/B test angle."""
+        return random.choice(self.ANGLES)
+
     def __init__(self, config: Settings):
         """Initialize generator service.
 
@@ -170,13 +176,42 @@ class GeneratorService:
         phone = str(lead.get("phone") or lead.get("internationalPhoneNumber") or "")
         address = str(lead.get("formattedAddress") or "")
         csv_research = str(lead.get("research") or "")
+        rating = lead.get("rating")
+        review_count = lead.get("userRatingCount")
+
+        wa_language = "short, casual English"
+        wa_placeholder = "[short casual WhatsApp message in English]"
+        if "indonesia" in address.lower() or phone.startswith("+62") or phone.startswith("62") or phone.startswith("08"):
+            wa_language = "casual Indonesian (Bahasa Indonesia)"
+            wa_placeholder = "[short casual WhatsApp message in Indonesian]"
+        elif "singapore" in address.lower() or phone.startswith("+65") or phone.startswith("65"):
+            wa_language = "casual English (Singapore context)"
+        elif "malaysia" in address.lower() or phone.startswith("+60") or phone.startswith("60"):
+            wa_language = "casual Malay or English"
+            wa_placeholder = "[short casual WhatsApp message in Malay/English]"
+
+        pitch_strategy = ""
+        if not website or self._is_empty(website):
+            pitch_strategy = "CRITICAL: This business does NOT have a website. You MUST prioritize pitching Web Development, Landing Page Creation, or Digital Presence. Do not pitch advanced SEO or Ads since they have nowhere to send traffic."
+        elif rating is not None and float(rating) < 4.2:
+            pitch_strategy = f"CRITICAL: This business has a low Google rating ({rating} stars). You MUST pitch Reputation Management, Local SEO, and Customer Experience Automation to help them fix their online reputation."
+        elif review_count is not None and int(review_count) < 20:
+            pitch_strategy = f"CRITICAL: This business has very few Google reviews ({review_count}). You MUST pitch Local SEO, Review Automation, and Brand Trust building."
+        else:
+            pitch_strategy = "CRITICAL: This business already has a website and decent presence. You MUST pitch Growth, Advanced SEO, Google/Meta Ads, AI Automation, or Conversion Rate Optimization (CRO)."
+
+        competitor_spy = ""
+        if "indonesia" in address.lower() or "jakarta" in address.lower():
+            competitor_spy = "Use the 'Competitor Spy' technique: Name a real or highly likely local competitor in their exact city/industry and subtly suggest that the competitor is gaining an edge by using the very services you are proposing. Create mild FOMO."
 
         system_prompt = (
             "You are a senior Solution Architect at BerkahKarya, a technology and growth partner.\n\n"
             f"Available capability matrix:\n{capability_matrix}\n\n"
-            "Your task: Based on the prospect's research data below, INVENT a specific, tailored digital solution.\n"
-            "DO NOT use generic phrases like 'we are a digital agency' or 'we help businesses grow'.\n"
-            "Instead, identify the exact gap or opportunity this prospect has, and propose 1-2 concrete solutions.\n"
+            f"Your task: Based on the prospect's research data below, INVENT a specific, tailored digital solution.\n"
+            f"DO NOT use generic phrases like 'we are a digital agency' or 'we help businesses grow'.\n"
+            f"Instead, identify the exact gap or opportunity this prospect has, and propose 1-2 concrete solutions.\n"
+            f"{pitch_strategy}\n"
+            f"{competitor_spy}\n"
             "Be creative — you may bundle or combine services from the capability matrix.\n"
             "Sign the email as Vilona from BerkahKarya."
         )
@@ -202,9 +237,12 @@ class GeneratorService:
                 f"- Call to action: {service_context.get('cta', {}).get('email', 'Book a free consultation')}\n"
             )
 
+        angle = self.select_ab_test_angle()
+
         user_parts = [
             f"Prospect: {lead_name}",
             f"Business Type: {business_type}",
+            f"A/B Test Angle: {angle}",
         ]
 
         if website and not self._is_empty(website):
@@ -242,22 +280,28 @@ class GeneratorService:
                 "Reference challenges common to this niche."
             )
 
+        dm_instruction = ""
+        decision_maker = str(lead.get("decision_maker", "UNKNOWN"))
+        if decision_maker and decision_maker.upper() != "UNKNOWN" and decision_maker.upper() != "NAN":
+            dm_instruction = f"- ADDRESS THE DECISION MAKER: Address the email specifically to {decision_maker}.\n"
+
         user_parts.append(
             f"\nInstructions:\n"
             f"- {pain_instruction}\n"
+            f"{dm_instruction}"
             f"- The email must open with a specific observation about their business "
             f"(not 'I hope this email finds you well').\n"
             f"- Propose 1-2 concrete solutions from the capability matrix — name the deliverables.\n"
             f"- Mention a specific ROI or metric where possible (e.g., '30% more leads', "
             f"'cut response time by 5x').\n"
             f"- End with a low-friction CTA: offer a 15-minute call or a free audit.\n"
-            f"- The WhatsApp message must be SHORT (3-4 sentences), casual, in Indonesian (Bahasa Indonesia).\n"
-            f"- The WhatsApp message should feel human, not like a sales pitch.\n\n"
+            f"- The WhatsApp message must be SHORT (3-4 sentences), casual, in {wa_language}.\n"
+            f"- The WhatsApp message should feel human, strictly conversational (e.g., 'Hey [Name], just found your business on Google Maps. Quick question...'). Do NOT sound like a sales pitch.\n\n"
             f"Output format (use these exact separators, nothing before or after):\n"
             f"---PROPOSAL---\n"
             f"[professional email body in English]\n"
             f"---WHATSAPP---\n"
-            f"[short casual WhatsApp message in Indonesian]"
+            f"{wa_placeholder}"
         )
 
         user_prompt = "\n".join(user_parts)
@@ -300,6 +344,8 @@ class GeneratorService:
             except (json.JSONDecodeError, TypeError):
                 pass
 
+        lead["ab_test_angle"] = angle
+
         service_name_for_brain = ""
         if service_context:
             service_name_for_brain = service_context.get("service", "")
@@ -320,10 +366,7 @@ class GeneratorService:
             return ""
 
         # LLM chain: Omniroute API → CLI fallback
-        models = [
-            ("omniroute/glm-5.1", "ollama-cloud/glm-5.1"),
-            ("omniroute/deepseek-v3.2", "ollama-cloud/deepseek-v3.2"),
-        ]
+        models = []
 
         for label, model_id in models:
             try:
@@ -336,7 +379,7 @@ class GeneratorService:
 
         # CLI fallback
         for tool, cmd, use_stdin in [
-            ("claude", ["claude", "-p", "--model", self.generator_model], True),
+            ("claude", ["claude", "--bare", "-p", "--model", self.generator_model, full_prompt], False),
         ]:
             try:
                 kwargs = dict(capture_output=True, text=True, timeout=90)
@@ -351,7 +394,7 @@ class GeneratorService:
 
                 logger.warning(
                     f"{tool} failed (exit {result.returncode}): "
-                    f"{result.stderr.strip()[:120]}"
+                    f"{result.stderr.strip()}"
                 )
             except subprocess.TimeoutExpired:
                 logger.warning(f"{tool} timed out after 90s")

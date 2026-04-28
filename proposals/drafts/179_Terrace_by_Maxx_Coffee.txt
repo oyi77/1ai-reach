@@ -1,0 +1,31 @@
+---PROPOSAL---
+Subject: Converting more of your Kuningan City visitors into loyal customers
+
+Hi Team at Terrace by Maxx Coffee,
+
+I noticed you're leveraging meta_pixel and google_analytics on your site — smart move to track visitor behavior. However, I'm seeing a missed opportunity: despite having significant foot traffic at Kuningan City Mall, your website isn't capturing the same engagement.
+
+Here's what I spotted: no WhatsApp widget for instant inquiries, weak call-to-actions, and no social proof through customer testimonials. For a coffee shop in Jakarta's competitive cafe scene, this means losing potential customers who visit your site but don't convert.
+
+I'd recommend a two-part solution:
+
+1. **WhatsApp Business API Integration with Automated Chatbot**
+   - Add a WhatsApp widget to your site for instant menu inquiries, reservations, and location questions
+   - Implement an AI chatbot that handles 80% of common queries 24/7 (hours, menu, parking, WiFi availability)
+   - Capture leads directly into your CRM for follow-up campaigns
+
+2. **Landing Page Optimization & Social Proof Integration**
+   - Redesign key CTAs to drive reservations and orders
+   - Add a testimonial carousel featuring customer reviews (we can source these from Google Maps/Instagram)
+   - Create a "Why Choose Terrace" section highlighting your unique value
+
+**Expected impact**: The WhatsApp integration alone typically captures 40-60% of visitor inquiries that would otherwise bounce, while automated responses cut your response time by 10x — crucial for F&B where customers expect instant answers.
+
+Would you be open to a 15-minute call next week to discuss how this could work for Terrace? I can also share a quick audit of your current conversion funnel.
+
+Best regards,
+Vilona
+BerkahKarya
+
+---WHATSAPP---
+Halo Maxx Coffee! Aku Vilona dari BerkahKarya. Website kalian sudah ada tracking-nya bagus, tapi kelihatannya belum ada WhatsApp buat chat sama pelanggan. Bisa bantu bikinin WhatsApp widget biar customer tanya menu/reservasi lebih gampang? Chat santai aja kalau mau tahu-tahu lebih lanjut ya! 😊

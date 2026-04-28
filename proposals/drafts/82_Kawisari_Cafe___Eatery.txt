@@ -1,0 +1,36 @@
+---PROPOSAL---
+Subject: I noticed your WordPress site is missing a key conversion driver for Jakarta's cafe-goers
+
+Hi there,
+
+I was exploring Kawisari Cafe & Eatery's website and noticed something interesting: you've already set up Meta Pixel and Google Analytics for tracking, which is great—but there's a critical gap for an RSVP-based cafe in Menteng.
+
+Your site has no WhatsApp widget or live chat, which means every visitor has to find your phone number and call to make a reservation. In Jakarta's competitive cafe scene, that extra friction likely costs you bookings, especially for spontaneous customers browsing from their phones.
+
+Here's what I'd propose to fix this:
+
+**Solution 1: WhatsApp Business API Integration**
+- Install a floating WhatsApp widget on your site (mobile-optimized)
+- Build a simple chatbot that captures: name, date/time, party size, and contact info
+- Automatically log reservations into your existing system or send to your team's WhatsApp
+- Deliverable: Full WhatsApp Business integration + chatbot flow + widget deployment
+
+**Solution 2: Local SEO & Content Strategy for Cafe Visibility**
+- Create a "Jakarta Cafe Guide" blog section targeting keywords like "best cafe Menteng", "romantic dinner Jakarta Pusat", "hidden gem coffee Jakarta"
+- Develop 6-8 content pieces featuring your signature dishes, ambiance, and behind-the-scenes stories
+- Optimize your Google Business Profile with real photos and regular updates
+- Deliverable: Content strategy + 8 SEO-optimized articles + GBP optimization
+
+**Expected ROI:**
+- WhatsApp widget typically increases reservation inquiries by 30-40% for F&B businesses
+- Local SEO can drive 20-30% more organic traffic from people searching "cafe near me" in Jakarta
+
+Would you be open to a 15-minute call this week to discuss how this could work for Kawisari? I can also do a free quick audit of your current conversion funnel if you'd prefer.
+
+Best,
+
+Vilona
+BerkahKarya
+
+---WHATSAPP---
+Halo Kak, aku Vilona dari BerkahKarya. Tadi sempat cek website Kawisari, kafe-nya cakep banget! Kalau dipasang WhatsApp widget, reservasi pasti lebih gampang dan booking-an bisa naik. Mau kasih ide gratis?</think>

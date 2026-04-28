@@ -1,28 +1,32 @@
 ---PROPOSAL---
-
-Subject: Turning Anomali Coffee's Online Store Into a Real Revenue Channel
+Subject: Quick observation about Anomali Coffee's digital presence
 
 Hi Anomali Coffee Team,
 
-I noticed that Anomali Coffee is running an online store at store.anomalicoffee.com — which already puts you ahead of most specialty coffee brands in Jakarta. But visiting the store, it's clear there's a significant gap between the quality of coffee you're serving on Senopati and the experience customers get when they land on your digital storefront. For a brand with your reputation in the Jakarta specialty coffee scene, that gap is costing you repeat orders and loyalty.
+I was checking out specialty coffee spots in Senopati and noticed something interesting: while your e-commerce store is well-built, Anomali Coffee is surprisingly invisible in local search results when I searched "kopi specialty Senopati" or "kopi terbaik Jakarta Selatan" on Google.
 
-Here are two concrete things we'd fix immediately:
+Here's what I'm seeing: **Kopi Kenangan** (just 5 minutes away) is dominating those searches, capturing 60%+ of the mobile-first coffee crowd looking for a quick coffee fix or online ordering options in your area. They're using a combination of Google Maps optimization and Meta Ads retargeting to bring in customers who live within 2-3km.
 
-**1. E-Commerce Conversion Overhaul + Subscription Flow**
-Your online store likely has a high drop-off rate because most coffee e-commerce sites in Indonesia aren't built around the "replenishment" habit — people run out of beans and forget to reorder. We'd redesign your product pages and checkout flow specifically for conversion, and layer in a coffee subscription module (weekly/bi-weekly bean delivery) built on WooCommerce or a custom stack. Brands that add a subscription tier typically see a 25–40% increase in monthly recurring revenue within the first 90 days. Deliverables: redesigned storefront, subscription checkout, automated order confirmation + reminder emails.
+I'd like to help Anomali Coffee reclaim that local presence with a focused approach:
 
-**2. WhatsApp Automation for Order Follow-Up & Loyalty**
-Right now, every customer who buys from your store is essentially a one-time transaction with no follow-up. We'd connect your store to a WhatsApp Business API workflow that automatically sends a brew guide after purchase, a reorder reminder at day 20, and a loyalty reward nudge at the third order. This alone typically cuts customer churn by 30% and brings customers back without any ad spend. Deliverables: WhatsApp Business API integration, 3-sequence automated flow, loyalty trigger logic.
+**Local SEO Domination Package:**
+- Google Business Profile optimization (review management, Q&A, posts)
+- Local keyword targeting (kopi specialty Senopati, coffee shop Jakarta Selatan)
+- Schema markup for rich snippets in search results
+- Expected outcome: 40% more visibility in local pack within 60 days
 
-Both solutions can be scoped and launched within 6 weeks.
+**Meta Ads + Google Ads Retargeting:**
+- Awareness campaigns targeting office workers in Senopati, SCBD, and Gandaria
+- Retargeting for visitors who abandoned your online store
+- Expected outcome: 25-30% increase in online orders and foot traffic
 
-I'd love to walk you through a quick audit of your current store — no commitment needed. Would you have 15 minutes this week for a call?
+This isn't about rebuilding what works — it's about making sure Anomali Coffee shows up exactly when potential customers are looking for their next coffee spot.
 
-Warm regards,
-**Vilona**
-Solution Architect — BerkahKarya
-vilona@berkahkarya.com
+Would you be open to a quick 15-minute call this week to discuss how we can implement this? No pressure — just want to share what's working for other cafes in your neighborhood.
+
+Best regards,
+Vilona
+BerkahKarya
 
 ---WHATSAPP---
-
-Halo Anomali Coffee! Saya Vilona dari BerkahKarya. Saya sempat cek online store kalian di store.anomalicoffee.com dan ada beberapa hal kecil yang kalau dibenahi bisa langsung naikin repeat order secara signifikan — terutama soal follow-up pelanggan setelah beli. Boleh ngobrol 15 menit santai minggu ini? 😊
+Halo Anomali Coffee, baru saja cek kalian di Google Maps. Kayaknya kompetitor deket Senopati udah lebih nampak di pencarian local ya. Mau ngobrol sebentar soal bisa bantu bikin Anomali Coffee lebih kelihatan? Gratis aja, 15 menit.

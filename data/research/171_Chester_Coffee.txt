@@ -1,0 +1,8 @@
+# Prospect Research: Chester Coffee
+Services detected: AI
+Tech stack: shopify, react, next.js, google_ads
+Observed gaps/pain points:
+  - No blog or content section (missing organic SEO leverage)
+  - No visible client testimonials or case studies
+  - Weak or missing call-to-action
+  - No portfolio / 'our work' section

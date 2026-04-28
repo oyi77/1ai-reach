@@ -1,5 +1,6 @@
 from pathlib import Path
 import subprocess
+import sys
 
 from oneai_reach.infrastructure.legacy.state_manager import count_by_status
 from oneai_reach.config.settings import Settings
@@ -44,8 +45,8 @@ class AutonomousService:
         logger.info(f"DISPATCH {script}")
         proc = subprocess.Popen(
             [sys.executable, str(script_path)],
-            stdout=subprocess.PIPE,
-            stderr=subprocess.STDOUT,
+            stdout=sys.stdout,
+            stderr=sys.stderr,
         )
         self._running[script] = proc
 

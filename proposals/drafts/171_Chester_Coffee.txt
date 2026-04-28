@@ -1,0 +1,28 @@
+---PROPOSAL---
+Subject: Content & conversion gap I noticed on your site
+
+Hi Chester Coffee team,
+
+I was exploring your Linktree and noticed something interesting: you're using a modern tech stack with Shopify, Next.js, and Google Ads, but you're missing a critical piece of the puzzle — there's no blog or content section to capture organic search traffic, and I don't see any customer testimonials or a portfolio section.
+
+For a coffee shop with e-commerce capabilities, this is a missed opportunity. You're driving paid traffic (Google Ads), but you have no content engine to capture people searching for "coffee shops in Jakarta Timur," "specialty beans," or related terms — and no social proof to convert those visitors once they arrive.
+
+Here's what I'd propose:
+
+**1. SEO-Driven Content Marketing Strategy**
+Deliverables: A content calendar (12 blog posts optimized for local SEO), blog implementation on your Next.js site, and social media content production (Instagram/TikTok content calendar). This will help you rank for high-intent local search terms and build brand authority.
+
+**2. Conversion Rate Optimization**
+Deliverables: A/B testing framework for your CTAs, customer testimonial collection system (automated via WhatsApp Business API), and a "Our Story/Portfolio" section showcasing your coffee sourcing and brewing process. E-commerce brands typically see a 15-30% lift in conversions when adding social proof elements.
+
+The combination would give you both organic traffic growth and higher conversion rates from your existing paid traffic — without increasing ad spend.
+
+Would you be open to a 15-minute call this week to discuss which area to tackle first? No pressure, just want to see if this aligns with where you want to take Chester Coffee.
+
+Best,
+
+Vilona
+BerkahKarya
+
+---WHATSAPP---
+Halo Chester Coffee! Aku cek website kalian, stack-nya keren pakai Next.js & Shopify. Tapi kayaknya masih kurang konten blog & testimoni pelanggan buat SEO ya. Mau ngobrol santai 15 menit soal solusinya? Kalau sibuk gapapa, another time! ☕

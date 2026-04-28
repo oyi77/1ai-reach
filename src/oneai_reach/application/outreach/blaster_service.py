@@ -88,10 +88,14 @@ class BlasterService:
                 skipped_cooldown += 1
                 continue
 
-            email = str(row.get("email") or "").strip()
-            phone = str(
-                row.get("internationalPhoneNumber") or row.get("phone") or ""
-            ).strip()
+            val = row.get("email"); email = "" if pd.isna(val) else str(val).strip()
+            val_ip = row.get("internationalPhoneNumber")
+            val_p = row.get("phone")
+            phone = ""
+            if not pd.isna(val_ip) and str(val_ip).strip():
+                phone = str(val_ip).strip()
+            elif not pd.isna(val_p) and str(val_p).strip():
+                phone = str(val_p).strip()
 
             if is_empty_fn(email):
                 email = ""
@@ -117,17 +121,18 @@ class BlasterService:
 
             pdf_bytes = None
             pdf_filename = None
+            email_can_send = False
             if email:
                 # GDPR compliance check before email
-                can_send, reason = self.compliance.can_contact_email(str(row.get("id") or f"lead_{index}"), email)
-                if not can_send:
+                email_can_send, reason = self.compliance.can_contact_email(str(row.get("id") or f"lead_{index}"), email)
+                if not email_can_send:
                     logger.warning(f"[skip email] {name} - {reason}")
                 else:
                     try:
                         pdf_bytes = generate_proposal_pdf(proposal, name)
                     except ProposalPdfError as exc:
-                        logger.error(f"[skip email] {name} — {exc}")
-                        email = ""
+                        logger.error(f"[pdf failed, sending email without attachment] {name} — {exc}")
+                        pdf_bytes = None
                     else:
                         logger.info(f"Generated proposal PDF: {len(pdf_bytes)} bytes")
                     pdf_filename = proposal_pdf_filename(name)
@@ -142,7 +147,7 @@ class BlasterService:
                     if wa_sent:
                         self.compliance.record_outreach(str(row.get("id") or f"lead_{index}"), phone, "whatsapp", True)
 
-            if email and pdf_bytes:
+            if email and email_can_send:
                 email_sent = send_email_fn(
                     email,
                     PROPOSAL_SUBJECT,
@@ -153,10 +158,11 @@ class BlasterService:
                 )
                 if email_sent:
                     self.compliance.record_outreach(str(row.get("id") or f"lead_{index}"), email, "email", True)
-                    pdf_path = persist_proposal_pdf(
-                        pdf_bytes, self.proposals_dir, index, name
-                    )
-                    logger.info(f"Saved sent proposal PDF: {pdf_path}")
+                    if pdf_bytes:
+                        pdf_path = persist_proposal_pdf(
+                            pdf_bytes, self.proposals_dir, index, name
+                        )
+                        logger.info(f"Saved sent proposal PDF: {pdf_path}")
 
             if wa_sent or email_sent:
                 df.at[index, "status"] = "contacted"

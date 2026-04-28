@@ -16,6 +16,7 @@ CLI flags:
 
 import argparse
 import os
+import pandas as pd
 import sys
 
 from leads import load_leads
@@ -121,7 +122,7 @@ def process_proposals(lead_id: str = None, dry_run: bool = False) -> None:
             skipped += 1
             continue
 
-        email = str(row.get("email") or "").strip()
+        val = row.get("email"); email = "" if pd.isna(val) else str(val).strip()
         if is_empty(email):
             skipped += 1
             continue

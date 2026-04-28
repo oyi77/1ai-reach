@@ -1,0 +1,28 @@
+---PROPOSAL---
+Hi Team at Mahato Coffee Rooftop,
+
+I noticed something interesting about your digital presence: you're running Google Ads and have the tech stack to match (Shopify, React, Next.js), yet you're driving traffic to a LinkTree page instead of converting it. You're investing in paid acquisition but leaking potential customers at the conversion stage.
+
+Here's what's costing you: No WhatsApp widget on your site means Indonesian customers who prefer quick questions can't connect. Without strong CTAs or social proof, visitors bounce instead of ordering or visiting. You're paying for clicks that don't convert.
+
+I'd recommend two solutions to fix this:
+
+**1. WhatsApp Business API + Smart Chatbot**
+- Automated responses to common questions (menu, hours, reservation)
+- Lead capture for WhatsApp marketing campaigns
+- 24/7 availability without hiring more staff
+- Expected ROI: 30-40% increase in reservations, cut response time from hours to seconds
+
+**2. Conversion Rate Optimization (CRO) + Content Strategy**
+- Redesign landing pages with strong CTAs and trust signals
+- Add testimonial/case study section
+- Launch blog for organic SEO to reduce ad spend dependency
+- Expected ROI: 25-35% higher conversion rate from existing traffic
+
+Interested in a free 15-minute call to walk through a quick audit? No sales pitch - just actionable insights.
+
+Best,
+Vilona
+BerkahKarya
+---WHATSAPP---
+Halo Mahato Coffee! Barusan liat coffee shop kalian di Palmerah, rooftop conceptnya keren banget. Kira-kira pernah ngalamin customer nanya menu atau reservasi tapi lama direspon?

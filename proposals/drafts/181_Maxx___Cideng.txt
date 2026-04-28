@@ -1,0 +1,31 @@
+---PROPOSAL---
+Subject: Turning your analytics data into more coffee customers
+
+Hi Maxx - Cideng team,
+
+I noticed you already have Meta Pixel and Google Analytics tracking installed on your website — that's smart data collection. But here's the gap: visitors are landing on your site, finding no way to connect instantly, and likely bouncing before converting into coffee customers.
+
+Here's what I recommend for Maxx Coffee:
+
+**WhatsApp Business API with Smart Chatbot (2-week delivery)**
+- Add a WhatsApp widget to your site (Indonesia's #1 messaging app)
+- Deploy an automated chatbot that handles FAQs (hours, menu, reservations) 24/7
+- Route human conversations to your team during business hours
+- Expected impact: 3x more leads, cut response time from hours to seconds
+
+**Landing Page Optimization with Social Proof (1-week delivery)**
+- Strengthen your call-to-action: "Reserve a Table" or "Order Now" buttons
+- Add customer testimonials and case studies section (we can help collect these)
+- Create a "Our Signature Blends" portfolio showcase
+- Expected impact: 25-40% higher conversion rate
+
+Since you're already tracking visitors, we'd integrate the WhatsApp widget with your existing analytics — so you'll see exactly how many leads are coming from each channel.
+
+Would you be open to a free 15-minute call next week? I can walk through a quick audit of your current setup and show you exactly where the opportunities are.
+
+Best,
+Vilona
+BerkahKarya
+
+---WHATSAPP---
+Halo! Barusan lihat website kopi kalian, sudah pasang Google Analytics dan Meta Pixel bagus banget. Cuma kurang widget WhatsApp ya? Kalau mau, aku bisa bantu pasang WhatsApp chatbot biar pelanggan bisa langsung tanya atau reservasi tanpa perlu nunggu lama. Mau coba dulu gak?

@@ -8,6 +8,7 @@ import requests
 from bs4 import BeautifulSoup
 
 from oneai_reach.config.settings import Settings
+from oneai_reach.infrastructure.llm.llm_client import LLMClient
 from oneai_reach.infrastructure.logging import get_logger
 
 logger = get_logger(__name__)
@@ -85,6 +86,7 @@ class ResearcherService:
     def __init__(self, config: Settings):
         self.config = config
         self.research_dir = config.database.research_dir
+        self.llm = LLMClient(config)
 
     def research_prospect(self, website: str) -> dict:
         """Research a prospect's website for pain points and services.
@@ -132,11 +134,22 @@ class ResearcherService:
         ]
         signals = self._detect_signals(combined_html, combined_text, base)
 
+        decision_maker = "UNKNOWN"
+        try:
+            prompt = f"Analyze the following text scraped from a company website and identify the CEO, Founder, Co-Founder, or Owner. Reply ONLY with their full name. If not found, reply exactly with 'UNKNOWN'.\n\nText:\n{combined_text[:3000]}"
+            result = self.llm.generate(prompt, fallback="UNKNOWN").strip()
+            if result and result.upper() != "UNKNOWN" and len(result) < 50:
+                decision_maker = result
+                logger.info(f"Found decision maker on {base}: {decision_maker}")
+        except Exception as e:
+            logger.warning(f"Decision-Maker extraction failed for {base}: {e}")
+
         return {
             "services": services,
             "pain_points": pain_points,
             "tech_stack": tech_stack,
             "signals": signals,
+            "decision_maker": decision_maker,
             "text_sample": combined_text[:800],
         }
 
@@ -209,6 +222,9 @@ class ResearcherService:
             return f"No research data available for {name}."
 
         lines = [f"# Prospect Research: {name}"]
+
+        if data.get("decision_maker") and data["decision_maker"] != "UNKNOWN":
+            lines.append(f"Decision Maker Found: {data['decision_maker']}")
 
         if data.get("services"):
             lines.append(f"Services detected: {', '.join(data['services'])}")

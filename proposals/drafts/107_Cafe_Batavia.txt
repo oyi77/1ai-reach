@@ -1,0 +1,33 @@
+---PROPOSAL---
+Subject: Instant reservations & 40% more organic traffic for Cafe Batavia
+
+I noticed Cafe Batavia's website doesn't have a way for visitors to chat or book via WhatsApp—missing a huge opportunity since Indonesia has over 200 million WhatsApp users and diners often check hours, availability, or menu questions outside business hours.
+
+Here's how we can fix this gap:
+
+**Solution 1: WhatsApp Business API Chatbot**
+We'll build an intelligent chatbot that handles:
+- Table reservations (24/7, no phone tag)
+- FAQ automation (hours, parking, dress code, menu highlights)
+- Historical trivia (Cafe Batavia's colonial-era stories)
+- Special event inquiries
+
+Deliverable: Fully integrated WhatsApp bot with AI-powered intent detection, connected to your existing systems.
+
+**Expected ROI:** Cut response time by 5x (from hours to seconds) and increase reservation conversion by 30% since customers can book instantly.
+
+**Solution 2: Content Hub & SEO Strategy**
+We'll create a blog/section showcasing your heritage, chef stories, behind-the-scenes content, and Kota Tua dining guides—positioning Cafe Batavia as the authority on Jakarta's colonial dining scene.
+
+Deliverable: SEO-optimized content hub with 8-10 foundational articles, keyword strategy, and monthly content calendar.
+
+**Expected ROI:** 40% increase in organic search traffic within 6-12 months, driving more tourists and locals who search "heritage restaurants Jakarta."
+
+Would you be open to a free 15-minute call this week? I can walk through a quick demo of how the WhatsApp bot would work for your specific needs.
+
+Best regards,
+Vilona
+BerkahKarya
+
+---WHATSAPP---
+Halo team Cafe Batavia! Saya Vilona dari BerkahKarya. Bisa bantu pasang chatbot WhatsApp biar tamu bisa reservasi 24/7 tanpa harus telpon. Free demo 15 menit, yuk?

@@ -1,0 +1,31 @@
+---PROPOSAL---
+Subject: Quick reservation capture for Twin House Blok M
+
+I was just browsing twinhouse.id and noticed something interesting — your restaurant is prominently featured in Melawai/Blok M, yet visitors can't instantly book a table or ask about today's menu without digging around for contact info.
+
+This creates friction that could be costing you reservations, especially during peak hours.
+
+I have two specific solutions that would close this gap:
+
+**1. WhatsApp Business API + Chatbot Integration**
+- Add a floating WhatsApp widget to your WordPress site
+- Build an automated chatbot that handles common queries (hours, location, today's specials)
+- Route reservation requests directly to your staff via WhatsApp
+- Deliverable: Full WhatsApp Business API setup with a custom chatbot for Twin House Blok M
+
+**2. Landing Page Conversion Optimization**
+- Strengthen CTAs across your site for instant reservations
+- Add a one-click "Book Now" button that opens WhatsApp conversation
+- Optimize for mobile diners browsing near Blok M
+- Deliverable: CRO audit + implementation on key pages
+
+**Expected impact:** Restaurants using WhatsApp Business API typically see 3-5x faster response times and 25-40% more reservations from web traffic.
+
+Would you be open to a 15-minute call to discuss how this would work for your team? No pressure — just happy to share more details.
+
+Best,
+Vilona
+BerkahKarya
+
+---WHATSAPP---
+Halo Twin House! Barusan cek website twinhouse.id — ada WhatsApp widget di site? Bisa bantu bikin customer lebih gampang booking meja via WhatsApp. Kita bisa coba 15 menit call kalau tertarik? 🍽️

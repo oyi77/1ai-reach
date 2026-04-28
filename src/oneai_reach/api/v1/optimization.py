@@ -52,8 +52,8 @@ async def list_ab_tests(status: Optional[str] = None):
                 {
                     "id": t.id,
                     "name": t.name,
-                    "type": t.test_type.value,
-                    "status": t.status.value,
+                    "type": t.test_type,
+                    "status": t.status,
                     "variants_count": len(t.variants),
                     "created_at": t.created_at,
                 }

@@ -19,7 +19,7 @@ import logging
 import subprocess
 import sys
 
-from config import DEFAULT_VERTICALS, _ROOT
+from config import DEFAULT_VERTICALS, TARGET_LOCATIONS, _PROJECT_ROOT as _ROOT
 
 import brain_client
 
@@ -55,12 +55,19 @@ def _save_rotation_index(index: int) -> None:
     _ROTATION_FILE.write_text(json.dumps({"index": index}))
 
 
-def next_from_rotation() -> str:
-    """Pick the next vertical from DEFAULT_VERTICALS via round-robin."""
+def next_from_rotation() -> tuple[str, str]:
+    """Pick the next vertical and location via round-robin."""
     idx = _load_rotation_index()
+    
     vertical = DEFAULT_VERTICALS[idx % len(DEFAULT_VERTICALS)]
-    _save_rotation_index((idx + 1) % len(DEFAULT_VERTICALS))
-    return vertical
+    
+    # Use a different pacing for location so we don't always pair the same vertical with the same location
+    # Integer division means we change location every len(DEFAULT_VERTICALS) iterations
+    loc_idx = idx // len(DEFAULT_VERTICALS)
+    location = TARGET_LOCATIONS[loc_idx % len(TARGET_LOCATIONS)]
+    
+    _save_rotation_index(idx + 1)
+    return vertical, location
 
 
 # ---------------------------------------------------------------------------
@@ -91,12 +98,13 @@ def _extract_vertical_from_brain(text: str) -> str | None:
     return max(counts, key=counts.get)  # type: ignore[arg-type]
 
 
-def decide_vertical() -> str:
+def decide_strategy() -> tuple[str, str]:
     """
     1. Query brain for 'outreach_win' data to find best-converting vertical.
     2. Parse response to extract the vertical name.
     3. Fall back to rotation if brain is offline or unparseable.
     """
+    brain_vertical = None
     try:
         results = brain_client.search("outreach_win best converting vertical", limit=5)
         if results:
@@ -104,22 +112,26 @@ def decide_vertical() -> str:
             found = _extract_vertical_from_brain(combined)
             if found:
                 log.info("Brain recommends vertical: %s (from win data)", found)
-                return found
+                brain_vertical = found
 
-        strategy = brain_client.get_strategy("outreach")
-        if strategy:
-            found = _extract_vertical_from_brain(strategy)
-            if found:
-                log.info("Brain recommends vertical: %s (from strategy)", found)
-                return found
+        if not brain_vertical:
+            strategy = brain_client.get_strategy("outreach")
+            if strategy:
+                found = _extract_vertical_from_brain(strategy)
+                if found:
+                    log.info("Brain recommends vertical: %s (from strategy)", found)
+                    brain_vertical = found
 
-        log.info("Brain returned no actionable vertical data, using rotation.")
+        if not brain_vertical:
+            log.info("Brain returned no actionable vertical data, using rotation.")
     except Exception as e:
         log.warning("Brain query failed: %s — using rotation fallback.", e)
 
-    vertical = next_from_rotation()
-    log.info("Rotation fallback selected: %s", vertical)
-    return vertical
+    rot_vertical, rot_location = next_from_rotation()
+    
+    vertical = brain_vertical if brain_vertical else rot_vertical
+    log.info("Strategy selected: %s in %s", vertical, rot_location)
+    return vertical, rot_location
 
 
 # ---------------------------------------------------------------------------
@@ -193,8 +205,8 @@ def main() -> None:
     parser.add_argument(
         "--location",
         type=str,
-        default="Jakarta",
-        help="Location to scrape (default: Jakarta).",
+        default=None,
+        help="Override location instead of using rotation.",
     )
     parser.add_argument(
         "--count",
@@ -202,16 +214,21 @@ def main() -> None:
         default=20,
         help="Number of leads to scrape (default: 20).",
     )
+    
     args = parser.parse_args()
 
-    if args.vertical:
-        vertical = args.vertical
-        log.info("Using CLI-overridden vertical: %s", vertical)
-    else:
-        vertical = decide_vertical()
+    decided_vertical, decided_location = decide_strategy()
 
-    print(f"Decided to scrape: {vertical}")
-    run_scraping(vertical, args.location, args.count, args.dry_run)
+    vertical = args.vertical if args.vertical else decided_vertical
+    location = args.location if args.location else decided_location
+
+    if args.vertical:
+        log.info("Using CLI-overridden vertical: %s", vertical)
+    if args.location:
+        log.info("Using CLI-overridden location: %s", location)
+
+    print(f"Decided to scrape: {vertical} in {location}")
+    run_scraping(vertical, location, args.count, args.dry_run)
 
 
 if __name__ == "__main__":

@@ -62,6 +62,7 @@ class SQLiteConversationRepository(ConversationRepository):
                     lead_id TEXT,
                     engine_mode TEXT NOT NULL,
                     status TEXT DEFAULT 'active',
+                    stage TEXT DEFAULT 'discovery',
                     manual_mode INTEGER DEFAULT 0,
                     test_mode INTEGER DEFAULT 0,
                     last_message_at TEXT,

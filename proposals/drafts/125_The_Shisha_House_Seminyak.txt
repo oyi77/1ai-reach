@@ -1,0 +1,29 @@
+---PROPOSAL---
+Hi team at The Shisha House Seminyak,
+
+I noticed your site is running on Google Sites with SEM campaigns active, yet there's no way for visitors to reach you instantly when they're ready to book a table or ask about your shisha offerings. Tourists browsing your page at 11 PM are probably messaging your competitors instead.
+
+Here's what I'd propose:
+
+**1. WhatsApp Business API Integration**
+- Install a WhatsApp widget on your site (visible mobile-first)
+- Build a simple chatbot for common queries: menu, hours, reservations, shisha flavors
+- Integrate with your existing AI tools for smarter responses
+*Expected outcome: 3-4x faster response times, 30%+ more reservation bookings*
+
+**2. Local SEO & Content Strategy**
+- Create a blog section targeting "best shisha Seminyak," "dining in Seminyak," "Bali nightlife"
+- Publish 4-6 optimized monthly posts (food photography, event announcements, local guides)
+- Build your Google Business Profile with fresh content and reviews
+*Expected outcome: 50%+ increase in organic search traffic within 3 months*
+
+You're already investing in SEM—let's capture that traffic more effectively and reduce ad dependency over time.
+
+Want to see a 15-minute demo of how this would look on your site? No obligation, just a walk-through.
+
+Best,
+Vilona
+BerkahKarya
+
+---WHATSAPP---
+Halo The Shisha House Seminyak! Lihat website Anda, sepertinya kurang WhatsApp untuk booking cepat. Bisa pasang WhatsApp widget + chatbot simple? Saya bisa tunjuk demo 15 menit gratis. Minat?

@@ -337,13 +337,39 @@ async def get_status() -> Dict[str, Any]:
             port=8766,
         ))
         
-        autonomous_job = None
-        if agent_control:
+        autonomous_running = False
+        autonomous_pid = None
+        
+        try:
+            result = subprocess.run(
+                ["systemctl", "--user", "is-active", "1ai-reach-autonomous"],
+                capture_output=True,
+                text=True,
+                timeout=5,
+            )
+            autonomous_running = result.returncode == 0 and result.stdout.strip() == "active"
+            
+            if autonomous_running:
+                pid_result = subprocess.run(
+                    ["systemctl", "--user", "show", "1ai-reach-autonomous", "--property=MainPID"],
+                    capture_output=True,
+                    text=True,
+                    timeout=5,
+                )
+                if pid_result.returncode == 0:
+                    pid_str = pid_result.stdout.strip().split("=")[-1]
+                    if pid_str and pid_str.isdigit() and int(pid_str) > 0:
+                        autonomous_pid = int(pid_str)
+        except Exception as e:
+            logger.warning(f"systemctl --user autonomous check failed: {e}")
+        
+        if not autonomous_running and agent_control:
             try:
                 jobs_result = agent_control.list_jobs()
                 for job in jobs_result.get("items", []):
                     if job.get("stage") == "autonomous_loop" and job.get("running"):
-                        autonomous_job = job
+                        autonomous_running = True
+                        autonomous_pid = job.get("pid")
                         break
             except Exception as e:
                 logger.warning(f"autonomous job lookup failed: {e}")
@@ -351,8 +377,8 @@ async def get_status() -> Dict[str, Any]:
         services.append(ServiceStatus(
             key="autonomous",
             label="Autonomous Loop",
-            running=autonomous_job is not None,
-            pid=autonomous_job.get("pid") if autonomous_job else None,
+            running=autonomous_running,
+            pid=autonomous_pid,
         ))
         
         dashboard_running = False

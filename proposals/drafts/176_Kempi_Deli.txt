@@ -1,0 +1,25 @@
+---PROPOSAL---
+Hi Kempi Deli Team,
+
+I noticed you're operating out of Grand Indonesia as part of the Kempinski Hotels legacy—that's some impressive heritage and prime foot traffic for a premium deli. 
+
+While exploring your site, I see you've built on Next.js with Google Analytics tracking, so you already have good technical foundations. However, I also noticed a significant missed opportunity: there's no way for customers to reach you directly while browsing your offerings. With your premium location and quality, you're losing potential orders the moment a customer has a question about availability, pricing, or recommendations.
+
+I'd recommend implementing a WhatsApp Business API integration with an intelligent chatbot that can:
+- Handle menu inquiries and product availability in real-time
+- Process pre-orders and reservations for pickup
+- Provide personalized recommendations based on customer preferences
+- Send automated follow-ups for repeat customers
+
+Our clients typically see response times cut by 5x and capture 30% more orders through WhatsApp compared to web forms alone. Since you're already using Next.js, we can integrate this seamlessly without disrupting your current setup.
+
+Additionally, we could launch a simple content strategy with a blog section showcasing your premium offerings—featured items, seasonal specials, and behind-the-scenes stories—which would improve your organic SEO visibility and give people a reason to revisit your site beyond just ordering.
+
+Would you be open to a 15-minute call to discuss how this might fit your operations?
+
+Best regards,
+Vilona
+BerkahKarya
+
+---WHATSAPP---
+Halo Kempi Deli! Saya Vilona dari BerkahKarya. Lihat website kalian di Grand Indonesia, tapi belum ada WhatsApp buat customer tanya-tanya menu atau pesan langsung. Kita bisa bantu pasangin WhatsApp Business API biar customer bisa chat dan pesan tanpa ribet. Sparing 15 menit yuk bahas ini?

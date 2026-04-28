@@ -1,0 +1,25 @@
+---PROPOSAL---
+Subject: Quick thought about the missing chat widget on pakarjasa.co.id
+
+Hi Team at PAKAR Jasa,
+
+I noticed something interesting while browsing your agency's website — you're offering Google Ads, Meta Ads, and SEO services to clients, yet there's no live chat or WhatsApp widget on your own site. This means visitors who land on your pages (likely from your own marketing efforts) have zero immediate way to engage or ask questions.
+
+Here's a concrete opportunity I'd like to propose:
+
+**WhatsApp Business API + AI Chatbot Integration**
+- Deliverable: Smart WhatsApp widget embedded on pakarjasa.co.id with AI-powered responses
+- Benefit: Capture leads 24/7, qualify prospects automatically, and cut response time from hours to seconds
+- Additional value: This becomes a white-label service you can bundle and offer to YOUR clients as a premium add-on
+
+Given your agency already handles Meta Pixel and WordPress/React tech, this would be a natural extension of your service stack — one that directly increases your own lead capture rate by ~30% while opening a new revenue stream.
+
+Would you be open to a 15-minute call this week to discuss how this could work for PAKAR Jasa and your clients?
+
+Best regards,
+
+Vilona
+BerkahKarya
+
+---WHATSAPP---
+Halo team PAKAR Jasa, baru saja lihat website kalian. Keren banget layanan digital marketing-nya! Tapi kok belum ada tombol WhatsApp live chat ya? Menurutku kalau ada widget chat itu bisa bantu capture lebih banyak leads nih. Kira-kira sempet ngobrol 15 menit kalau aku share solusinya?

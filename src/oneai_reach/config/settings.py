@@ -279,9 +279,23 @@ class ScraperSettings(BaseSettings):
             "E-commerce",
             "Startup",
             "Property",
-            "Education",
+        ]
+    )
+    
+    target_locations: list[str] = Field(
+        default=[
+            "Singapore",
+            "Dubai",
+            "Sydney",
+            "Kuala Lumpur",
+            "Jakarta",
+            "Bali",
+            "London",
+            "New York",
+            "Manila",
+            "Bangkok",
         ],
-        description="Default verticals for autonomous scraping",
+        description="Global locations for strategy rotation",
     )
 
     model_config = ConfigDict(env_prefix="SCRAPER_")

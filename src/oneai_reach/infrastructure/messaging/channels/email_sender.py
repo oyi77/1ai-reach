@@ -23,7 +23,7 @@ class EmailSender:
         self.from_name = config.get("from_name", "")
         self.from_email = config.get("from_email", "")
 
-    def send(self, to_email: str, subject: str, body: str) -> bool:
+    def send(self, to_email: str, subject: str, body: str, lead_id: Optional[str] = None, pdf_bytes=None, filename=None) -> bool:
         """Send email using the existing senders.py chain."""
         try:
             from oneai_reach.infrastructure.legacy.senders import send_email

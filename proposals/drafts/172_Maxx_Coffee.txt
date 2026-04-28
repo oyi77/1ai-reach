@@ -1,0 +1,26 @@
+---PROPOSAL---
+Subject: Quick observation about Maxx Coffee's website - one improvement opportunity
+
+Hi Team Maxx Coffee,
+
+I noticed you already have Meta Pixel and Google Analytics tracking installed on your site, which is great — you're already measuring customer behavior. However, there's one conversion opportunity I spotted: your website visitors have no instant way to connect with you.
+
+For a coffee shop like Maxx Coffee in Senayan Park, where customers often make spontaneous decisions about where to grab coffee, this missing channel could be costing you walk-ins and online orders.
+
+I'd recommend adding a WhatsApp Business widget with a simple chatbot to your website. Here's what this would deliver:
+
+1. **WhatsApp Widget + Chatbot Integration**
+   - Add a floating WhatsApp button on every page (desktop & mobile)
+   - Set up an AI-powered chatbot that handles common queries: hours, menu, reservations, Senayan Park location directions
+   - Enable staff handoff for complex questions
+
+**Expected ROI:** We typically see a 30-40% increase in customer inquiries and a 5x reduction in response time compared to email or phone. For busy Jakarta customers, instant response = higher conversion.
+
+If you're interested, I'd be happy to do a quick 15-minute call to show you how this would look on your site, or provide a free audit of your current setup. Which would you prefer?
+
+Best,
+Vilona
+BerkahKarya
+
+---WHATSAPP---
+Halo Maxx Coffee! Aku baru cek website kalian, lho. Kayaknya menarik kalau ada WhatsApp biar pelanggan bisa tanya-tanya lebih cepet. Kalau sempat, mau ngobrol sebentar 15 menit soal ini?

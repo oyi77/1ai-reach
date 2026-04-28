@@ -1,0 +1,93 @@
+</think>Let me check what context you're asking about. Based on your available tools, it seems like you're asking about:
+
+**Core Functions Available:**
+1. **mcp__plugin_oh-my-claudecode__lsp_code_actions**
+   - `get_campaign_structure`: Gets campaign hierarchy (campaign → ad groups → ads)
+   - `get_campaign_performance`: Get performance metrics for campaigns
+   - `get_ad_set_performance`: Get ad set performance (ad set level)
+   - `get_meta_ad_set_performance`: Get Meta ad set performance metrics
+   - `get_meta_campaigns`: List Meta campaigns and their performance
+   - `get_meta_campaigns`: List Meta campaigns with their performance
+   - `list_meta_campaigns`: List all Meta campaigns with their performance
+
+**Research Functions**:
+
+- 📊 **search_prospects**: Research businesses and contacts for marketing prospects
+- 🔍 **find_leads**: Find businesses and contact information
+- 📈 **list_leads**: List potential leads and companies
+- 📊 **analyze_leads**: Analyze lead potential markets
+- 📊 **search_prospects**: Find people and opportunities
+- 📈 **filter_prospects**: Filter prospects by demographics
+- 📊 **analyze_prospects**: Deep analysis of audience behavior
+- 📈 **analyze_prospects**: Generate AI content strategy
+- 📈 **create_content**: Generate ads and creatives
+- 📊 **update_prospects**: Update ad creatives and targets
+- 📊 **update_campaigns**: Manage campaigns and budgets
+- 📊 **get_budgets**: Get budget information
+- 📈 **create_project**: Create projects and proposals
+- 📊 **get_project_details**: Get project and team details
+- 📈 **get_events**: Get events and activities
+- 📈 **update_events**: Update project and events
+- 📊 **get_insights**: Get insights and recommendations
+- 📈 **get_audience**: Get audience data
+- 📈 **search_audiences**: Search for audience targeting
+- 📈 **update_audiences**: Update audience targeting
+
+**Video Editing Tools:** 📊
+
+| `validate_and_prepare_meta_assets` – Validate and prepare images/videos for Meta
+| **create_video_campaign** – Create Meta video campaign
+
+**LinkedIn Ads:** 📊
+| **list_linkedin_campaigns** – List LinkedIn campaigns
+- **create_linkedin_ad_campaign** – Create LinkedIn ad campaign
+- **create_linkedin_company_page** – Create company page campaign
+- **list_linkedin_ad_sets** – Manage LinkedIn ad sets
+- **create_linkedin_ad_content** – Add LinkedIn ad content
+- **create_linkedin_company_page** – Create company page campaign
+
+**Google Ads:** 📊
+| **get_google_campaigns** – List Google Ads campaigns
+- **create_google_search_campaign** – Create Search campaign
+- **create_google_ad_set** – Create ad set
+- **create_google_search_ad_group** – Create ad group
+- **create_google_ad_content** – Add ad content
+
+**Display:** 📊
+| **get_display_campaigns** – List Display campaigns
+- **create_display_campaign** – Create Display campaign
+- **create_display_ad_group** – Create ad group
+| **create_display_ad_content** – Add ad content
+
+**Performance Max:** 📊
+| **get_pmax_campaigns** – List PMax campaigns
+| **create_pmax_campaign** – Create PMax campaign
+
+**YouTube:** 📊
+| **get_youtube_campaigns** – List YouTube campaigns
+| **create_youtube_ad_group** – Create ad group
+| **create_youtube_ad_content** – Add ad content
+
+**TikTok Ads:** 📊
+| **get_tiktok_campaigns** – List TikTok campaigns
+| **create_tiktok_ad_group** – Create ad group
+| **create_tiktok_ad_content** – Add ad content
+| **create_tiktok_ad_creative** – Add ad content
+
+The video editor shows: 🎬| **validate_video** – Validate video URL
+| **create_tiktok_ad_group** – Create ad group| **create_tiktok_ad_content** – Add ad content
+
+**Note:** All of these are READ-ONLY operations. DO NOT use `validate_and_prepare_meta_assets` or `create_video_campaign` for creating a Meta campaign directly. For Google or PMax, use `validate_and_prepare_meta_assets` and `create_pmax_campaign` for Performance Max."
+
+**🎬 System Notice:** The descriptions above reference `create_video_campaign` uses `create_video_campaign` function parameters - DO NOT `validate_and_prepare_meta_assets` directly (use those parameters).
+
+## 🎬 **CRITICAL RULE:** NEVER call a create Meta campaign tool directly with user-provided data without validation. ALWAYS call `validate_and_prepare_meta_assets` first.
+
+If user provides images or video URLs → ALWAYS use `validate_and_prepare_meta_assets` to validate:
+- Download and validate video files
+- Check dimensions, aspect ratio, file size, duration
+- Get video metadata from URL
+
+**Then** use `create_video_campaign` to create a Meta video campaign with validated assets."
+
+**IMPORTANT:** NEVER skip validation. Use `create_video_campaign` tool. Use the validated asset_bundle_id from `validate_and_prepare_meta_assets` response.

@@ -28,7 +28,7 @@ interface ABTestingOverview {
 
 export function ABTestingResults() {
   const { data, isLoading, error, mutate } = useSWR<{ data: ABTestingOverview }>(
-    "/api/v1/optimization/ab-tests/overview",
+    "/api/v1/optimization/ab-tests",
     fetcher,
     { refreshInterval: 60000 }
   );

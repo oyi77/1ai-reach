@@ -12,6 +12,8 @@ from email.mime.text import MIMEText
 from email.utils import parseaddr
 from typing import Optional
 
+import logging
+logger = logging.getLogger(__name__)
 try:
     import requests
 
@@ -77,6 +79,9 @@ class EmailSender:
                 # Log but don't block - just warn
             elif check_result["deliverability_score"] < 50:
                 logger.warning(f"Low deliverability score: {check_result['deliverability_score']}/100")
+        except Exception as e:
+            logger.error(f"Deliverability check error: {e}")
+            # Don't block sending if check fails
         except Exception as e:
             logger.error(f"Deliverability check error: {e}")
             # Don't block sending if check fails

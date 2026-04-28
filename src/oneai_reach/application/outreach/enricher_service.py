@@ -95,18 +95,92 @@ class EnricherService:
     def __init__(self, config: Settings):
         self.config = config
 
-    def enrich_lead(self, website: str, name: str) -> Optional[dict]:
-        """Enrich a single lead with contact information.
+    def score_lead(self, lead_data: dict) -> int:
+        """Score a lead based on predefined criteria.
 
         Args:
-            website: Business website URL
-            name: Business/person name
+            lead_data: Dictionary containing lead information.
 
         Returns:
-            Dictionary with email, phone, linkedin or None if all strategies fail
+            A score for the lead (integer).
         """
+        score = 0
+
+        # Scoring criteria
+        if lead_data.get("website"):
+            score += 20
+        if self._is_valid_email(lead_data.get("email", "")):
+            score += 30
+        if lead_data.get("phone"):
+            score += 30
+        if lead_data.get("linkedin"):
+            score += 20
+
+        logger.info(f"Lead scored {score}: {lead_data}")
+        return score
+
+    def enrich_lead(self, website: str, name: str) -> Optional[dict]:
+        """Enrich a lead and apply lead scoring to filter low-quality leads."""
         if self._is_empty(website):
             return None
+
+        research_data = None
+        try:
+            try:
+                loop = asyncio.get_event_loop()
+            except RuntimeError:
+                loop = asyncio.new_event_loop()
+                asyncio.set_event_loop(loop)
+
+            if loop.is_running():
+                import threading
+
+                def run_async(coro):
+                    res = []
+
+                    def f():
+                        res.append(asyncio.run(coro))
+
+                    t = threading.Thread(target=f)
+                    t.start()
+                    t.join()
+                    return res[0]
+
+                research_data = run_async(JinaWebReader.fetch_markdown(website))
+            else:
+                research_data = loop.run_until_complete(JinaWebReader.fetch_markdown(website))
+        except Exception as e:
+            logger.warning(f"[JinaWebReader] failed to fetch markdown for {website}: {e}")
+
+        strategies = [
+            ("AgentCash Minerva", lambda: self._via_agentcash(website, name)),
+            ("Jina AI + extraction", lambda: self._enrich_via_jina(website)),
+            ("Website scraping", lambda: self._scrape_website(website)),
+            ("LinkedIn search", lambda: self._find_linkedin(website, name)),
+            ("Email pattern", lambda: self._guess_email(website, name)),
+        ]
+
+        for label, fn in strategies:
+            try:
+                result = fn()
+                if result.get("email") or result.get("phone"):
+                    logger.info(f"[{label}] found contact info")
+
+                    # Score the lead
+                    lead_score = self.score_lead(result)
+                    if lead_score < 30:
+                        logger.info(f"Lead skipped due to low score ({lead_score})")
+                        return None
+
+                    result.update({"research_data": research_data, "score": lead_score})
+                    return result
+            except Exception as e:
+                logger.warning(f"[{label}] failed: {e}")
+
+        if research_data:
+            return {"email": None, "phone": None, "linkedin": None, "research_data": research_data, "score": 0}
+
+        return None
 
         research_data = None
         try:

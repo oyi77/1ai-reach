@@ -1,0 +1,32 @@
+---PROPOSAL---
+Subject: Transform 1/15 Coffee's customer engagement with WhatsApp & content strategy
+
+Hi Team at 1/15 Coffee,
+
+I just visited your website and noticed you've created a beautiful space at Jl. Kemang Raya No.37 — the coffee culture you're building in one of Jakarta's most creative neighborhoods clearly shines through your concept. However, I also noticed a few missed opportunities that could significantly boost your customer acquisition and retention.
+
+Your website lacks a WhatsApp widget or live chat, which means interested visitors who have questions about your menu, hours, or reservation process have to call or email — creating unnecessary friction. Additionally, with no blog or content section, you're missing out on organic search traffic from coffee enthusiasts searching for specialty coffee spots in Kemang, Jakarta Selatan.
+
+Here's what I propose for 1/15 Coffee:
+
+**Solution 1: WhatsApp Business API Integration**
+- Deploy a WhatsApp widget directly on your website for instant customer engagement
+- Set up automated responses for common queries (menu, hours, location)
+- Implement reservation booking via WhatsApp
+- Expected impact: 40% more inquiries converted to visits, response time cut from hours to seconds
+
+**Solution 2: Coffee Culture Content & SEO Strategy**
+- Develop a blog featuring your specialty coffee origins, brewing techniques, and Kemang coffee community stories
+- Create SEO-optimized content targeting keywords like "specialty coffee Kemang" and "coffee shop Jakarta Selatan"
+- Build a testimonials section showcasing customer experiences
+- Expected impact: 60% increase in organic traffic within 3 months
+
+Would you be open to a 15-minute call this week to discuss how we can implement these for 1/15 Coffee? Alternatively, I can offer a free digital presence audit to identify other quick wins.
+
+Best regards,
+
+Vilona
+BerkahKarya
+
+---WHATSAPP---
+Halo 1/15 Coffee! Barusan liat website kalian, tempatnya keren banget di Kemang. Coba kita implementasikan WhatsApp widget di website biar pelanggan bisa tanya-menu dan reservasi lebih cepat? Free audit kalau mau coba dulu, seneng bisa bantu! 🙌

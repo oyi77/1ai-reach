@@ -91,8 +91,16 @@ class ReplyTrackerService:
                 df.at[index, "replied_at"] = datetime.now(timezone.utc).isoformat()
                 lead_id = str(row.get("id") or row.name or "")
                 if lead_id and reply_text:
+                    ai_category, ai_suggested_reply = self.classifier.get_ai_triage(reply_text)
+
                     try:
-                        update_lead_fn(lead_id, reply_text=reply_text)
+                        update_lead_fn(
+                            lead_id,
+                            reply_text=reply_text,
+                            ai_triage_category=ai_category,
+                            ai_suggested_reply=ai_suggested_reply
+                        )
+                        self._forward_reply_with_triage("EMAIL", name, lead_email, reply_text, ai_category, ai_suggested_reply)
                     except Exception as e:
                         logger.error(f"Failed to store reply text for {name}: {e}")
                 updated += 1
@@ -105,6 +113,28 @@ class ReplyTrackerService:
 
         logger.info(f"Reply check complete. {updated} new replies detected")
         return updated
+
+
+    def _forward_reply_with_triage(self, channel: str, lead_name: str, contact_info: str, reply_text: str, ai_category: str, ai_suggested_reply: str):
+        try:
+            from oneai_reach.infrastructure.messaging.email_sender import EmailSender
+            sender = EmailSender(self.config)
+            target = "grahainsanmandiri@gmail.com"
+            subject = f"[{channel} REPLY] New reply from {lead_name} ({contact_info})"
+            
+            body = f"New {channel.lower()} reply from {lead_name} ({contact_info}):\n\n"
+            body += f"AI Triage Category: {ai_category}\n"
+            body += f"AI Suggested Reply: {ai_suggested_reply}\n\n"
+            body += f"{reply_text}\n\n---\n"
+            body += "Automated Forwarding by 1ai-reach"
+            
+            success = sender.send(target, subject, body)
+            if success:
+                logger.info(f"Forwarded {channel} reply to {target}")
+            else:
+                logger.warning(f"Failed to forward {channel} reply to {target}")
+        except Exception as e:
+            logger.error(f"Error forwarding reply: {e}")
 
     def _gog_search(self, query: str) -> List[dict]:
         env = {
@@ -249,8 +279,16 @@ class ReplyTrackerService:
         if mode == "cs" and cs_handle_fn is not None:
             effective_wa_id = wa_number_id or session_name
             try:
-                cs_handle_fn(effective_wa_id, contact_phone, body, session_name)
-                logger.info(f"🤖 CS handled: {contact_phone} [via {target_name}/{session_name}]")
+                ai_category, ai_suggested_reply = self.classifier.get_ai_triage(body)
+                cs_handle_fn(
+                    effective_wa_id,
+                    contact_phone,
+                    body,
+                    session_name,
+                    ai_triage_category=ai_category,
+                    ai_suggested_reply=ai_suggested_reply
+                )
+                logger.info(f"🤖 CS handled: {contact_phone} [via {target_name}/{session_name}] with category {ai_category}")
             except Exception as e:
                 logger.error(f"cs_engine error for {contact_phone}: {e}")
             return
@@ -283,6 +321,7 @@ class ReplyTrackerService:
             if lead_id and body:
                 try:
                     update_lead_fn(lead_id, reply_text=body)
+                    self._forward_reply("WHATSAPP", name, phone, body)
                 except Exception as e:
                     logger.error(f"Failed to store WA reply text for {name}: {e}")
             return
@@ -318,6 +357,7 @@ class ReplyTrackerService:
                     if lead_id and reply_text:
                         try:
                             update_lead_fn(lead_id, reply_text=reply_text)
+                            self._forward_reply("EMAIL", name, lead_email, reply_text)
                         except Exception as e:
                             logger.error(f"Failed to store reply text for {name}: {e}")
         except Exception as e:

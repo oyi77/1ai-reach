@@ -127,5 +127,1071 @@
       "type": "email",
       "given": true
     }
+  },
+  {
+    "timestamp": "2026-04-28T11:17:13.515737+00:00",
+    "action": "consent",
+    "subject": "lead_0",
+    "details": {
+      "type": "email_marketing",
+      "given": true
+    }
+  },
+  {
+    "timestamp": "2026-04-28T11:36:26.283800+00:00",
+    "action": "outreach",
+    "subject": "lead_0",
+    "details": {
+      "channel": "email",
+      "contact": "lead@example.com",
+      "success": true,
+      "timestamp": "2026-04-28T11:36:26.281741+00:00"
+    }
+  },
+  {
+    "timestamp": "2026-04-28T11:40:10.638932+00:00",
+    "action": "outreach",
+    "subject": "lead_0",
+    "details": {
+      "channel": "email",
+      "contact": "lead@example.com",
+      "success": true,
+      "timestamp": "2026-04-28T11:40:10.638819+00:00"
+    }
+  },
+  {
+    "timestamp": "2026-04-28T11:43:38.310218+00:00",
+    "action": "outreach",
+    "subject": "lead_0",
+    "details": {
+      "channel": "email",
+      "contact": "lead@example.com",
+      "success": true,
+      "timestamp": "2026-04-28T11:43:38.310105+00:00"
+    }
+  },
+  {
+    "timestamp": "2026-04-28T11:44:34.979573+00:00",
+    "action": "outreach",
+    "subject": "lead_0",
+    "details": {
+      "channel": "email",
+      "contact": "lead@example.com",
+      "success": true,
+      "timestamp": "2026-04-28T11:44:34.979446+00:00"
+    }
+  },
+  {
+    "timestamp": "2026-04-28T11:45:12.652039+00:00",
+    "action": "outreach",
+    "subject": "lead_0",
+    "details": {
+      "channel": "email",
+      "contact": "lead@example.com",
+      "success": true,
+      "timestamp": "2026-04-28T11:45:12.651897+00:00"
+    }
+  },
+  {
+    "timestamp": "2026-04-28T12:34:22.099290+00:00",
+    "action": "outreach",
+    "subject": "lead_0",
+    "details": {
+      "channel": "email",
+      "contact": "lead@example.com",
+      "success": true,
+      "timestamp": "2026-04-28T12:34:22.098952+00:00"
+    }
+  },
+  {
+    "timestamp": "2026-04-28T13:52:41.283164+00:00",
+    "action": "outreach",
+    "subject": "lead_0",
+    "details": {
+      "channel": "email",
+      "contact": "lead@example.com",
+      "success": true,
+      "timestamp": "2026-04-28T13:52:41.280120+00:00"
+    }
+  },
+  {
+    "timestamp": "2026-04-28T13:57:35.414796+00:00",
+    "action": "outreach",
+    "subject": "lead_0",
+    "details": {
+      "channel": "email",
+      "contact": "lead@example.com",
+      "success": true,
+      "timestamp": "2026-04-28T13:57:35.414671+00:00"
+    }
+  },
+  {
+    "timestamp": "2026-04-28T14:03:33.604433+00:00",
+    "action": "consent",
+    "subject": "ChIJsfcrG-zxaS4Re3Bk_BjGv8A",
+    "details": {
+      "type": "email_marketing",
+      "given": true
+    }
+  },
+  {
+    "timestamp": "2026-04-28T14:03:33.694643+00:00",
+    "action": "consent",
+    "subject": "ChIJsfcrG-zxaS4Re3Bk_BjGv8A",
+    "details": {
+      "type": "whatsapp_marketing",
+      "given": true
+    }
+  },
+  {
+    "timestamp": "2026-04-28T14:03:36.239457+00:00",
+    "action": "outreach",
+    "subject": "ChIJsfcrG-zxaS4Re3Bk_BjGv8A",
+    "details": {
+      "channel": "whatsapp",
+      "contact": "+62 878-6215-9093",
+      "success": true,
+      "timestamp": "2026-04-28T14:03:36.238822+00:00"
+    }
+  },
+  {
+    "timestamp": "2026-04-28T14:03:36.241180+00:00",
+    "action": "consent",
+    "subject": "ChIJddLwgBj3aS4RmCtur_8iF5s",
+    "details": {
+      "type": "email_marketing",
+      "given": true
+    }
+  },
+  {
+    "timestamp": "2026-04-28T14:03:36.278675+00:00",
+    "action": "consent",
+    "subject": "ChIJddLwgBj3aS4RmCtur_8iF5s",
+    "details": {
+      "type": "whatsapp_marketing",
+      "given": true
+    }
+  },
+  {
+    "timestamp": "2026-04-28T14:03:36.862903+00:00",
+    "action": "outreach",
+    "subject": "ChIJddLwgBj3aS4RmCtur_8iF5s",
+    "details": {
+      "channel": "whatsapp",
+      "contact": "+62 21 30067981",
+      "success": true,
+      "timestamp": "2026-04-28T14:03:36.862502+00:00"
+    }
+  },
+  {
+    "timestamp": "2026-04-28T14:03:36.865086+00:00",
+    "action": "consent",
+    "subject": "ChIJ3y8SyvT3aS4RS6XrGNwdFps",
+    "details": {
+      "type": "email_marketing",
+      "given": true
+    }
+  },
+  {
+    "timestamp": "2026-04-28T14:03:36.908927+00:00",
+    "action": "consent",
+    "subject": "ChIJ3y8SyvT3aS4RS6XrGNwdFps",
+    "details": {
+      "type": "whatsapp_marketing",
+      "given": true
+    }
+  },
+  {
+    "timestamp": "2026-04-28T14:03:38.097608+00:00",
+    "action": "outreach",
+    "subject": "ChIJ3y8SyvT3aS4RS6XrGNwdFps",
+    "details": {
+      "channel": "whatsapp",
+      "contact": "+62 812-8888-3692",
+      "success": true,
+      "timestamp": "2026-04-28T14:03:38.097321+00:00"
+    }
+  },
+  {
+    "timestamp": "2026-04-28T14:03:38.099121+00:00",
+    "action": "consent",
+    "subject": "ChIJlXvsjmLxaS4RMNspwWwdN0E",
+    "details": {
+      "type": "email_marketing",
+      "given": true
+    }
+  },
+  {
+    "timestamp": "2026-04-28T14:03:38.134385+00:00",
+    "action": "consent",
+    "subject": "ChIJlXvsjmLxaS4RMNspwWwdN0E",
+    "details": {
+      "type": "whatsapp_marketing",
+      "given": true
+    }
+  },
+  {
+    "timestamp": "2026-04-28T14:03:39.433961+00:00",
+    "action": "outreach",
+    "subject": "ChIJlXvsjmLxaS4RMNspwWwdN0E",
+    "details": {
+      "channel": "whatsapp",
+      "contact": "+62 851-3401-0122",
+      "success": true,
+      "timestamp": "2026-04-28T14:03:39.433493+00:00"
+    }
+  },
+  {
+    "timestamp": "2026-04-28T14:03:39.437310+00:00",
+    "action": "consent",
+    "subject": "ChIJeeBczNv1aS4R2bjWJY30sPs",
+    "details": {
+      "type": "email_marketing",
+      "given": true
+    }
+  },
+  {
+    "timestamp": "2026-04-28T14:03:39.521872+00:00",
+    "action": "consent",
+    "subject": "ChIJeeBczNv1aS4R2bjWJY30sPs",
+    "details": {
+      "type": "whatsapp_marketing",
+      "given": true
+    }
+  },
+  {
+    "timestamp": "2026-04-28T14:03:42.286862+00:00",
+    "action": "outreach",
+    "subject": "ChIJeeBczNv1aS4R2bjWJY30sPs",
+    "details": {
+      "channel": "whatsapp",
+      "contact": "+62 812-9898-5900",
+      "success": true,
+      "timestamp": "2026-04-28T14:03:42.286555+00:00"
+    }
+  },
+  {
+    "timestamp": "2026-04-28T14:03:42.288686+00:00",
+    "action": "consent",
+    "subject": "ChIJJ0PtrgeVaS4RVwB64MQ5270",
+    "details": {
+      "type": "email_marketing",
+      "given": true
+    }
+  },
+  {
+    "timestamp": "2026-04-28T14:03:42.316979+00:00",
+    "action": "consent",
+    "subject": "ChIJJ0PtrgeVaS4RVwB64MQ5270",
+    "details": {
+      "type": "whatsapp_marketing",
+      "given": true
+    }
+  },
+  {
+    "timestamp": "2026-04-28T14:03:44.579903+00:00",
+    "action": "outreach",
+    "subject": "ChIJJ0PtrgeVaS4RVwB64MQ5270",
+    "details": {
+      "channel": "whatsapp",
+      "contact": "+62 852-1143-6032",
+      "success": true,
+      "timestamp": "2026-04-28T14:03:44.579601+00:00"
+    }
+  },
+  {
+    "timestamp": "2026-04-28T14:03:44.581981+00:00",
+    "action": "consent",
+    "subject": "ChIJT7whNfLzaS4R_Xk9SiTxTig",
+    "details": {
+      "type": "email_marketing",
+      "given": true
+    }
+  },
+  {
+    "timestamp": "2026-04-28T14:03:44.623369+00:00",
+    "action": "consent",
+    "subject": "ChIJT7whNfLzaS4R_Xk9SiTxTig",
+    "details": {
+      "type": "whatsapp_marketing",
+      "given": true
+    }
+  },
+  {
+    "timestamp": "2026-04-28T14:03:47.068213+00:00",
+    "action": "outreach",
+    "subject": "ChIJT7whNfLzaS4R_Xk9SiTxTig",
+    "details": {
+      "channel": "whatsapp",
+      "contact": "+62 821-1310-0223",
+      "success": true,
+      "timestamp": "2026-04-28T14:03:47.067828+00:00"
+    }
+  },
+  {
+    "timestamp": "2026-04-28T14:03:47.070408+00:00",
+    "action": "consent",
+    "subject": "ChIJlwk8dar1aS4R6XYpHZgB558",
+    "details": {
+      "type": "email_marketing",
+      "given": true
+    }
+  },
+  {
+    "timestamp": "2026-04-28T14:03:47.111617+00:00",
+    "action": "consent",
+    "subject": "ChIJlwk8dar1aS4R6XYpHZgB558",
+    "details": {
+      "type": "whatsapp_marketing",
+      "given": true
+    }
+  },
+  {
+    "timestamp": "2026-04-28T14:03:49.600928+00:00",
+    "action": "outreach",
+    "subject": "ChIJlwk8dar1aS4R6XYpHZgB558",
+    "details": {
+      "channel": "whatsapp",
+      "contact": "+62 852-1078-3334",
+      "success": true,
+      "timestamp": "2026-04-28T14:03:49.600429+00:00"
+    }
+  },
+  {
+    "timestamp": "2026-04-28T14:03:49.603508+00:00",
+    "action": "consent",
+    "subject": "ChIJj5q9xfOt6y4RAdhsjXihkgM",
+    "details": {
+      "type": "email_marketing",
+      "given": true
+    }
+  },
+  {
+    "timestamp": "2026-04-28T14:03:49.646222+00:00",
+    "action": "consent",
+    "subject": "ChIJj5q9xfOt6y4RAdhsjXihkgM",
+    "details": {
+      "type": "whatsapp_marketing",
+      "given": true
+    }
+  },
+  {
+    "timestamp": "2026-04-28T14:03:51.923406+00:00",
+    "action": "outreach",
+    "subject": "ChIJj5q9xfOt6y4RAdhsjXihkgM",
+    "details": {
+      "channel": "whatsapp",
+      "contact": "+62 858-1001-7176",
+      "success": true,
+      "timestamp": "2026-04-28T14:03:51.923213+00:00"
+    }
+  },
+  {
+    "timestamp": "2026-04-28T14:03:51.925363+00:00",
+    "action": "consent",
+    "subject": "ChIJ7aQ4HVgdai4RDqbUyuVPjVo",
+    "details": {
+      "type": "email_marketing",
+      "given": true
+    }
+  },
+  {
+    "timestamp": "2026-04-28T14:03:51.983485+00:00",
+    "action": "consent",
+    "subject": "ChIJ7aQ4HVgdai4RDqbUyuVPjVo",
+    "details": {
+      "type": "whatsapp_marketing",
+      "given": true
+    }
+  },
+  {
+    "timestamp": "2026-04-28T14:03:54.176543+00:00",
+    "action": "outreach",
+    "subject": "ChIJ7aQ4HVgdai4RDqbUyuVPjVo",
+    "details": {
+      "channel": "whatsapp",
+      "contact": "+62 856-8808-066",
+      "success": true,
+      "timestamp": "2026-04-28T14:03:54.175856+00:00"
+    }
+  },
+  {
+    "timestamp": "2026-04-28T14:03:54.180261+00:00",
+    "action": "consent",
+    "subject": "ChIJN_ZIUnn0aS4Rz0zdR4eFBjc",
+    "details": {
+      "type": "email_marketing",
+      "given": true
+    }
+  },
+  {
+    "timestamp": "2026-04-28T14:03:54.240662+00:00",
+    "action": "consent",
+    "subject": "ChIJN_ZIUnn0aS4Rz0zdR4eFBjc",
+    "details": {
+      "type": "whatsapp_marketing",
+      "given": true
+    }
+  },
+  {
+    "timestamp": "2026-04-28T14:03:54.850904+00:00",
+    "action": "outreach",
+    "subject": "ChIJN_ZIUnn0aS4Rz0zdR4eFBjc",
+    "details": {
+      "channel": "whatsapp",
+      "contact": "+62 21 8583944",
+      "success": true,
+      "timestamp": "2026-04-28T14:03:54.850524+00:00"
+    }
+  },
+  {
+    "timestamp": "2026-04-28T14:08:34.332942+00:00",
+    "action": "outreach",
+    "subject": "ChIJsfcrG-zxaS4Re3Bk_BjGv8A",
+    "details": {
+      "channel": "whatsapp",
+      "contact": "+62 878-6215-9093",
+      "success": true,
+      "timestamp": "2026-04-28T14:08:34.332161+00:00"
+    }
+  },
+  {
+    "timestamp": "2026-04-28T14:08:34.958090+00:00",
+    "action": "outreach",
+    "subject": "ChIJddLwgBj3aS4RmCtur_8iF5s",
+    "details": {
+      "channel": "whatsapp",
+      "contact": "+62 21 30067981",
+      "success": true,
+      "timestamp": "2026-04-28T14:08:34.957427+00:00"
+    }
+  },
+  {
+    "timestamp": "2026-04-28T14:08:36.532187+00:00",
+    "action": "outreach",
+    "subject": "ChIJ3y8SyvT3aS4RS6XrGNwdFps",
+    "details": {
+      "channel": "whatsapp",
+      "contact": "+62 812-8888-3692",
+      "success": true,
+      "timestamp": "2026-04-28T14:08:36.531180+00:00"
+    }
+  },
+  {
+    "timestamp": "2026-04-28T14:08:36.922303+00:00",
+    "action": "outreach",
+    "subject": "ChIJlXvsjmLxaS4RMNspwWwdN0E",
+    "details": {
+      "channel": "whatsapp",
+      "contact": "+62 851-3401-0122",
+      "success": true,
+      "timestamp": "2026-04-28T14:08:36.921713+00:00"
+    }
+  },
+  {
+    "timestamp": "2026-04-28T14:08:37.946894+00:00",
+    "action": "outreach",
+    "subject": "ChIJeeBczNv1aS4R2bjWJY30sPs",
+    "details": {
+      "channel": "whatsapp",
+      "contact": "+62 812-9898-5900",
+      "success": true,
+      "timestamp": "2026-04-28T14:08:37.946143+00:00"
+    }
+  },
+  {
+    "timestamp": "2026-04-28T14:08:39.172379+00:00",
+    "action": "outreach",
+    "subject": "ChIJJ0PtrgeVaS4RVwB64MQ5270",
+    "details": {
+      "channel": "whatsapp",
+      "contact": "+62 852-1143-6032",
+      "success": true,
+      "timestamp": "2026-04-28T14:08:39.171175+00:00"
+    }
+  },
+  {
+    "timestamp": "2026-04-28T14:08:40.404176+00:00",
+    "action": "outreach",
+    "subject": "ChIJT7whNfLzaS4R_Xk9SiTxTig",
+    "details": {
+      "channel": "whatsapp",
+      "contact": "+62 821-1310-0223",
+      "success": true,
+      "timestamp": "2026-04-28T14:08:40.403531+00:00"
+    }
+  },
+  {
+    "timestamp": "2026-04-28T14:08:41.666817+00:00",
+    "action": "outreach",
+    "subject": "ChIJlwk8dar1aS4R6XYpHZgB558",
+    "details": {
+      "channel": "whatsapp",
+      "contact": "+62 852-1078-3334",
+      "success": true,
+      "timestamp": "2026-04-28T14:08:41.666517+00:00"
+    }
+  },
+  {
+    "timestamp": "2026-04-28T14:08:42.679655+00:00",
+    "action": "outreach",
+    "subject": "ChIJj5q9xfOt6y4RAdhsjXihkgM",
+    "details": {
+      "channel": "whatsapp",
+      "contact": "+62 858-1001-7176",
+      "success": true,
+      "timestamp": "2026-04-28T14:08:42.678893+00:00"
+    }
+  },
+  {
+    "timestamp": "2026-04-28T14:08:43.761824+00:00",
+    "action": "outreach",
+    "subject": "ChIJ7aQ4HVgdai4RDqbUyuVPjVo",
+    "details": {
+      "channel": "whatsapp",
+      "contact": "+62 856-8808-066",
+      "success": true,
+      "timestamp": "2026-04-28T14:08:43.761186+00:00"
+    }
+  },
+  {
+    "timestamp": "2026-04-28T14:08:44.374144+00:00",
+    "action": "outreach",
+    "subject": "ChIJN_ZIUnn0aS4Rz0zdR4eFBjc",
+    "details": {
+      "channel": "whatsapp",
+      "contact": "+62 21 8583944",
+      "success": true,
+      "timestamp": "2026-04-28T14:08:44.370586+00:00"
+    }
+  },
+  {
+    "timestamp": "2026-04-28T14:09:22.913512+00:00",
+    "action": "outreach",
+    "subject": "lead_0",
+    "details": {
+      "channel": "email",
+      "contact": "lead@example.com",
+      "success": true,
+      "timestamp": "2026-04-28T14:09:22.913305+00:00"
+    }
+  },
+  {
+    "timestamp": "2026-04-28T14:09:56.783047+00:00",
+    "action": "outreach",
+    "subject": "ChIJsfcrG-zxaS4Re3Bk_BjGv8A",
+    "details": {
+      "channel": "whatsapp",
+      "contact": "+62 878-6215-9093",
+      "success": true,
+      "timestamp": "2026-04-28T14:09:56.782295+00:00"
+    }
+  },
+  {
+    "timestamp": "2026-04-28T14:09:57.469583+00:00",
+    "action": "outreach",
+    "subject": "ChIJddLwgBj3aS4RmCtur_8iF5s",
+    "details": {
+      "channel": "whatsapp",
+      "contact": "+62 21 30067981",
+      "success": true,
+      "timestamp": "2026-04-28T14:09:57.468841+00:00"
+    }
+  },
+  {
+    "timestamp": "2026-04-28T14:09:58.826591+00:00",
+    "action": "outreach",
+    "subject": "ChIJ3y8SyvT3aS4RS6XrGNwdFps",
+    "details": {
+      "channel": "whatsapp",
+      "contact": "+62 812-8888-3692",
+      "success": true,
+      "timestamp": "2026-04-28T14:09:58.825945+00:00"
+    }
+  },
+  {
+    "timestamp": "2026-04-28T14:10:00.296447+00:00",
+    "action": "outreach",
+    "subject": "ChIJlXvsjmLxaS4RMNspwWwdN0E",
+    "details": {
+      "channel": "whatsapp",
+      "contact": "+62 851-3401-0122",
+      "success": true,
+      "timestamp": "2026-04-28T14:10:00.295816+00:00"
+    }
+  },
+  {
+    "timestamp": "2026-04-28T14:10:01.934421+00:00",
+    "action": "outreach",
+    "subject": "ChIJeeBczNv1aS4R2bjWJY30sPs",
+    "details": {
+      "channel": "whatsapp",
+      "contact": "+62 812-9898-5900",
+      "success": true,
+      "timestamp": "2026-04-28T14:10:01.933941+00:00"
+    }
+  },
+  {
+    "timestamp": "2026-04-28T14:10:03.506342+00:00",
+    "action": "outreach",
+    "subject": "ChIJJ0PtrgeVaS4RVwB64MQ5270",
+    "details": {
+      "channel": "whatsapp",
+      "contact": "+62 852-1143-6032",
+      "success": true,
+      "timestamp": "2026-04-28T14:10:03.505815+00:00"
+    }
+  },
+  {
+    "timestamp": "2026-04-28T14:10:05.420933+00:00",
+    "action": "outreach",
+    "subject": "ChIJT7whNfLzaS4R_Xk9SiTxTig",
+    "details": {
+      "channel": "whatsapp",
+      "contact": "+62 821-1310-0223",
+      "success": true,
+      "timestamp": "2026-04-28T14:10:05.420436+00:00"
+    }
+  },
+  {
+    "timestamp": "2026-04-28T14:10:07.215999+00:00",
+    "action": "outreach",
+    "subject": "ChIJlwk8dar1aS4R6XYpHZgB558",
+    "details": {
+      "channel": "whatsapp",
+      "contact": "+62 852-1078-3334",
+      "success": true,
+      "timestamp": "2026-04-28T14:10:07.215293+00:00"
+    }
+  },
+  {
+    "timestamp": "2026-04-28T14:10:08.798077+00:00",
+    "action": "outreach",
+    "subject": "ChIJj5q9xfOt6y4RAdhsjXihkgM",
+    "details": {
+      "channel": "whatsapp",
+      "contact": "+62 858-1001-7176",
+      "success": true,
+      "timestamp": "2026-04-28T14:10:08.797429+00:00"
+    }
+  },
+  {
+    "timestamp": "2026-04-28T14:10:10.567592+00:00",
+    "action": "outreach",
+    "subject": "ChIJ7aQ4HVgdai4RDqbUyuVPjVo",
+    "details": {
+      "channel": "whatsapp",
+      "contact": "+62 856-8808-066",
+      "success": true,
+      "timestamp": "2026-04-28T14:10:10.566988+00:00"
+    }
+  },
+  {
+    "timestamp": "2026-04-28T14:10:11.210714+00:00",
+    "action": "outreach",
+    "subject": "ChIJN_ZIUnn0aS4Rz0zdR4eFBjc",
+    "details": {
+      "channel": "whatsapp",
+      "contact": "+62 21 8583944",
+      "success": true,
+      "timestamp": "2026-04-28T14:10:11.210336+00:00"
+    }
+  },
+  {
+    "timestamp": "2026-04-28T14:10:11.213648+00:00",
+    "action": "consent",
+    "subject": "ChIJR3rAPWvxaS4RBLu0Rxvs3hw",
+    "details": {
+      "type": "email_marketing",
+      "given": true
+    }
+  },
+  {
+    "timestamp": "2026-04-28T14:10:11.250361+00:00",
+    "action": "consent",
+    "subject": "ChIJR3rAPWvxaS4RBLu0Rxvs3hw",
+    "details": {
+      "type": "whatsapp_marketing",
+      "given": true
+    }
+  },
+  {
+    "timestamp": "2026-04-28T14:10:11.818578+00:00",
+    "action": "outreach",
+    "subject": "ChIJR3rAPWvxaS4RBLu0Rxvs3hw",
+    "details": {
+      "channel": "whatsapp",
+      "contact": "+62 21 29043913",
+      "success": true,
+      "timestamp": "2026-04-28T14:10:11.818112+00:00"
+    }
+  },
+  {
+    "timestamp": "2026-04-28T14:10:11.820479+00:00",
+    "action": "consent",
+    "subject": "ChIJHW2OUzjxaS4R3MDxvIY9G0A",
+    "details": {
+      "type": "email_marketing",
+      "given": true
+    }
+  },
+  {
+    "timestamp": "2026-04-28T14:10:11.855670+00:00",
+    "action": "consent",
+    "subject": "ChIJHW2OUzjxaS4R3MDxvIY9G0A",
+    "details": {
+      "type": "whatsapp_marketing",
+      "given": true
+    }
+  },
+  {
+    "timestamp": "2026-04-28T14:10:14.128541+00:00",
+    "action": "outreach",
+    "subject": "ChIJHW2OUzjxaS4R3MDxvIY9G0A",
+    "details": {
+      "channel": "whatsapp",
+      "contact": "+62 811-1913-553",
+      "success": true,
+      "timestamp": "2026-04-28T14:10:14.127939+00:00"
+    }
+  },
+  {
+    "timestamp": "2026-04-28T14:10:14.131711+00:00",
+    "action": "consent",
+    "subject": "ChIJ743iZjD0aS4R3E1hUBbT36s",
+    "details": {
+      "type": "email_marketing",
+      "given": true
+    }
+  },
+  {
+    "timestamp": "2026-04-28T14:10:14.184996+00:00",
+    "action": "consent",
+    "subject": "ChIJ743iZjD0aS4R3E1hUBbT36s",
+    "details": {
+      "type": "whatsapp_marketing",
+      "given": true
+    }
+  },
+  {
+    "timestamp": "2026-04-28T14:10:14.766225+00:00",
+    "action": "outreach",
+    "subject": "ChIJ743iZjD0aS4R3E1hUBbT36s",
+    "details": {
+      "channel": "whatsapp",
+      "contact": "+62 21 31900001",
+      "success": true,
+      "timestamp": "2026-04-28T14:10:14.765643+00:00"
+    }
+  },
+  {
+    "timestamp": "2026-04-28T14:10:14.770684+00:00",
+    "action": "consent",
+    "subject": "ChIJSf7dvUT2aS4R_wbsAK_vd-E",
+    "details": {
+      "type": "email_marketing",
+      "given": true
+    }
+  },
+  {
+    "timestamp": "2026-04-28T14:10:14.844933+00:00",
+    "action": "consent",
+    "subject": "ChIJSf7dvUT2aS4R_wbsAK_vd-E",
+    "details": {
+      "type": "whatsapp_marketing",
+      "given": true
+    }
+  },
+  {
+    "timestamp": "2026-04-28T14:10:15.423945+00:00",
+    "action": "outreach",
+    "subject": "ChIJSf7dvUT2aS4R_wbsAK_vd-E",
+    "details": {
+      "channel": "whatsapp",
+      "contact": "+62 21 39516661",
+      "success": true,
+      "timestamp": "2026-04-28T14:10:15.423219+00:00"
+    }
+  },
+  {
+    "timestamp": "2026-04-28T14:10:15.427879+00:00",
+    "action": "consent",
+    "subject": "ChIJPV7M1J_2aS4Rc0iBJc_KXjo",
+    "details": {
+      "type": "email_marketing",
+      "given": true
+    }
+  },
+  {
+    "timestamp": "2026-04-28T14:10:15.470856+00:00",
+    "action": "consent",
+    "subject": "ChIJPV7M1J_2aS4Rc0iBJc_KXjo",
+    "details": {
+      "type": "whatsapp_marketing",
+      "given": true
+    }
+  },
+  {
+    "timestamp": "2026-04-28T14:10:16.051792+00:00",
+    "action": "outreach",
+    "subject": "ChIJPV7M1J_2aS4Rc0iBJc_KXjo",
+    "details": {
+      "channel": "whatsapp",
+      "contact": "+62 21 31990862",
+      "success": true,
+      "timestamp": "2026-04-28T14:10:16.051485+00:00"
+    }
+  },
+  {
+    "timestamp": "2026-04-28T14:10:16.053899+00:00",
+    "action": "consent",
+    "subject": "ChIJiaU5yf-LaS4RIStJsP6hx-U",
+    "details": {
+      "type": "email_marketing",
+      "given": true
+    }
+  },
+  {
+    "timestamp": "2026-04-28T14:10:16.093589+00:00",
+    "action": "consent",
+    "subject": "ChIJiaU5yf-LaS4RIStJsP6hx-U",
+    "details": {
+      "type": "whatsapp_marketing",
+      "given": true
+    }
+  },
+  {
+    "timestamp": "2026-04-28T14:10:18.319754+00:00",
+    "action": "outreach",
+    "subject": "ChIJiaU5yf-LaS4RIStJsP6hx-U",
+    "details": {
+      "channel": "whatsapp",
+      "contact": "+62 858-8758-2702",
+      "success": true,
+      "timestamp": "2026-04-28T14:10:18.318024+00:00"
+    }
+  },
+  {
+    "timestamp": "2026-04-28T14:10:18.326266+00:00",
+    "action": "consent",
+    "subject": "ChIJ7XVkpDT1aS4Ry8UWNYObSCc",
+    "details": {
+      "type": "email_marketing",
+      "given": true
+    }
+  },
+  {
+    "timestamp": "2026-04-28T14:10:18.374418+00:00",
+    "action": "consent",
+    "subject": "ChIJ7XVkpDT1aS4Ry8UWNYObSCc",
+    "details": {
+      "type": "whatsapp_marketing",
+      "given": true
+    }
+  },
+  {
+    "timestamp": "2026-04-28T14:10:19.027294+00:00",
+    "action": "outreach",
+    "subject": "ChIJ7XVkpDT1aS4Ry8UWNYObSCc",
+    "details": {
+      "channel": "whatsapp",
+      "contact": "+6280877603773",
+      "success": true,
+      "timestamp": "2026-04-28T14:10:19.026249+00:00"
+    }
+  },
+  {
+    "timestamp": "2026-04-28T14:10:19.034939+00:00",
+    "action": "consent",
+    "subject": "ChIJGVSN3fnzaS4R3w9qNDpIbjs",
+    "details": {
+      "type": "whatsapp_marketing",
+      "given": true
+    }
+  },
+  {
+    "timestamp": "2026-04-28T14:10:19.678160+00:00",
+    "action": "outreach",
+    "subject": "ChIJGVSN3fnzaS4R3w9qNDpIbjs",
+    "details": {
+      "channel": "whatsapp",
+      "contact": "+62 21 5201642",
+      "success": true,
+      "timestamp": "2026-04-28T14:10:19.677742+00:00"
+    }
+  },
+  {
+    "timestamp": "2026-04-28T14:10:19.681867+00:00",
+    "action": "consent",
+    "subject": "ChIJcWGKG2zxaS4RFcxWKOyqtH4",
+    "details": {
+      "type": "whatsapp_marketing",
+      "given": true
+    }
+  },
+  {
+    "timestamp": "2026-04-28T14:10:22.207974+00:00",
+    "action": "outreach",
+    "subject": "ChIJcWGKG2zxaS4RFcxWKOyqtH4",
+    "details": {
+      "channel": "whatsapp",
+      "contact": "+62 817-0737-125",
+      "success": true,
+      "timestamp": "2026-04-28T14:10:22.207601+00:00"
+    }
+  },
+  {
+    "timestamp": "2026-04-28T14:11:37.029013+00:00",
+    "action": "outreach",
+    "subject": "lead_0",
+    "details": {
+      "channel": "email",
+      "contact": "lead@example.com",
+      "success": true,
+      "timestamp": "2026-04-28T14:11:37.028593+00:00"
+    }
+  },
+  {
+    "timestamp": "2026-04-28T14:11:37.043132+00:00",
+    "action": "outreach",
+    "subject": "lead_0",
+    "details": {
+      "channel": "email",
+      "contact": "lead@example.com",
+      "success": true,
+      "timestamp": "2026-04-28T14:11:37.042870+00:00"
+    }
+  },
+  {
+    "timestamp": "2026-04-28T14:12:18.998079+00:00",
+    "action": "outreach",
+    "subject": "lead_0",
+    "details": {
+      "channel": "email",
+      "contact": "lead@example.com",
+      "success": true,
+      "timestamp": "2026-04-28T14:12:18.997617+00:00"
+    }
+  },
+  {
+    "timestamp": "2026-04-28T14:12:19.011303+00:00",
+    "action": "outreach",
+    "subject": "lead_0",
+    "details": {
+      "channel": "email",
+      "contact": "lead@example.com",
+      "success": true,
+      "timestamp": "2026-04-28T14:12:19.010979+00:00"
+    }
+  },
+  {
+    "timestamp": "2026-04-28T14:12:31.360023+00:00",
+    "action": "outreach",
+    "subject": "lead_0",
+    "details": {
+      "channel": "email",
+      "contact": "lead@example.com",
+      "success": true,
+      "timestamp": "2026-04-28T14:12:31.359729+00:00"
+    }
+  },
+  {
+    "timestamp": "2026-04-28T14:12:31.372846+00:00",
+    "action": "outreach",
+    "subject": "lead_0",
+    "details": {
+      "channel": "email",
+      "contact": "lead@example.com",
+      "success": true,
+      "timestamp": "2026-04-28T14:12:31.372617+00:00"
+    }
+  },
+  {
+    "timestamp": "2026-04-28T16:22:14.095699+00:00",
+    "action": "outreach",
+    "subject": "lead_0",
+    "details": {
+      "channel": "email",
+      "contact": "lead@example.com",
+      "success": true,
+      "timestamp": "2026-04-28T16:22:14.095025+00:00"
+    }
+  },
+  {
+    "timestamp": "2026-04-28T16:22:14.113498+00:00",
+    "action": "outreach",
+    "subject": "lead_0",
+    "details": {
+      "channel": "email",
+      "contact": "lead@example.com",
+      "success": true,
+      "timestamp": "2026-04-28T16:22:14.113208+00:00"
+    }
+  },
+  {
+    "timestamp": "2026-04-28T16:33:57.704211+00:00",
+    "action": "outreach",
+    "subject": "lead_0",
+    "details": {
+      "channel": "email",
+      "contact": "lead@example.com",
+      "success": true,
+      "timestamp": "2026-04-28T16:33:57.701462+00:00"
+    }
+  },
+  {
+    "timestamp": "2026-04-28T16:33:57.716828+00:00",
+    "action": "outreach",
+    "subject": "lead_0",
+    "details": {
+      "channel": "email",
+      "contact": "lead@example.com",
+      "success": true,
+      "timestamp": "2026-04-28T16:33:57.716593+00:00"
+    }
+  },
+  {
+    "timestamp": "2026-04-28T17:56:09.270180+00:00",
+    "action": "outreach",
+    "subject": "lead_0",
+    "details": {
+      "channel": "email",
+      "contact": "lead@example.com",
+      "success": true,
+      "timestamp": "2026-04-28T17:56:09.269211+00:00"
+    }
+  },
+  {
+    "timestamp": "2026-04-28T17:56:09.296680+00:00",
+    "action": "outreach",
+    "subject": "lead_0",
+    "details": {
+      "channel": "email",
+      "contact": "lead@example.com",
+      "success": true,
+      "timestamp": "2026-04-28T17:56:09.296417+00:00"
+    }
+  },
+  {
+    "timestamp": "2026-04-28T18:05:12.343343+00:00",
+    "action": "outreach",
+    "subject": "lead_0",
+    "details": {
+      "channel": "email",
+      "contact": "lead@example.com",
+      "success": true,
+      "timestamp": "2026-04-28T18:05:12.342707+00:00"
+    }
+  },
+  {
+    "timestamp": "2026-04-28T18:05:12.354422+00:00",
+    "action": "outreach",
+    "subject": "lead_0",
+    "details": {
+      "channel": "email",
+      "contact": "lead@example.com",
+      "success": true,
+      "timestamp": "2026-04-28T18:05:12.354174+00:00"
+    }
   }
 ]

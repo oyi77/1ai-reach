@@ -1,0 +1,31 @@
+---PROPOSAL---
+Hi Team at Cafe Kissa,
+
+I noticed your beautiful cafe is one of the standout F&B experiences at Grand Indonesia, and the Ismaya Group's reputation for quality hospitality is well-deserved.
+
+However, looking at your current website (built on Next.js - good choice), I see you're missing some key opportunities that competitors in Jakarta's premium F&B space are already leveraging:
+
+**Two concrete solutions I'd recommend:**
+
+1. **Content Marketing & SEO Integration**
+   - Build a blog/content section directly into your Next.js site featuring coffee culture, seasonal menu stories, and Grand Indonesia events
+   - Implement an SEO strategy targeting keywords like "best cafe Grand Indonesia," "coffee spots Jakarta," and "brunch Jakarta"
+   - Deliverables: 8-10 SEO-optimized blog posts/month, technical SEO audit, and content calendar
+   - **Expected ROI**: 30-50% increase in organic traffic within 3 months, translating to more foot traffic from people searching for cafes in the area
+
+2. **WhatsApp Business API for Reservations & Customer Service**
+   - Integrate WhatsApp directly into your site for instant reservations, inquiries, and order confirmations
+   - Set up automated responses for common questions (menu, hours, location)
+   - Deliverables: WhatsApp Business API setup, chatbot automation, and CRM integration
+   - **Expected ROI**: Cut response time by 5x (from hours to seconds) and increase reservation conversions by 25%
+
+The combination of stronger organic visibility and instant customer communication would position Cafe Kissa as the go-to cafe in Grand Indonesia for both walk-ins and planned visits.
+
+Would you be open to a 15-minute call next week to discuss how this could work for your specific needs? Or I can send over a free audit of your current digital presence - no obligation.
+
+Best regards,
+Vilona
+BerkahKarya
+
+---WHATSAPP---
+Halo Cafe Kissa! Saya lihat kalian ada di Grand Indonesia. Kebetulan website kalian pakai Next.js - bagus banget! Tapi kayanya bisa lebih banyak pengunjung kalau ada blog dan integrasi WhatsApp buat reservasi. Mau saya kasih ide gratis? 15 menit aja, santai. 😊

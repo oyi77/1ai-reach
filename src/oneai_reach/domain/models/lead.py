@@ -47,6 +47,13 @@ class Lead(BaseModel):
     type: Optional[str] = None
     source: Optional[str] = None
 
+    
+    score: int = Field(default=0, ge=0, le=100, description="Predictive lead score")
+    ai_triage_category: Optional[str] = Field(default=None, description="AI classification of reply")
+    ai_suggested_reply: Optional[str] = Field(default=None, description="Draft response prepared by AI")
+    is_blacklisted: bool = Field(default=False, description="True if asked to DND")
+
+
     # Pipeline status
     status: LeadStatus = LeadStatus.NEW
     contacted_at: Optional[datetime] = None

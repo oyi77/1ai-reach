@@ -133,6 +133,7 @@ CREATE TABLE IF NOT EXISTS conversations (
     lead_id TEXT,
     engine_mode TEXT NOT NULL,
     status TEXT DEFAULT 'active',
+    stage TEXT DEFAULT 'discovery',
     manual_mode INTEGER DEFAULT 0,
     test_mode INTEGER DEFAULT 0,
     last_message_at TEXT,
@@ -150,6 +151,7 @@ CREATE TABLE IF NOT EXISTS conversation_messages (
     message_type TEXT DEFAULT 'text',
     waha_message_id TEXT,
     timestamp TEXT DEFAULT (datetime('now')),
+    created_at TEXT DEFAULT (datetime('now')),
     FOREIGN KEY (conversation_id) REFERENCES conversations(id)
 );
 

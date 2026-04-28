@@ -156,7 +156,7 @@ class TestBlasterService:
         )
         sent_payload = {}
 
-        def send_email(email, subject, body, pdf_bytes=None, filename=None):
+        def send_email(email, subject, body, pdf_bytes=None, filename=None, lead_id=None):
             sent_payload["email"] = email
             sent_payload["subject"] = subject
             sent_payload["body"] = body
@@ -191,7 +191,7 @@ class TestBlasterService:
         assert sent_payload["filename"] == "Proposal_ACME.pdf"
         assert (tmp_path / "proposals" / "sent_pdfs" / "0_Proposal_ACME.pdf").exists()
 
-    def test_blast_proposals_does_not_mark_contacted_when_pdf_fails(self, settings, tmp_path, monkeypatch):
+    def test_blast_proposals_sends_without_attachment_when_pdf_fails(self, settings, tmp_path, monkeypatch):
         draft_dir = tmp_path / "proposals" / "drafts"
         draft_dir.mkdir(parents=True)
         settings.database.proposals_dir = str(draft_dir)
@@ -232,5 +232,5 @@ class TestBlasterService:
             str,
         )
 
-        assert (sent, skipped_cooldown, skipped_no_draft) == (0, 0, 0)
-        assert df.at[0, "status"] == "reviewed"
+        assert (sent, skipped_cooldown, skipped_no_draft) == (1, 0, 0)
+        assert df.at[0, "status"] == "contacted"

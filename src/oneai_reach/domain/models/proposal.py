@@ -18,6 +18,7 @@ class Proposal(BaseModel):
     # Proposal content
     content: str
     score: Optional[float] = Field(None, ge=0.0, le=10.0)
+    ab_test_angle: Optional[str] = None
 
     # Review status
     reviewed: bool = False

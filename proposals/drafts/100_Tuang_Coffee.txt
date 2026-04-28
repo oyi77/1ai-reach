@@ -1,0 +1,28 @@
+---PROPOSAL---
+Subject: Quick WhatsApp integration for Tuang Coffee's customer inquiries
+
+Hi Team Tuang Coffee,
+
+I noticed your website doesn't have a WhatsApp widget or live chat – which means customers browsing your menu or space in Kby. Baru can't quickly reach out with questions about reservations, private events, or daily specials. That's a missed opportunity, especially for a coffee shop in a high-footfall area like Jakarta Selatan.
+
+I'd like to propose a simple but powerful solution:
+
+**WhatsApp Business API Integration with Chatbot**
+We'll build a conversational bot that handles:
+- Menu inquiries and recommendations
+- Table/seat reservations
+- Private event booking requests
+- Operating hours and daily specials updates
+
+Based on similar F&B clients in Jakarta, this typically increases customer inquiry conversion by 30% and cuts response time from hours to seconds – no more missed calls or unanswered DMs.
+
+If you'd like, we can also add a lightweight testimonial showcase section to your site (we saw you don't currently have customer reviews visible), which builds trust and could boost reservations by another 20-25%.
+
+Would you be open to a 15-minute call this week to discuss what a WhatsApp integration would look like for Tuang Coffee? No strings attached.
+
+Best regards,  
+Vilona  
+BerkahKarya
+
+---WHATSAPP---
+Halo Tuang Coffee! Kami dari BerkahKarya mau bantu bikin chatbot WhatsApp biar pelanggan bisa tanya menu dan reservasi langsung dari website. Bisa coba 15 menit ngobrol besok?

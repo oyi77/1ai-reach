@@ -1,3 +1,4 @@
+import pandas as pd
 """
 Prospect pain-point researcher.
 
@@ -32,11 +33,15 @@ def process_research() -> None:
 
     if "research" not in df.columns:
         df["research"] = None
+    if "decision_maker" not in df.columns:
+        df["decision_maker"] = None
+        
     df["research"] = df["research"].astype(object)
+    df["decision_maker"] = df["decision_maker"].astype(object)
 
     researched = 0
     for index, row in df.iterrows():
-        existing = str(row.get("research") or "")
+        val = row.get("research"); existing = "" if pd.isna(val) else str(val)
         if existing and not is_empty(existing):
             continue
 
@@ -58,6 +63,10 @@ def process_research() -> None:
         df.at[index, "research"] = (
             " | ".join(summary_parts) if summary_parts else "no_data"
         )
+        
+        if data.get("decision_maker") and data["decision_maker"] != "UNKNOWN":
+            df.at[index, "decision_maker"] = data["decision_maker"]
+            
         researched += 1
         time.sleep(0.5)
 

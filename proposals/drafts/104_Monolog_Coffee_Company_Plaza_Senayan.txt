@@ -1,0 +1,31 @@
+---PROPOSAL---
+Subject: Quick idea for Monolog's digital customer experience
+
+Hi Monolog Coffee team,
+
+I noticed something interesting on your Plaza Senayan location - while your coffee quality speaks for itself through the foot traffic, your website isn't capturing the same energy in-store. The absence of a direct conversation channel means curious browsers can't easily ask about today's pour-over selection or reserve a table before they arrive.
+
+Here's what I'd recommend:
+
+**WhatsApp Business API Integration with Smart Menu Chatbot**
+- Deploy a WhatsApp widget on your site that connects to an intelligent chatbot trained on your menu, brewing methods, and daily specials
+- Enable instant table reservations and pre-orders through WhatsApp
+- Capture customer inquiries automatically and route barista questions to your team
+- Expected impact: 3x faster response times and 40% more table reservations from web traffic
+
+**Coffee Content Hub + Local SEO Strategy**
+- Create a blog section featuring brewing guides, bean origin stories, and Jakarta coffee culture pieces
+- Develop a "Our Coffee" showcase page highlighting your sourcing and roasting philosophy
+- Build testimonial carousel from your loyal Plaza Senayan regulars
+- Expected impact: 250% increase in organic traffic from "coffee Jakarta" searches within 6 months
+
+Both solutions work together - your content drives organic discovery, while WhatsApp converts that interest into actual foot traffic and orders.
+
+Would you be open to a 15-minute call next week to walk through how this would look for Monolog specifically? I can also share a quick free audit of your current conversion funnel.
+
+Best regards,
+Vilona
+BerkahKarya
+
+---WHATSAPP---
+Halo Monolog Coffee! Baru coba pour-over kalian di Plaza Senayan minggu lalu, enak banget. Kayaknya website kalian bisa bikin lebih banyak orang nyoba kopi kalian kalau ada WhatsApp chat langsung. Kalau sempat, bisa chat sebentar gak ya?

@@ -1,6 +1,7 @@
 """Lead scraper service - extracts business logic from scripts/scraper.py."""
 
 import time
+import asyncio
 from typing import List, Optional
 from urllib.parse import urlparse
 
@@ -181,7 +182,12 @@ class ScraperService:
                     return requests.post(url, json=body, headers=headers, timeout=15)
                 
                 if threading.current_thread() is threading.main_thread():
-                    asyncio.get_event_loop().run_until_complete(rate_limiter.acquire())
+                    try:
+                        loop = asyncio.get_event_loop()
+                    except RuntimeError:
+                        loop = asyncio.new_event_loop()
+                        asyncio.set_event_loop(loop)
+                    loop.run_until_complete(rate_limiter.acquire())
                 else:
                     asyncio.run(rate_limiter.acquire())
                     

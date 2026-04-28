@@ -1,0 +1,27 @@
+---PROPOSAL---
+Subject: Turning your tech stack into 40% more direct bookings at HPlace
+
+Hi HPlace team,
+
+I noticed something interesting while looking at your Linktree - you're already using Next.js, React, Shopify, and Google Ads. Most restaurants in Canggu are still figuring out Instagram, but you've got a modern web stack in place. That's rare.
+
+Here's the thing though: your Linktree is essentially a dead end for conversions. No testimonials, no menu preview, and zero social proof. Tourists landing there see zero reasons to book a table or visit you tonight.
+
+I'd recommend leveraging your existing tech infrastructure with two specific additions:
+
+1. **WhatsApp Business API Chatbot** - A bot that handles reservations, menu inquiries, and pushes daily specials automatically. Tourists in Bali live on WhatsApp - giving them instant booking confirmation without downloading an app or calling. Deliverable: Automated reservation flow, menu FAQ bot, broadcast system for events/promos.
+
+2. **Conversion-Optimized Landing Page** - Replace your Linktree with a proper page showcasing guest testimonials, real-time menu preview, and a prominent "Book Now" button. Build it on Next.js (which you already use) with Google Analytics tracking. Deliverable: Landing page design + development, testimonial collection system, Google Ads integration.
+
+**Expected impact:** Restaurants using WhatsApp booking in Canggu see 30-40% more direct reservations (cutting out aggregator fees) and reduce response time from hours to instant.
+
+You're already tech-forward - let's make it convert.
+
+I'm happy to do a free 15-minute call to review your current funnel and show you a quick mockup. Or if you prefer, I can audit your current booking setup and email you a roadmap.
+
+Best regards,
+
+Vilona
+BerkahKarya
+---WHATSAPP---
+Halo HPlace! Kuliat tech stack kalian - udah pakai Next.js dan Google Ads, keren banget. Aku bisa bantu bikin sistem booking lewat WhatsApp biar turis bisa reservasi langsung tanpa ribet. Mau ngobrol 15 menit kasih lihat demo?

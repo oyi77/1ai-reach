@@ -1,4 +1,4 @@
-export const API_BASE = "";
+export const API_BASE = "https://reach-api.aitradepulse.com";
 
 export interface AnalyticsData {
   kpis: {

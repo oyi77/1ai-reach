@@ -1,35 +1,31 @@
 ---PROPOSAL---
-Subject: How AI Automation Can Scale SAB's Service Delivery — Worth a 15-Minute Chat?
-
 Hi SAB Team,
 
-I came across SAB | Digital Marketing Agency and was genuinely impressed by the scope of services you offer. Running a full-service digital marketing agency means managing multiple clients, campaigns, reporting cycles, and content pipelines simultaneously — and that's exactly where I believe we can add real value.
+I noticed you're positioning SAB as a comprehensive digital marketing agency with automation and AI capabilities, operating right out of Rasuna Epicentrum. Impressive range - social media, web design, e-commerce, and automation under one roof.
 
-My name is Vilona, and I'm reaching out from BerkahKarya — we specialize in AI Automation, Digital Marketing, and Software Development, specifically for agencies and service-based businesses like yours.
+Here's what caught my attention: While you're offering automation and AI services, many agencies I'm seeing in Jakarta are now using advanced AI automation workflows (n8n/Make/custom agents) to dramatically scale their client work without adding headcount. 
 
-Here's what we're seeing with digital marketing agencies right now:
+I'm thinking of agencies like **Neo Digital** in Menteng - they've started deploying AI-powered lead generation and automated client onboarding workflows, which has allowed them to take on 40% more clients with the same team size. Their secret weapon? Custom AI agents that handle repetitive tasks, automate reporting, and even qualify leads before human intervention.
 
-- **Reporting & Analytics** — Agencies spend 5–10 hours per client per month on manual reporting. We automate this entirely, delivering real-time dashboards and AI-generated summaries.
-- **Client Communication & Follow-Ups** — AI-powered workflows handle routine client updates, lead nurturing, and onboarding sequences, freeing your team to focus on strategy.
-- **Content & Campaign Operations** — Repetitive tasks like scheduling, A/B test tracking, and performance alerts can be fully automated, cutting operational overhead by 30–50%.
+Here's where BerkahKarya can help you level up:
 
-The result: your team delivers more, faster, without increasing headcount.
+**AI-Powered Agency Automation Suite**
+- Custom AI agent workflows for client onboarding, reporting automation, and lead qualification
+- Integration with your existing tech stack (Google Analytics, WordPress, Shopify)
+- *Expected ROI: Reduce client delivery time by 50%, increase client retention by 30%*
 
-We've helped similar agencies reduce manual workload and reinvest that time into higher-margin work and new client acquisition.
+**Advanced SEO & CRO for Your Clients**
+- Technical SEO audits and optimization for your e-commerce clients (especially Shopify stores)
+- Conversion Rate Optimization to help your clients convert more traffic into sales
+- *Expected ROI: 25-40% increase in conversion rates for your clients*
 
-I'd love to set up a quick 15-minute call to walk you through what this could look like specifically for SAB — no commitment, just a concrete look at where the wins are.
+This isn't about replacing what you do - it's about giving you the tools to scale faster and deliver better results for your clients.
 
-Would this week or next work for a short call?
+Would you be open to a 15-minute call next week to discuss how we can set up a quick pilot automation workflow for one of your processes?
 
-Warm regards,
-**Vilona**
-BerkahKarya — AI Automation | Digital Marketing | Software Development
+Best regards,
+Vilona
+BerkahKarya
 
 ---WHATSAPP---
-Halo Kak, saya Vilona dari BerkahKarya 👋
-
-Lagi ngulik tentang SAB dan tertarik banget — agency digital marketing pasti tau rasanya kerjaan operasional bisa nyita banyak waktu ya, mulai dari reporting, follow-up klien, sampai konten.
-
-Kami bantu agency kayak SAB otomatisasi hal-hal itu pake AI, biar tim bisa fokus ke hal yang lebih penting.
-
-Boleh ngobrol 15 menit aja nggak? Mau share beberapa ide yang mungkin relevan buat SAB 🙏
+Halo SAB, baru saja liat website kalian di Rasuna Epicentrum. Keren banget service-nya dari social media sampai automation! Quick question: pernah kepikiran nggak pake AI automation buat otomatisin reporting sama client onboarding? Banyak agency di Jakarta sekarang udah mulai pake nih biar bisa handle lebih banyak client tanpa nambah tim. Kalau sempat, maybe kita bisa ngobrol santai 15 menit soal ini?

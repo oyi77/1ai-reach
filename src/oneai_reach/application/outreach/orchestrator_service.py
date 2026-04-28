@@ -105,39 +105,41 @@ class OrchestratorService:
             return False
 
     def run_lead_scoring(self) -> bool:
-        """Run lead_scorer on leads that don't have a score yet."""
-        logger.info("Running lead scoring on new leads")
+        """Run predictive lead scoring on enriched leads."""
+        logger.info("Running predictive lead scoring on new leads")
         try:
             from oneai_reach.infrastructure.legacy.leads import load_leads, save_leads
-            from oneai_reach.infrastructure.legacy.lead_scorer import score_lead
+            from oneai_reach.application.outreach.enricher_service import EnricherService
 
             df = load_leads()
             if df is None or df.empty:
                 return True
 
+            enricher = EnricherService(self.config)
             updated = 0
+
             for idx, row in df.iterrows():
                 try:
-                    score = float(row.get("lead_score", 0) or 0)
-                except (ValueError, TypeError):
-                    score = 0
-                if score > 0:
-                    continue
+                    current_score = float(row.get("lead_score", 0) or 0)
+                    if current_score > 0:
+                        continue  # Skip already scored leads
 
-                lead = row.to_dict()
-                research_text = str(row.get("research", ""))
-                result = score_lead(lead, {"text_sample": research_text})
+                    lead_data = row.to_dict()
+                    lead_score = enricher.score_lead(lead_data)
 
-                df.at[idx, "lead_score"] = result["total_score"]
-                df.at[idx, "tier"] = result["tier"]
-                updated += 1
+                    df.at[idx, "lead_score"] = lead_score
+                    updated += 1
 
-            if updated:
+                except Exception as e:
+                    logger.warning(f"Failed to score lead at index {idx}: {e}")
+
+            if updated > 0:
                 save_leads(df)
-                logger.info(f"Scored {updated} leads")
+                logger.info(f"Updated lead scores for {updated} leads")
+
             return True
         except Exception as e:
-            logger.error(f"Lead scoring error: {e}")
+            logger.error(f"Error during lead scoring: {e}")
             return False
 
     def run_full_pipeline(self, query: str, dry_run: bool = False, scraper_source: str = "gmaps", max_leads: int = 60) -> dict:
@@ -157,9 +159,13 @@ class OrchestratorService:
         results["scraper"] = self._run_step("scraper.py", "Scraping additional leads via Google Places", [query])
 
         results["service_detection"] = self.run_service_detection()
+
+        # Run lead enrichment first
+        results["enricher"] = self._run_step("enricher.py", "Enriching contact info")
+
+        # Predictive lead scoring immediately after enrichment
         results["lead_scoring"] = self.run_lead_scoring()
 
-        results["enricher"] = self._run_step("enricher.py", "Enriching contact info")
         results["researcher"] = self._run_step("researcher.py", "Researching prospect pain points")
         results["generator"] = self._run_step("generator.py", "Generating personalized proposals")
         results["reviewer"] = self._run_step("reviewer.py", "Reviewing proposal quality")

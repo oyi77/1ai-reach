@@ -73,7 +73,7 @@ def load_leads(path: str = LEADS_FILE) -> pd.DataFrame | None:
             df[col] = default
     for col in _STR_COLS:
         if col in df.columns:
-            df[col] = df[col].astype(str).replace({"None": pd.NA, "nan": pd.NA})
+            df[col] = df[col].astype(str).replace({"None": None, "nan": None, "<NA>": None})
     return df
 
 

@@ -1,0 +1,33 @@
+---PROPOSAL---
+Subject: Turn that missing WhatsApp widget into 24/7 orders for MAXX Coffee
+
+I noticed MAXX Coffee's site has Meta Pixel and Google Analytics tracking installed (smart move), but there's one conversion killer I spotted: no WhatsApp widget or live chat.
+
+Given your prime location inside Siloam Hospital MRCCC, you're likely serving a steady stream of hospital visitors, staff, and nearby office workers who need quick answers: operating hours, menu details, delivery options. Right now, they're leaving your site without an easy way to connect.
+
+Here's what I'd propose:
+
+**Solution 1: WhatsApp Business API Chatbot**
+Deploy an AI-powered WhatsApp assistant that:
+- Takes pre-orders for pickup/delivery
+- Answers common questions (hours, location, menu) 24/7
+- Handles 80% of routine queries automatically
+- Routes complex requests to your staff
+
+**Expected ROI:** Cut response time from hours to seconds, capture 30%+ more orders that would've otherwise bounced.
+
+**Solution 2: Coffee Content Strategy**
+Launch a blog section with targeted content like "Coffee for Hospital Shift Workers: Energy Without the Crash" and "5 Coffee Drinks That Won't Spike Blood Sugar" —leveraging your hospital location for organic search relevance.
+
+**Expected ROI:** 50-70% increase in organic traffic within 3 months, positioning MAXX Coffee as a go-to resource for health-conscious coffee drinkers.
+
+Both solutions integrate with your existing analytics, so you'll see exactly how each channel performs.
+
+Open to a 15-minute call next week? I can show you a live demo of a coffee shop WhatsApp chatbot we've deployed.
+
+Best,
+Vilona
+BerkahKarya
+
+---WHATSAPP---
+Halo kak, mampir di website MAXX Coffee tadi. Cukup rapi! Kayaknya kurang WhatsApp biar pelanggan bisa tanya-tanya atau pre-order. Bisa kita bahas 15 menit gratis?

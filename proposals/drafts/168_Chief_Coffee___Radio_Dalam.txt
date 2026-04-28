@@ -1,0 +1,23 @@
+---PROPOSAL---
+Subject: Quick win for Chief Coffee's digital storefront
+
+I noticed Chief Coffee Radio Dalam has a solid tech foundation with Next.js and Shopify — that's impressive for a coffee shop. But I also spotted something that's likely costing you daily: no WhatsApp widget, which means customers can't instantly ask about your menu, hours, or place orders.
+
+Here's what I'd recommend:
+
+**Solution 1: WhatsApp Business API + Smart Chatbot**
+Deploy a WhatsApp widget directly on your site that handles common queries (menu, location, prices) and captures customer info when you're offline. We can integrate it seamlessly with your existing Next.js setup.
+
+**Solution 2: Social Proof & CTA Optimization**
+Add a customer testimonial section and implement clear conversion CTAs (e.g., "Order Now," "Reserve a Table"). We'll set up a simple review collection system via WhatsApp to build your social proof automatically.
+
+**Expected Impact:** Coffee shops with WhatsApp chat see 40-50% higher lead response rates, and social proof can boost conversions by 20-30%.
+
+Would you be open to a 15-minute call this week? I can walk you through a quick demo and share a free audit of your current conversion funnel.
+
+Best regards,
+Vilona
+BerkahKarya
+
+---WHATSAPP---
+Halo Chief Coffee! Saya Vilona dari BerkahKarya. Saya lihat website-nya pakai Next.js, keren banget. Ada ide simpel biar pelanggan bisa tanya menu dan order via WhatsApp langsung dari web. Kalau sempat, kita bisa ngobrol 15 menit? 😊
