@@ -207,6 +207,9 @@ class ExternalAPISettings(BaseSettings):
     exa_api_key: str = Field(
         default="", description="Exa API key for semantic intent search"
     )
+    calendly_api_key: str = Field(
+        default="", description="Calendly API key for meeting scheduling"
+    )
 
     model_config = ConfigDict(env_prefix="")
 

@@ -1,0 +1,43 @@
+[32mINFO    [0m oneai_reach.infrastructure.database.migration_v2 V2 tables created/verified
+[32mINFO    [0m oneai_reach.infrastructure.database.migration_v2 V2 migration complete
+[32mINFO    [0m oneai_reach.infrastructure.database.migration_personas Persona tables created/verified
+[32mINFO    [0m oneai_reach.infrastructure.database.migration_personas Persona migration complete
+[32mINFO    [0m oneai_reach.infrastructure.database.migration_crm_phase_a CRM Phase A tables created/verified
+[32mINFO    [0m oneai_reach.infrastructure.database.migration_crm_phase_a CRM Phase A migration complete
+[32mINFO    [0m oneai_reach.infrastructure.database.migration_crm_phase_b CRM Phase B tables created/verified
+[32mINFO    [0m oneai_reach.infrastructure.database.migration_crm_phase_b CRM Phase B migration complete
+[32mINFO    [0m oneai_reach.infrastructure.database.migration_crm_phase_c CRM Phase C tables created/verified
+[32mINFO    [0m oneai_reach.infrastructure.database.migration_crm_phase_c CRM Phase C migration complete
+[32mINFO    [0m oneai_reach.infrastructure.database.migration_v2 V2 tables created/verified
+[32mINFO    [0m oneai_reach.infrastructure.database.migration_v2 V2 migration complete
+[32mINFO    [0m oneai_reach.infrastructure.database.migration_personas Persona tables created/verified
+[32mINFO    [0m oneai_reach.infrastructure.database.migration_personas Persona migration complete
+[32mINFO    [0m oneai_reach.infrastructure.database.migration_crm_phase_a CRM Phase A tables created/verified
+[32mINFO    [0m oneai_reach.infrastructure.database.migration_crm_phase_a CRM Phase A migration complete
+[32mINFO    [0m oneai_reach.infrastructure.database.migration_crm_phase_b CRM Phase B tables created/verified
+[32mINFO    [0m oneai_reach.infrastructure.database.migration_crm_phase_b CRM Phase B migration complete
+[32mINFO    [0m oneai_reach.infrastructure.database.migration_crm_phase_c CRM Phase C tables created/verified
+[32mINFO    [0m oneai_reach.infrastructure.database.migration_crm_phase_c CRM Phase C migration complete
+INFO:     Started server process [3549155]
+INFO:     Waiting for application startup.
+INFO:     Application startup complete.
+INFO:     Uvicorn running on http://0.0.0.0:8000 (Press CTRL+C to quit)
+INFO oneai_reach.api.middleware [db1d7e0e-9ac1-4f14-81a3-63046e1a1dde] GET /api/v1/scheduled-messages/stats/overview
+INFO oneai_reach.api.middleware [db1d7e0e-9ac1-4f14-81a3-63046e1a1dde] GET /api/v1/scheduled-messages/stats/overview -> 200
+INFO:     127.0.0.1:46016 - "GET /api/v1/scheduled-messages/stats/overview HTTP/1.1" 200 OK
+INFO oneai_reach.api.middleware [62e063ec-64d0-4464-9f61-205d3d020510] GET /api/v1/broadcast-lists
+INFO oneai_reach.api.middleware [62e063ec-64d0-4464-9f61-205d3d020510] GET /api/v1/broadcast-lists -> 200
+INFO:     127.0.0.1:46024 - "GET /api/v1/broadcast-lists HTTP/1.1" 200 OK
+INFO oneai_reach.api.middleware [8032617c-7a79-4402-b276-7235ab89e726] GET /api/v1/broadcasts/stats/overview
+INFO oneai_reach.api.middleware [8032617c-7a79-4402-b276-7235ab89e726] GET /api/v1/broadcasts/stats/overview -> 200
+INFO:     127.0.0.1:46030 - "GET /api/v1/broadcasts/stats/overview HTTP/1.1" 200 OK
+INFO oneai_reach.api.middleware [1c81e634-0631-494e-a928-9dd14f7501b6] GET /api/v1/broadcast-sends
+INFO oneai_reach.api.middleware [1c81e634-0631-494e-a928-9dd14f7501b6] GET /api/v1/broadcast-sends -> 200
+INFO:     127.0.0.1:46044 - "GET /api/v1/broadcast-sends HTTP/1.1" 200 OK
+INFO oneai_reach.api.middleware [03cf147b-9e15-4f57-9a97-d78f3de4a0b1] GET /api/v1/email-templates
+INFO oneai_reach.api.middleware [03cf147b-9e15-4f57-9a97-d78f3de4a0b1] GET /api/v1/email-templates -> 200
+INFO:     127.0.0.1:46046 - "GET /api/v1/email-templates HTTP/1.1" 200 OK
+INFO:     Shutting down
+INFO:     Waiting for application shutdown.
+INFO:     Application shutdown complete.
+INFO:     Finished server process [3549155]

@@ -35,6 +35,7 @@ from oneai_reach.api.v1.templates import router as templates_router
 from oneai_reach.api.v1.proposals import router as proposals_router
 from oneai_reach.api.v1.email_tracking import router as email_tracking_router
 from oneai_reach.api.v1.deliverability import router as deliverability_router
+from oneai_reach.api.v1.optimization import router as optimization_router
 from oneai_reach.api.v1.labels import router as labels_router
 from oneai_reach.api.v1.email_templates import router as email_templates_router
 from oneai_reach.api.v1.scheduled_messages import router as scheduled_messages_router
@@ -126,6 +127,7 @@ def create_app() -> FastAPI:
     app.include_router(proposals_router)
     app.include_router(email_tracking_router)
     app.include_router(deliverability_router, prefix="/api/v1/deliverability")
+    app.include_router(optimization_router, prefix="/api/v1/optimization")
     app.include_router(labels_router)
     app.include_router(email_templates_router)
     app.include_router(scheduled_messages_router)

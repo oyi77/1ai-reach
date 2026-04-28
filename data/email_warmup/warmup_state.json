@@ -1,0 +1,44 @@
+{
+  "test@berkahkarya.org": {
+    "email": "test@berkahkarya.org",
+    "day": 1,
+    "daily_limit": 10,
+    "sent_today": 0,
+    "total_sent": 0,
+    "total_received": 2,
+    "spam_complaints": 0,
+    "bounce_count": 0,
+    "reputation_score": 52,
+    "status": "active",
+    "started_at": "2026-04-28T14:54:10.807350",
+    "last_sent_at": null
+  },
+  "test2@berkahkarya.org": {
+    "email": "test2@berkahkarya.org",
+    "day": 1,
+    "daily_limit": 10,
+    "sent_today": 0,
+    "total_sent": 0,
+    "total_received": 0,
+    "spam_complaints": 0,
+    "bounce_count": 0,
+    "reputation_score": 50,
+    "status": "active",
+    "started_at": "2026-04-28T14:54:40.547751",
+    "last_sent_at": null
+  },
+  "test3@berkahkarya.org": {
+    "email": "test3@berkahkarya.org",
+    "day": 1,
+    "daily_limit": 10,
+    "sent_today": 1,
+    "total_sent": 1,
+    "total_received": 1,
+    "spam_complaints": 0,
+    "bounce_count": 0,
+    "reputation_score": 51,
+    "status": "active",
+    "started_at": "2026-04-28T14:55:43.208281",
+    "last_sent_at": "2026-04-28T14:55:43.208782"
+  }
+}
