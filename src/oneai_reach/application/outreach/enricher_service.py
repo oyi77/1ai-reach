@@ -134,7 +134,9 @@ class EnricherService:
 
         strategies = [
             ("AgentCash Minerva", lambda: self._via_agentcash(website, name)),
+            ("Jina AI + extraction", lambda: self._enrich_via_jina(website)),
             ("Website scraping", lambda: self._scrape_website(website)),
+            ("LinkedIn search", lambda: self._find_linkedin(website, name)),
             ("Email pattern", lambda: self._guess_email(website, name)),
         ]
 
@@ -414,6 +416,69 @@ class EnricherService:
             digits = "62" + digits
 
         return "+" + digits
+
+
+    def _enrich_via_jina(self, website: str) -> dict:
+        """Enrich via Jina AI web reader + contact extraction.
+        
+        Uses Jina AI to fetch clean markdown, then extracts contacts.
+        More reliable than direct scraping for modern websites.
+        """
+        import asyncio
+        import threading
+        from oneai_reach.infrastructure.web_reader import JinaWebReader
+        
+        # Fetch markdown via Jina
+        try:
+            loop = asyncio.get_event_loop()
+        except RuntimeError:
+            loop = asyncio.new_event_loop()
+            asyncio.set_event_loop(loop)
+        
+        if loop.is_running():
+            def run_async(coro):
+                res = []
+                def f():
+                    res.append(asyncio.run(coro))
+                t = threading.Thread(target=f)
+                t.start()
+                t.join()
+                return res[0]
+            markdown = run_async(JinaWebReader.fetch_markdown(website))
+        else:
+            markdown = loop.run_until_complete(JinaWebReader.fetch_markdown(website))
+        
+        if not markdown:
+            raise RuntimeError("Jina AI failed to fetch website")
+        
+        # Extract emails and phones from markdown
+        emails = self._extract_emails_from_text(markdown)
+        phones = self._extract_phones_from_text(markdown)
+        
+        if not emails and not phones:
+            raise RuntimeError("no contact info in Jina markdown")
+        
+        return {
+            "email": emails[0] if emails else None,
+            "phone": phones[0] if phones else None,
+            "linkedin": None,
+            "research_data": markdown[:10000],
+        }
+
+    def _extract_emails_from_text(self, text: str) -> list[str]:
+        """Extract emails from text (markdown or HTML)."""
+        return [
+            e
+            for e in _EMAIL_RE.findall(text)
+            if self._is_valid_email(e) and not any(n in e.lower() for n in _EMAIL_NOISE)
+        ]
+
+    def _extract_phones_from_text(self, text: str) -> list[str]:
+        """Extract phone numbers from text."""
+        phones = []
+        for m in _PHONE_RE.findall(text):
+            phones.append(self._normalize_phone(m))
+        return [p for p in phones if p]
 
     @staticmethod
     def _is_empty(value) -> bool:
