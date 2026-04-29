@@ -91,8 +91,17 @@ export default function AnalyticsPage() {
   }
 
   const { kpis, conversion_rates, funnel_counts, channel_email, channel_wa, velocity, industry_performance, tier_stats, score_histogram, service_performance } = data;
+  const safeTierStats = tier_stats ?? {};
+  const safeScoreHistogram = score_histogram ?? {};
+  const safeIndustryPerformance = industry_performance ?? [];
+  const safeServicePerformance = service_performance ?? [];
+  const safeFunnelCounts = funnel_counts ?? {};
+  const safeConversionRates = conversion_rates ?? {};
+  const safeKpis = kpis ?? {};
+  const safeChannelEmail = channel_email ?? {};
+  const safeChannelWa = channel_wa ?? {};
 
-  const maxFunnelCount = Math.max(...FUNNEL_STAGES.map((s) => funnel_counts[s.key] ?? 0), 1);
+  const maxFunnelCount = Math.max(...FUNNEL_STAGES.map((s) => safeFunnelCounts[s.key] ?? 0), 1);
 
   return (
     <div className="p-6 space-y-6">
@@ -117,22 +126,22 @@ export default function AnalyticsPage() {
       <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-6 gap-3">
         <StatCard
           title="Full Funnel"
-          value={`${kpis.full_funnel_conversion}%`}
+          value={`${safeKpis.full_funnel_conversion}%`}
           sub="new → won"
           icon={TrendingUp}
           highlight
         />
         <StatCard
           title="Reply Rate"
-          value={`${kpis.reply_rate}%`}
+          value={`${safeKpis.reply_rate}%`}
           sub="contacted → replied"
           icon={MessageCircle}
           highlight
         />
-        <StatCard title="Avg Lead Score" value={kpis.avg_lead_score} sub="out of 10" icon={Zap} />
-        <StatCard title="This Week" value={`+${kpis.leads_this_week}`} sub="new leads" />
-        <StatCard title="Pipeline Active" value={kpis.pipeline_active} sub="working leads" />
-        <StatCard title="Total Leads" value={kpis.total_leads} />
+        <StatCard title="Avg Lead Score" value={safeKpis.avg_lead_score} sub="out of 10" icon={Zap} />
+        <StatCard title="This Week" value={`+${safeKpis.leads_this_week}`} sub="new leads" />
+        <StatCard title="Pipeline Active" value={safeKpis.pipeline_active} sub="working leads" />
+        <StatCard title="Total Leads" value={safeKpis.total_leads} />
       </div>
 
       {/* ── Section 2: Conversion Funnel ── */}
@@ -142,10 +151,10 @@ export default function AnalyticsPage() {
         </CardHeader>
         <CardContent className="space-y-2">
           {FUNNEL_STAGES.map((stage, i) => {
-            const count = funnel_counts[stage.key] ?? 0;
+            const count = safeFunnelCounts[stage.key] ?? 0;
             const barPct = Math.round((count / maxFunnelCount) * 100);
-            const convKey = CONVERSION_STEPS[i]?.key as keyof typeof conversion_rates | undefined;
-            const convRate = convKey ? conversion_rates[convKey] : null;
+            const convKey = CONVERSION_STEPS[i]?.key as string | undefined;
+            const convRate = convKey ? safeConversionRates[convKey as keyof typeof safeConversionRates] : null;
             return (
               <div key={stage.key}>
                 <div className="flex items-center gap-3">
@@ -175,7 +184,7 @@ export default function AnalyticsPage() {
         <CardContent>
           <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
             {CONVERSION_STEPS.map((step) => {
-              const rate = conversion_rates[step.key as keyof typeof conversion_rates];
+              const rate = safeConversionRates[step.key as keyof typeof safeConversionRates];
               return (
                 <div key={step.key} className="bg-neutral-800 rounded-lg p-3 text-center">
                   <p className="text-xs text-neutral-500 mb-1">{step.label}</p>
@@ -197,11 +206,11 @@ export default function AnalyticsPage() {
           </CardHeader>
           <CardContent className="space-y-3">
             {[
-              { label: "Sent", value: channel_email.sent },
-              { label: "Delivered", value: channel_email.delivered, rate: channel_email.delivery_rate },
-              { label: "Opened", value: channel_email.opened, rate: channel_email.open_rate },
-              { label: "Clicked", value: channel_email.clicked, rate: channel_email.click_rate },
-              { label: "Bounced", value: channel_email.bounced, rate: channel_email.bounce_rate, isNeg: true },
+              { label: "Sent", value: safeChannelEmail.sent },
+              { label: "Delivered", value: safeChannelEmail.delivered, rate: safeChannelEmail.delivery_rate },
+              { label: "Opened", value: safeChannelEmail.opened, rate: safeChannelEmail.open_rate },
+              { label: "Clicked", value: safeChannelEmail.clicked, rate: safeChannelEmail.click_rate },
+              { label: "Bounced", value: safeChannelEmail.bounced, rate: safeChannelEmail.bounce_rate, isNeg: true },
             ].map((row) => (
               <div key={row.label} className="flex items-center justify-between">
                 <span className="text-sm text-neutral-400">{row.label}</span>
@@ -228,8 +237,8 @@ export default function AnalyticsPage() {
           </CardHeader>
           <CardContent className="space-y-3">
             {[
-              { label: "Sent", value: channel_wa.sent },
-              { label: "Replied", value: channel_wa.replied, rate: channel_wa.reply_rate },
+              { label: "Sent", value: safeChannelWa.sent },
+              { label: "Replied", value: safeChannelWa.replied, rate: safeChannelWa.reply_rate },
             ].map((row) => (
               <div key={row.label} className="flex items-center justify-between">
                 <span className="text-sm text-neutral-400">{row.label}</span>
@@ -286,7 +295,7 @@ export default function AnalyticsPage() {
                 cold: "text-blue-400",
                 skip: "text-neutral-400",
               };
-              const totalTier = Object.values(tier_stats).reduce((s, t) => s + t.count, 0);
+              const totalTier = Object.values(safeTierStats).reduce((s, t) => s + (t as any).count, 0);
               const barPct = totalTier > 0 ? Math.round((stats.count / totalTier) * 100) : 0;
               return (
                 <div key={tier}>
@@ -315,7 +324,7 @@ export default function AnalyticsPage() {
           <CardContent className="space-y-3">
             {(["0-3", "3-5", "5-7", "7-10"] as const).map((bucket) => {
               const count = score_histogram[bucket] ?? 0;
-              const totalScored = Object.values(score_histogram).reduce((a, b) => a + b, 0);
+              const totalScored = Object.values(safeScoreHistogram).reduce((a, b) => a + (b as number), 0);
               const barPct = totalScored > 0 ? Math.round((count / totalScored) * 100) : 0;
               const colors = ["bg-red-600", "bg-amber-600", "bg-yellow-500", "bg-green-500"];
               const colorIdx = ["0-3", "3-5", "5-7", "7-10"].indexOf(bucket);
@@ -334,7 +343,7 @@ export default function AnalyticsPage() {
       </div>
 
       {/* ── Section 6: Industry Performance Table ── */}
-      {industry_performance.length > 0 && (
+      {safeIndustryPerformance.length > 0 && (
         <Card className="bg-neutral-900 border-neutral-800">
           <CardHeader>
             <CardTitle className="text-base">Industry Performance</CardTitle>
@@ -352,7 +361,7 @@ export default function AnalyticsPage() {
                 </TableRow>
               </TableHeader>
               <TableBody>
-                {industry_performance.slice(0, 15).map((row) => {
+                {safeIndustryPerformance.slice(0, 15).map((row) => {
                   const rowBg =
                     row.reply_rate >= 20
                       ? "bg-green-500/5"
@@ -379,14 +388,14 @@ export default function AnalyticsPage() {
       )}
 
       {/* ── Section 7: Service Performance ── */}
-      {service_performance.length > 0 && (
+      {safeServicePerformance.length > 0 && (
         <Card className="bg-neutral-900 border-neutral-800">
           <CardHeader>
             <CardTitle className="text-base">Service Performance</CardTitle>
           </CardHeader>
           <CardContent className="space-y-2">
-            {service_performance.slice(0, 10).map((svc) => {
-              const maxSvcCount = Math.max(...service_performance.map((s) => s.total), 1);
+            {safeServicePerformance.slice(0, 10).map((svc) => {
+              const maxSvcCount = Math.max(...safeServicePerformance.map((s) => s.total), 1);
               const barPct = Math.round((svc.total / maxSvcCount) * 100);
               return (
                 <div key={svc.service} className="flex items-center gap-3">

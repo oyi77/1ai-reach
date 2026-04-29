@@ -35,7 +35,7 @@ function StatBox({ label, value, icon: Icon, color = "text-neutral-400" }: any) 
 }
 
 export function ComplianceDashboard() {
-  const { data, isLoading, error, mutate } = useSWR<{ data: ComplianceOverview }>(
+  const { data, isLoading, error, mutate } = useSWR<ComplianceOverview>(
     "/api/v1/compliance/overview",
     fetcher,
     { refreshInterval: 60000 }
@@ -67,7 +67,7 @@ export function ComplianceDashboard() {
     );
   }
 
-  const { total_consents, active_consents, dnc_count, suppression_count, bounce_stats, list_health_score, list_health_status } = data.data;
+  const { total_consents, active_consents, dnc_count, suppression_count, bounce_stats, list_health_score, list_health_status } = data;
 
   const healthColor = list_health_status === "excellent" ? "text-green-400" : list_health_status === "good" ? "text-emerald-400" : list_health_status === "fair" ? "text-amber-400" : "text-red-400";
 

@@ -47,7 +47,7 @@ function SignalIcon({ type }: { type: string }) {
 }
 
 export function IntentSignalsPanel() {
-  const { data, isLoading, error, mutate } = useSWR<{ data: IntentOverview }>(
+  const { data, isLoading, error, mutate } = useSWR<IntentOverview>(
     "/api/v1/intent/overview",
     fetcher,
     { refreshInterval: 300000 }
@@ -79,7 +79,8 @@ export function IntentSignalsPanel() {
     );
   }
 
-  const { total_signals, unacted_signals, by_type, recent_signals } = data.data;
+  const { total_signals, unacted_signals, by_type, recent_signals } = data;
+  const safeByType = by_type ?? {};
 
   return (
     <Card className="bg-neutral-900 border-neutral-800">
@@ -119,7 +120,7 @@ export function IntentSignalsPanel() {
         <div>
           <p className="text-xs text-neutral-500 mb-2">Signals by Type</p>
           <div className="grid grid-cols-2 gap-2">
-            {Object.entries(by_type).map(([type, count]) => (
+            {Object.entries(safeByType).map(([type, count]) => (
               <div key={type} className={`rounded-lg p-2 border ${SIGNAL_COLORS[type] || "bg-neutral-800"}`}>
                 <div className="flex items-center gap-2">
                   <SignalIcon type={type} />

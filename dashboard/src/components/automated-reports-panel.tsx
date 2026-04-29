@@ -25,7 +25,7 @@ interface ReportsOverview {
 }
 
 export function AutomatedReportsPanel() {
-  const { data, isLoading, error, mutate } = useSWR<{ data: ReportsOverview }>(
+  const { data, isLoading, error, mutate } = useSWR<ReportsOverview>(
     "/api/v1/reports/overview",
     fetcher,
     { refreshInterval: 300000 }
@@ -57,7 +57,7 @@ export function AutomatedReportsPanel() {
     );
   }
 
-  const { total_reports, weekly_reports, monthly_reports, recent_reports } = data.data;
+  const { total_reports, weekly_reports, monthly_reports, recent_reports } = data;
 
   return (
     <Card className="bg-neutral-900 border-neutral-800">

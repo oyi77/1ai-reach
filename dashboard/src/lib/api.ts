@@ -321,7 +321,8 @@ export async function fetcher<T>(url: string): Promise<T> {
   if (!res.ok) throw new Error(`API ${res.status}: ${res.statusText}`);
   const json = await res.json();
   // Unwrap standardized API responses with {status, message, data} structure
-  if (json.status && json.data !== undefined) {
+  // Also unwrap {data: ...} without status (some endpoints omit status)
+  if (json.data !== undefined && typeof json.data === 'object' && !Array.isArray(json.data)) {
     return json.data;
   }
   return json;

@@ -31,7 +31,7 @@ const PRIORITY_COLORS: Record<string, string> = {
 };
 
 export function LeadRecyclingQueue() {
-  const { data, isLoading, error, mutate } = useSWR<{ data: RecyclingOverview }>(
+  const { data, isLoading, error, mutate } = useSWR<RecyclingOverview>(
     "/api/v1/outreach/recycling/overview",
     fetcher,
     { refreshInterval: 300000 }
@@ -63,7 +63,7 @@ export function LeadRecyclingQueue() {
     );
   }
 
-  const { total_cold_leads, by_interval, candidates } = data.data;
+  const { total_cold_leads, by_interval, candidates } = data;
 
   return (
     <Card className="bg-neutral-900 border-neutral-800">

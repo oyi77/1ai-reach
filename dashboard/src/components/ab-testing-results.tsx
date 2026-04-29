@@ -27,7 +27,7 @@ interface ABTestingOverview {
 }
 
 export function ABTestingResults() {
-  const { data, isLoading, error, mutate } = useSWR<{ data: ABTestingOverview }>(
+  const { data, isLoading, error, mutate } = useSWR<ABTestingOverview>(
     "/api/v1/optimization/ab-tests",
     fetcher,
     { refreshInterval: 60000 }
@@ -59,7 +59,7 @@ export function ABTestingResults() {
     );
   }
 
-  const { active_tests, completed_tests, tests } = data.data;
+  const { active_tests, completed_tests, tests } = data;
 
   return (
     <Card className="bg-neutral-900 border-neutral-800">
