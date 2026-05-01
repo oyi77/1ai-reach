@@ -1237,5 +1237,49 @@
       "success": true,
       "timestamp": "2026-04-28T18:35:09.081903+00:00"
     }
+  },
+  {
+    "timestamp": "2026-04-30T22:14:04.318511+00:00",
+    "action": "outreach",
+    "subject": "lead_0",
+    "details": {
+      "channel": "email",
+      "contact": "lead@example.com",
+      "success": true,
+      "timestamp": "2026-04-30T22:14:04.317963+00:00"
+    }
+  },
+  {
+    "timestamp": "2026-04-30T22:14:04.337940+00:00",
+    "action": "outreach",
+    "subject": "lead_0",
+    "details": {
+      "channel": "email",
+      "contact": "lead@example.com",
+      "success": true,
+      "timestamp": "2026-04-30T22:14:04.337513+00:00"
+    }
+  },
+  {
+    "timestamp": "2026-04-30T22:19:12.602455+00:00",
+    "action": "outreach",
+    "subject": "lead_0",
+    "details": {
+      "channel": "email",
+      "contact": "lead@example.com",
+      "success": true,
+      "timestamp": "2026-04-30T22:19:12.601710+00:00"
+    }
+  },
+  {
+    "timestamp": "2026-04-30T22:19:12.627483+00:00",
+    "action": "outreach",
+    "subject": "lead_0",
+    "details": {
+      "channel": "email",
+      "contact": "lead@example.com",
+      "success": true,
+      "timestamp": "2026-04-30T22:19:12.626809+00:00"
+    }
   }
 ]

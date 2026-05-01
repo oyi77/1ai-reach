@@ -16,7 +16,6 @@ dependencies = [
   "beautifulsoup4>=4.12.0",
   "Pillow>=10.0.0",
   "PyYAML>=6.0.0",
-  "streamlit>=1.28.0",
   "fastapi>=0.104.0",
   "uvicorn>=0.24.0",
   "starlette>=0.27.0",

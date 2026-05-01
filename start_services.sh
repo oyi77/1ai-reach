@@ -7,7 +7,6 @@ echo "🚀 Starting 1ai-reach Services..."
 
 # Kill existing
 pkill -f "webhook_server.py" 2>/dev/null
-pkill -f "streamlit run ui/app.py" 2>/dev/null
 sleep 2
 
 # Start webhook server with auto-restart wrapper
@@ -21,14 +20,10 @@ nohup bash -c '
 
 echo "✅ Webhook server started (auto-restart enabled)"
 
-# Start Streamlit
 cd /home/openclaw/.openclaw/workspace/1ai-reach
-nohup streamlit run ui/app.py --server.port 8502 --server.address 0.0.0.0 --server.headless true > logs/streamlit.log 2>&1 &
 
-echo "✅ Streamlit started"
 sleep 3
 echo ""
 echo "Services status:"
 echo "  - Webhook: http://localhost:8766"
-echo "  - Streamlit: http://localhost:8502"
 echo "  - Public: https://engage.aitradepulse.com"
