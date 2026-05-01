@@ -20,7 +20,6 @@ from config import DB_FILE, WAHA_API_KEY
 
 # Service ports
 MCP_PORT = 8766
-STREAMLIT_PORT = 8502
 WAHA_PORT = 3010
 
 # Health check thresholds
@@ -46,11 +45,8 @@ def check_webhook_server():
         return False
 
 
-def check_streamlit():
-    """Check if Streamlit UI is running"""
     try:
         response = requests.get(
-            f"http://localhost:{STREAMLIT_PORT}/_stcore/health",
             timeout=MAX_RESPONSE_TIME,
         )
         return response.status_code == 200
@@ -126,18 +122,11 @@ def restart_webhook_server():
     time.sleep(3)
 
 
-def restart_streamlit():
-    """Restart Streamlit"""
-    log("🔄 Restarting Streamlit...")
-    subprocess.run(["pkill", "-f", "streamlit run ui/app.py"], capture_output=True)
     time.sleep(2)
     subprocess.Popen(
         [
-            "streamlit",
             "run",
-            "ui/app.py",
             "--server.port",
-            str(STREAMLIT_PORT),
             "--server.address",
             "0.0.0.0",
             "--server.headless",
@@ -224,7 +213,6 @@ def main():
 
     failure_counts = {
         "webhook": 0,
-        "streamlit": 0,
         "waha": 0,
         "tunnel": 0,
         "database": 0,
@@ -235,7 +223,6 @@ def main():
             # Check all services
             checks = {
                 "webhook": check_webhook_server(),
-                "streamlit": check_streamlit(),
                 "waha": check_waha(),
                 "tunnel": check_cloudflare_tunnel(),
                 "database": check_database(),
@@ -256,8 +243,6 @@ def main():
                         if service == "webhook":
                             restart_webhook_server()
                             failure_counts[service] = 0
-                        elif service == "streamlit":
-                            restart_streamlit()
                             failure_counts[service] = 0
                         elif service == "tunnel":
                             subprocess.run(
