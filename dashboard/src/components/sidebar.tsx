@@ -37,6 +37,7 @@ const NAV_ITEMS = [
   { href: "/contacts", label: "Contacts", icon: Users },
   { href: "/proposals", label: "Proposals", icon: FileText },
   { href: "/conversations", label: "Conversations", icon: MessageSquare },
+  { href: "/unified-inbox", label: "💬 Inbox", icon: MessageSquare },
   { href: "/channels", label: "Channels", icon: Radio },
   { href: "/personas", label: "Personas", icon: Users },
   { href: "/outreach-tracker", label: "Outreach Tracker", icon: Search },
